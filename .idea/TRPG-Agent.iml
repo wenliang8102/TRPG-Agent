@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/backend" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/backend/.venv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.9 (TRPG-Agent)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.11 (TRPG-Agent)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

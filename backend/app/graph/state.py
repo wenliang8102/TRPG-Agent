@@ -73,7 +73,6 @@ class GraphState(TypedDict, total=False):
     user_input: str                # 当前回合输入
     plan: str                      # planner 节点产出的中间计划
     output: str                    # executor 节点产出的最终回复
-    next_node: Optional[str]       # 路由目标，供 edges 决定下一跳
 
     # --- V1 新增 ---
     session_id: str                # 会话唯一标识

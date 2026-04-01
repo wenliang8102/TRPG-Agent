@@ -12,5 +12,4 @@ STATE_MESSAGES_KEY = "messages"
 STATE_INPUT_KEY = "user_input"
 STATE_PLAN_KEY = "plan"
 STATE_OUTPUT_KEY = "output"
-STATE_NEXT_KEY = "next_node"
 

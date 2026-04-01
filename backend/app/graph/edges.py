@@ -5,19 +5,22 @@ from app.graph.state import GraphState
 
 
 def route_from_router(state: GraphState) -> str:
-    return state.get("next_node") or PLANNER_NODE
+    user_input = str(state.get("user_input", "")).strip()
+    if not user_input:
+        return END_NODE
+    return PLANNER_NODE
 
 
 def route_from_planner(state: GraphState) -> str:
-    return state.get("next_node") or EXECUTOR_NODE
+    return EXECUTOR_NODE
 
 
 def route_from_executor(state: GraphState) -> str:
-    return state.get("next_node") or END_NODE
+    return END_NODE
 
 
 def route_from_tool(state: GraphState) -> str:
-    return state.get("next_node") or EXECUTOR_NODE
+    return EXECUTOR_NODE
 
 
 ROUTE_OPTIONS = {

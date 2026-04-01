@@ -1,5 +1,7 @@
 """API request/response schemas."""
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -9,5 +11,5 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
-    plan: str | None = None
+    plan: Optional[str] = None
 

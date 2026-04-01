@@ -1,94 +1,171 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-// 定义响应式变量，用于在页面上显示数据
-const backendMessage = ref('')
-const inputText = ref('')
-const chatReply = ref('')
-
-// 测试 GET 请求 (请求根目录)
-const testGet = async () => {
-  try {
-    const response = await fetch('http://127.0.0.1:8000/')
-    const data = await response.json()
-    backendMessage.value = data.message
-  } catch (error) {
-    backendMessage.value = '连接后端失败，请检查后端是否启动！'
-    console.error(error)
-  }
+type ChatMessage = {
+  role: 'user' | 'assistant'
+  content: string
 }
 
-// 测试 POST 请求 (模拟发送聊天给 LangGraph)
-const testPost = async () => {
-  if (!inputText.value) return
+const inputText = ref('')
+const isSending = ref(false)
+const errorText = ref('')
+const messages = ref<ChatMessage[]>([
+  { role: 'assistant', content: '你好，我是 TRPG 助手。你可以直接开始提问。' }
+])
+
+const sendMessage = async () => {
+  const text = inputText.value.trim()
+  if (!text || isSending.value) return
+
+  errorText.value = ''
+  messages.value.push({ role: 'user', content: text })
+  inputText.value = ''
+  isSending.value = true
 
   try {
-    // 注意：这里我们用 query 参数传递文字，对应后端 main.py 里的 query: str
-    const response = await fetch(`http://127.0.0.1:8000/chat?query=${inputText.value}`, {
-      method: 'POST'
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
     })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
     const data = await response.json()
-    chatReply.value = data.reply
+    const reply = String(data.reply ?? '').trim() || '模型没有返回内容。'
+    messages.value.push({ role: 'assistant', content: reply })
   } catch (error) {
-    chatReply.value = '发送失败！'
+    errorText.value = '发送失败，请检查后端服务和模型配置。'
     console.error(error)
+  } finally {
+    isSending.value = false
   }
 }
 </script>
 
 <template>
-  <div class="test-container">
-    <h1>🚀 跨语言 Monorepo 测试</h1>
+  <main class="chat-page">
+    <section class="chat-panel">
+      <header class="chat-header">
+        <h1>TRPG 对话测试</h1>
+      </header>
 
-    <!-- GET 测试区域 -->
-    <div class="card">
-      <h3>1. 测试基础连接 (GET)</h3>
-      <button @click="testGet">获取后端问候语</button>
-      <p class="result">后端响应: <span style="color: #42b883">{{ backendMessage }}</span></p>
-    </div>
+      <div class="message-list">
+        <article
+          v-for="(message, index) in messages"
+          :key="index"
+          :class="['message-item', message.role]"
+        >
+          <p class="message-role">{{ message.role === 'user' ? '你' : 'AI' }}</p>
+          <p class="message-content">{{ message.content }}</p>
+        </article>
+      </div>
 
-    <!-- POST 测试区域 -->
-    <div class="card">
-      <h3>2. 测试带参数对话 (POST)</h3>
-      <input v-model="inputText" placeholder="输入要发送给后端的话..." />
-      <button @click="testPost">发送给后端</button>
-      <p class="result">后端回复: <span style="color: #42b883">{{ chatReply }}</span></p>
-    </div>
-  </div>
+      <p v-if="errorText" class="error-text">{{ errorText }}</p>
+
+      <form class="input-row" @submit.prevent="sendMessage">
+        <input
+          v-model="inputText"
+          type="text"
+          placeholder="输入内容并回车发送..."
+          :disabled="isSending"
+        />
+        <button type="submit" :disabled="isSending || !inputText.trim()">
+          {{ isSending ? '发送中...' : '发送' }}
+        </button>
+      </form>
+    </section>
+  </main>
 </template>
 
 <style scoped>
-.test-container {
-  font-family: Arial, sans-serif;
-  max-width: 600px;
-  margin: 50px auto;
-  text-align: center;
+.chat-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
 }
-.card {
-  border: 1px solid #ccc;
+
+.chat-panel {
+  width: 100%;
+  max-width: 780px;
+  border: 1px solid #2f2f2f;
+  border-radius: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.chat-header h1 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 58vh;
+  overflow-y: auto;
+  padding: 8px 4px;
+}
+
+.message-item {
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.message-item.user {
+  background: rgba(66, 184, 131, 0.2);
+}
+
+.message-item.assistant {
+  background: rgba(140, 140, 255, 0.15);
+}
+
+.message-role {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.message-content {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.input-row input {
+  flex: 1;
+  height: 40px;
   border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  background-color: #f9f9f9;
+  border: 1px solid #3f3f3f;
+  padding: 0 12px;
 }
-input {
-  padding: 8px;
-  margin-right: 10px;
-  width: 200px;
-}
-button {
-  padding: 8px 16px;
-  background-color: #42b883; /* Vue 的主题绿 */
-  color: white;
+
+.input-row button {
+  min-width: 96px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
+  background: #42b883;
+  color: #fff;
   cursor: pointer;
 }
-button:hover {
-  background-color: #33a06f;
+
+.input-row button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
-.result {
-  margin-top: 15px;
-  font-weight: bold;
+
+.error-text {
+  color: #ff6b6b;
+  margin-top: 10px;
 }
 </style>
