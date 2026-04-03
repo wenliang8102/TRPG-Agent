@@ -3,9 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently \"cd frontend && pnpm dev\" \"cd backend && python main.py\"",
+    "dev": "concurrently \"cd frontend && pnpm dev\" \"cd backend && .venv\\Scripts\\python.exe -m uvicorn app.main:app\"",
     "dev:frontend": "cd frontend && pnpm dev",
-    "dev:backend": "cd backend && python main.py"
+    "dev:backend": "cd backend && .venv\\Scripts\\python.exe -m uvicorn app.main:app"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
