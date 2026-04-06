@@ -12,7 +12,6 @@ from langgraph.types import Command
 from app.config.settings import settings
 from app.graph.builder import build_graph
 from app.memory.checkpointer import get_checkpointer
-from app.memory.memory import EnhancedMemory
 
 
 class ChatSessionService:
@@ -20,7 +19,6 @@ class ChatSessionService:
 
     def __init__(self, graph: Any) -> None:
         self._graph = graph
-        self._memory = EnhancedMemory()  # 添加增强记忆功能
 
     def process_turn(
         self,
@@ -45,21 +43,6 @@ class ChatSessionService:
         # 3. 提取执行结果
         state = self._graph.get_state(config)
         
-        # 应用简单记忆压缩（如果消息太多）
-        messages = state.values.get("messages", [])
-        if len(messages) > self._memory.compression_threshold:
-            processed_messages = self._memory.process_messages(messages)
-            # 更新状态中的消息
-            state.values["messages"] = processed_messages
-            messages = processed_messages
-
-        # 查找最新的完整 AI 回复文本
-        reply = ""
-        for msg in reversed(messages):
-            if isinstance(msg, AIMessage) and not msg.tool_calls:
-                reply = msg.content if isinstance(msg.content, str) else ""
-                break
-
         return {
             "reply": self._extract_new_reply(state, num_msgs_before),
             "plan": None,

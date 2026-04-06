@@ -27,7 +27,7 @@ class LLMService:
             model=settings.llm_model,
             temperature=settings.llm_temperature,
             timeout=settings.llm_timeout_seconds,
-            max_retries=2,
+            max_retries=0,
         )
 
     def invoke_with_tools(
