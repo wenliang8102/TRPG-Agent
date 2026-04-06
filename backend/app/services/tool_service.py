@@ -5,8 +5,13 @@ from __future__ import annotations
 import random
 from functools import lru_cache
 
-from langchain_core.tools import BaseTool, tool
-from langgraph.types import interrupt
+from typing import Annotated
+
+from langchain_core.messages import ToolMessage
+from langchain_core.tools import BaseTool, InjectedToolCallId, tool
+from langgraph.types import Command, interrupt
+
+from app.calculation.predefined_characters import PREDEFINED_CHARACTERS
 
 
 @tool
@@ -61,7 +66,42 @@ def request_dice_roll(reason: str, formula: str = "1d20") -> dict:
     
     return {"status": "failed", "note": "Player rejected the roll or unknown action."}
 
+
+@tool
+def load_character_profile(
+    role_class: str,
+    tool_call_id: Annotated[str, InjectedToolCallId]
+) -> Command | str:
+    """Load a predefined character profile based on the role class (e.g., '战士', '法师', '游荡者').
+    This handles loading all abilities, HP, and AC automatically into the game state.
+
+    Args:
+        role_class: The character class to load. Current supported values: "战士", "法师", "游荡者".
+    """
+    key = role_class.strip()
+    if key not in PREDEFINED_CHARACTERS:
+        return f"未找到对应职业 '{key}'。支持的预设职业为：{', '.join(PREDEFINED_CHARACTERS.keys())}。"
+
+    profile = PREDEFINED_CHARACTERS[key]
+    
+    import json
+    
+    # 依赖 LangGraph 机制原地更新 PlayerState 节点的共享状态
+    # 并且返回 ToolMessage 防止节点因为缺少工具执行确认而报错
+    return Command(
+        update={
+            "player": profile,
+            "messages": [
+                ToolMessage(
+                    content=f"已成功加载角色卡：{key}。\n属性如下：{json.dumps(profile, ensure_ascii=False, indent=2)}",
+                    tool_call_id=tool_call_id
+                )
+            ]
+        }
+    )
+
+
 @lru_cache(maxsize=1)
 def get_tools() -> list[BaseTool]:
-    return [weather, request_dice_roll]
+    return [weather, request_dice_roll, load_character_profile]
 

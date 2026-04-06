@@ -1,5 +1,6 @@
 """Graph node function implementations."""
 
+import json
 from functools import lru_cache
 
 from langchain_core.messages import AIMessage
@@ -26,10 +27,19 @@ def router_node(state: GraphState) -> GraphState:
 
 def assistant_node(state: GraphState) -> GraphState:
     messages = state.get("messages", [])
+    
+    # 动态组装附加了上下文的 System Prompt
+    system_prompt = ASSISTANT_SYSTEM_PROMPT
+    if player := state.get("player"):
+        player_context = json.dumps(player, ensure_ascii=False, indent=2)
+        system_prompt += f"\n\n[当前玩家状态]\n{player_context}"
+    else:
+        system_prompt += "\n\n[当前玩家状态]\n玩家尚未加载或创建角色卡。"
+
     response = _get_llm_service().invoke_with_tools(
         messages=messages,
         tools=get_tools(),
-        system_prompt=ASSISTANT_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
     )
 
     output = response.content if isinstance(response.content, str) and not response.tool_calls else ""
