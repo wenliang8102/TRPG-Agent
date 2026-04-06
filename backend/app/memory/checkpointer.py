@@ -19,5 +19,8 @@ def get_checkpointer(db_path: str) -> SqliteSaver:
     conn = sqlite3.connect(str(db_file), check_same_thread=False)
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA synchronous = NORMAL")
-    return SqliteSaver(conn)
+    
+    saver = SqliteSaver(conn)
+    saver.setup()
+    return saver
 
