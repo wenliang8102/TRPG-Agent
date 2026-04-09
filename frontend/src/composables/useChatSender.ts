@@ -19,11 +19,28 @@ export function useChatSender(
   addAssistantMessage: (content: string) => void,
   addConfirmedMessage: (reason?: string) => void,
   setPendingAction: (action: any) => void,
+  setPlayerState: (state: any) => void,
+  setCombatState: (state: any) => void,
   setError: (error: string) => void,
   setSending: (sending: boolean) => void,
   clearError: () => void,
   pendingActionRef: Ref<any>
 ) {
+  const processResponseData = (data: any) => {
+    if (data.session_id) updateSessionId(data.session_id)
+    setPendingAction(data.pending_action || null)
+    
+    if (data.player !== undefined) setPlayerState(data.player)
+    if (data.combat !== undefined) setCombatState(data.combat)
+
+    const reply = String(data.reply ?? '').trim()
+    if (reply) {
+      addAssistantMessage(reply)
+    } else if (!data.pending_action) {
+      addAssistantMessage('模型没有返回内容。')
+    }
+  }
+
   const sendTextMessage = async (text: string) => {
     if (!text.trim()) return
     clearError()
@@ -36,15 +53,7 @@ export function useChatSender(
         message: text
       })
 
-      if (data.session_id) updateSessionId(data.session_id)
-      setPendingAction(data.pending_action || null)
-
-      const reply = String(data.reply ?? '').trim()
-      if (reply) {
-        addAssistantMessage(reply)
-      } else if (!data.pending_action) {
-        addAssistantMessage('模型没有返回内容。')
-      }
+      processResponseData(data)
     } catch (error) {
       setError(buildUserError(error))
       console.error(error)
@@ -65,13 +74,7 @@ export function useChatSender(
         resume_action: 'confirmed'
       })
 
-      if (data.session_id) updateSessionId(data.session_id)
-      setPendingAction(data.pending_action || null)
-
-      const reply = String(data.reply ?? '').trim()
-      if (reply) {
-        addAssistantMessage(reply)
-      }
+      processResponseData(data)
     } catch (error) {
       setError(buildUserError(error))
       console.error(error)

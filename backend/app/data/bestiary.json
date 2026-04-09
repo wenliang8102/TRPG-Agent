@@ -1,34 +1,19 @@
 [
   {
-    "index": "goblin",
+    "slug": "goblin",
+    "desc": "",
     "name": "Goblin",
     "size": "Small",
-    "type": "humanoid",
+    "type": "Humanoid",
     "subtype": "goblinoid",
+    "group": null,
     "alignment": "neutral evil",
-    "armor_class": [
-      {
-        "type": "armor",
-        "value": 15,
-        "armor": [
-          {
-            "index": "leather-armor",
-            "name": "Leather Armor",
-            "url": "/api/2014/equipment/leather-armor"
-          },
-          {
-            "index": "shield",
-            "name": "Shield",
-            "url": "/api/2014/equipment/shield"
-          }
-        ]
-      }
-    ],
+    "armor_class": 15,
+    "armor_desc": "leather armor, shield",
     "hit_points": 7,
     "hit_dice": "2d6",
-    "hit_points_roll": "2d6",
     "speed": {
-      "walk": "30 ft."
+        "walk": 30
     },
     "strength": 8,
     "dexterity": 14,
@@ -36,74 +21,74 @@
     "intelligence": 10,
     "wisdom": 8,
     "charisma": 8,
-    "proficiencies": [
-      {
-        "value": 6,
-        "proficiency": {
-          "index": "skill-stealth",
-          "name": "Skill: Stealth",
-          "url": "/api/2014/proficiencies/skill-stealth"
-        }
-      }
-    ],
-    "damage_vulnerabilities": [],
-    "damage_resistances": [],
-    "damage_immunities": [],
-    "condition_immunities": [],
-    "senses": {
-      "darkvision": "60 ft.",
-      "passive_perception": 9
+    "strength_save": null,
+    "dexterity_save": null,
+    "constitution_save": null,
+    "intelligence_save": null,
+    "wisdom_save": null,
+    "charisma_save": null,
+    "perception": null,
+    "skills": {
+        "stealth": 6
     },
+    "damage_vulnerabilities": "",
+    "damage_resistances": "",
+    "damage_immunities": "",
+    "condition_immunities": "",
+    "senses": "darkvision 60 ft., passive Perception 9",
     "languages": "Common, Goblin",
-    "challenge_rating": 0.25,
-    "proficiency_bonus": 2,
-    "xp": 50,
-    "special_abilities": [
-      {
-        "name": "Nimble Escape",
-        "desc": "The goblin can take the Disengage or Hide action as a bonus action on each of its turns.",
-        "damage": []
-      }
-    ],
+    "challenge_rating": "1/4",
+    "cr": 0.25,
     "actions": [
-      {
-        "name": "Scimitar",
-        "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.",
-        "attack_bonus": 4,
-        "damage": [
-          {
-            "damage_type": {
-              "index": "slashing",
-              "name": "Slashing",
-              "url": "/api/2014/damage-types/slashing"
-            },
-            "damage_dice": "1d6+2"
-          }
-        ],
-        "actions": []
-      },
-      {
-        "name": "Shortbow",
-        "desc": "Ranged Weapon Attack: +4 to hit, range 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
-        "attack_bonus": 4,
-        "damage": [
-          {
-            "damage_type": {
-              "index": "piercing",
-              "name": "Piercing",
-              "url": "/api/2014/damage-types/piercing"
-            },
-            "damage_dice": "1d6+2"
-          }
-        ],
-        "actions": []
-      }
+        {
+            "name": "Scimitar",
+            "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.",
+            "attack_bonus": 4,
+            "damage_dice": "1d6",
+            "damage_bonus": 2
+        },
+        {
+            "name": "Shortbow",
+            "desc": "Ranged Weapon Attack: +4 to hit, range 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+            "attack_bonus": 4,
+            "damage_dice": "1d6",
+            "damage_bonus": 2
+        }
     ],
-    "image": "/api/images/monsters/goblin.png",
-    "url": "/api/2014/monsters/goblin",
-    "updated_at": "2026-04-01T20:35:38.254Z",
-    "forms": [],
-    "legendary_actions": [],
-    "reactions": []
-  }
+    "bonus_actions": null,
+    "reactions": null,
+    "legendary_desc": "",
+    "legendary_actions": null,
+    "special_abilities": [
+        {
+            "name": "Nimble Escape",
+            "desc": "The goblin can take the Disengage or Hide action as a bonus action on each of its turns."
+        }
+    ],
+    "spell_list": [],
+    "page_no": 315,
+    "environments": [
+        "Hill",
+        "Desert",
+        "Underdark",
+        "Mountains",
+        "Grassland",
+        "Tundra",
+        "Ruin",
+        "Feywild",
+        "Swamp",
+        "Settlement",
+        "Sewer",
+        "Forest",
+        "Jungle",
+        "Hills",
+        "Caverns"
+    ],
+    "img_main": null,
+    "document__slug": "wotc-srd",
+    "document__title": "5e Core Rules",
+    "document__license_url": "http://open5e.com/legal",
+    "document__url": "http://dnd.wizards.com/articles/features/systems-reference-document-srd",
+    "v2_converted_path": "/v2/creatures/srd_goblin/"
+}
 ]

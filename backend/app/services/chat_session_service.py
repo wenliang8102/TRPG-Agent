@@ -48,12 +48,24 @@ class ChatSessionService:
             raise ValueError("Must provide either message or resume_action.")
 
         state = self._graph.get_state(config)
+        
+        player_data = None
+        combat_data = None
+        if hasattr(state, "values"):
+            player = state.values.get("player")
+            if player:
+                player_data = player.model_dump() if hasattr(player, "model_dump") else dict(player)
+            combat = state.values.get("combat")
+            if combat:
+                combat_data = combat.model_dump() if hasattr(combat, "model_dump") else dict(combat)
 
         return {
             "reply": self._extract_new_reply(state, baseline_msg_id),
             "plan": None,
             "session_id": current_session_id,
             "pending_action": self._get_pending_action(state),
+            "player": player_data,
+            "combat": combat_data,
         }
 
     def _get_pending_action(self, state: Any) -> Optional[dict]:

@@ -43,7 +43,7 @@
 
     <!-- 右侧功能区 -->
     <div class="function-area" :style="{ width: rightWidth + '%' }">
-      <!-- 功能区内容 -->
+      <CombatPanel :combat="combatState" />
     </div>
 
     <!-- 圆形控制按钮 -->
@@ -65,6 +65,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import ChatMessage from '../components/Chat/ChatMessage.vue'
 import ChatInput from '../components/Chat/ChatInput.vue'
 import ActionPanel from '../components/Chat/ActionPanel.vue'
+import CombatPanel from '../components/Chat/CombatPanel.vue'
 import { useChatSession } from '../composables/useChatSession'
 import { useChatMessages } from '../composables/useChatMessages'
 import { useChatSender } from '../composables/useChatSender'
@@ -85,10 +86,13 @@ const {
   pendingAction,
   errorText,
   isSending,
+  combatState,
   addUserMessage,
   addAssistantMessage,
   addConfirmedMessage,
   setPendingAction,
+  setPlayerState,
+  setCombatState,
   setError,
   setSending,
   clearError
@@ -101,6 +105,8 @@ const { sendTextMessage, confirmDiceRoll } = useChatSender(
   addAssistantMessage,
   addConfirmedMessage,
   setPendingAction,
+  setPlayerState,
+  setCombatState,
   setError,
   setSending,
   clearError,

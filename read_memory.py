@@ -49,10 +49,7 @@ def read_summary(db_path: str):
             print(f"  💬 [当前流转的真实消息窗口] (共保留 {len(messages)} 条):")
             for m in messages:
                 role = m.__class__.__name__.replace("Message", "")
-                content = str(m.content).replace('\n', ' ')
-                # 如果内容过长，做简单截断展示
-                if len(content) > 100:
-                    content = content[:97] + "..."
+                content = str(m.content)
                 print(f"    [{role}]: {content}")
             print("-" * 60)
             

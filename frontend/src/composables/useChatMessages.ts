@@ -8,6 +8,8 @@ export function useChatMessages() {
   const pendingAction = ref<PendingAction | null>(null)
   const errorText = ref('')
   const isSending = ref(false)
+  const playerState = ref<any | null>(null)
+  const combatState = ref<any | null>(null)
 
   const addUserMessage = (content: string) => {
     messages.value.push({ role: 'user', content })
@@ -39,17 +41,29 @@ export function useChatMessages() {
     errorText.value = ''
   }
 
+  const setPlayerState = (state: any) => {
+    playerState.value = state
+  }
+
+  const setCombatState = (state: any) => {
+    combatState.value = state
+  }
+
   return {
     messages,
     pendingAction,
     errorText,
     isSending,
+    playerState,
+    combatState,
     addUserMessage,
     addAssistantMessage,
     addConfirmedMessage,
     setPendingAction,
     setError,
     setSending,
-    clearError
+    clearError,
+    setPlayerState,
+    setCombatState
   }
 }

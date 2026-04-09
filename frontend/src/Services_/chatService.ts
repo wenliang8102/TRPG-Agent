@@ -18,6 +18,8 @@ export type ChatResponsePayload = {
   plan?: string | null
   session_id?: string
   pending_action?: PendingAction | null
+  player?: any
+  combat?: any
 }
 
 export class ChatApiError extends Error {

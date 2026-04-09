@@ -45,6 +45,8 @@ async def chat(payload: ChatRequest) -> ChatResponse:
             plan=result.get("plan"),
             session_id=result.get("session_id", ""),
             pending_action=result.get("pending_action"),
+            player=result.get("player"),
+            combat=result.get("combat"),
         )
     except sqlite3.Error as exc:
         _raise_chat_http_error(

@@ -1,117 +1,130 @@
 ﻿# backend/app/graph/state.py
+from __future__ import annotations
+
 from typing import Annotated, Literal, Optional, TypedDict
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
+from pydantic import BaseModel, Field
 
 
-# 角色六维能力值（通常用于检定基础值）
-AbilityBlock = TypedDict(
-    "AbilityBlock",
-    {
-        "str": int,
-        "dex": int,
-        "con": int,
-        "int": int,
-        "wis": int,
-        "cha": int,
-    },
-    total=False,
-)
+# ── Pydantic 数据模型 ──────────────────────────────────────────
+# GraphState 保持 TypedDict（LangGraph 框架要求），嵌套字段用 Pydantic 获得校验能力。
+# 所有模型设置 extra="allow" 以兼容旧代码向 dict 中塞入额外字段的写法。
 
-# 六维对应修正值（通常由能力值推导）
-ModifierBlock = TypedDict(
-    "ModifierBlock",
-    {
-        "str": int,
-        "dex": int,
-        "con": int,
-        "int": int,
-        "wis": int,
-        "cha": int,
-    },
-    total=False,
-)
+# 六维能力值/修正值 — 字段名 str/int 与 Python 内置冲突，用 dict 类型别名最干净
+AbilityBlock = dict[str, int]
+ModifierBlock = dict[str, int]
 
 
-# 玩家常驻状态
-class PlayerState(TypedDict, total=False):
+class PlayerState(BaseModel, extra="allow"):
+    """玩家常驻状态"""
+    name: str = ""
+    role_class: str = ""
+    level: int = 1
+    hp: int = 0
+    max_hp: int = 0
+    temp_hp: int = 0
+    ac: int = 10
+    abilities: AbilityBlock = Field(default_factory=dict)
+    modifiers: ModifierBlock = Field(default_factory=dict)
+    conditions: list[str] = Field(default_factory=list)
+    resources: dict[str, int] = Field(default_factory=dict)
+    weapons: list[WeaponData] = Field(default_factory=list)
+
+
+class CheckState(BaseModel, extra="allow"):
+    """待执行的一次检定请求"""
+    kind: Literal["attack", "skill", "save", "custom"] = "custom"
+    ability: Literal["str", "dex", "con", "int", "wis", "cha"] = "str"
+    dc: int = 10
+    target: Optional[str] = None
+    advantage: Literal["normal", "advantage", "disadvantage"] = "normal"
+
+
+class RollResultState(BaseModel, extra="allow"):
+    """最近一次掷骰结果"""
+    dice: str = "1d20"
+    raw: int = 0
+    modifier: int = 0
+    total: int = 0
+    success: bool = False
+
+
+class WeaponData(BaseModel):
+    """武器基础数据 — 对应 D&D 5e SRD 武器表"""
     name: str
-    role_class: str
-    level: int
-    hp: int
-    max_hp: int
-    temp_hp: int
-    ac: int
-    abilities: AbilityBlock
-    modifiers: ModifierBlock
-    conditions: list[str]          # e.g. ["poisoned", "prone"]
-    resources: dict[str, int]      # e.g. {"spell_slot_lv1": 2}
+    damage_dice: str = "1d4"
+    damage_type: str = "bludgeoning"
+    weapon_type: Literal["melee", "ranged"] = "melee"
+    properties: list[str] = Field(default_factory=list)  # finesse, light, thrown, ...
 
 
-# 待执行的一次检定请求
-class CheckState(TypedDict, total=False):
-    kind: Literal["attack", "skill", "save", "custom"]
-    ability: Literal["str", "dex", "con", "int", "wis", "cha"]
-    dc: int
-    target: Optional[str]
-    advantage: Literal["normal", "advantage", "disadvantage"]
-
-
-# 最近一次掷骰结果
-class RollResultState(TypedDict, total=False):
-    dice: str                      # e.g. "1d20"
-    raw: int
-    modifier: int
-    total: int
-    success: bool
-
-
-# 战斗单位快照（玩家/敌人/友方）
-class CombatantState(TypedDict, total=False):
-    id: str
+class AttackInfo(BaseModel):
+    """从怪物/角色动作列表中提取的单次攻击信息"""
     name: str
-    side: Literal["player", "enemy", "ally"]
-    hp: int
-    max_hp: int
-    ac: int
-    initiative: int
-    speed: int
-    conditions: list[str]
+    attack_bonus: int = 0
+    damage_dice: str = "1d4"          # d20 库可直接解析的表达式
+    damage_type: str = "bludgeoning"
+
+
+class CombatantState(BaseModel, extra="allow"):
+    """战斗单位快照（玩家/敌人/友方）"""
+    id: str = ""
+    name: str = ""
+    side: Literal["player", "enemy", "ally"] = "enemy"
+    hp: int = 0
+    max_hp: int = 0
+    ac: int = 10
+    initiative: int = 0
+    speed: int = 30
+    conditions: list[str] = Field(default_factory=list)
+
+    # 六维能力值与修正（用于怪物攻击/豁免计算）
+    abilities: AbilityBlock = Field(default_factory=dict)
+    modifiers: ModifierBlock = Field(default_factory=dict)
+    proficiency_bonus: int = 2
+
+    # 该单位可用的攻击列表（从 Open5e actions 解析）
+    attacks: list[AttackInfo] = Field(default_factory=list)
 
     # 动作资源
-    action_available: bool                   # 标准动作
-    bonus_action_available: bool             # 附赠动作
-    reaction_available: bool                 # 反应
-    movement_left: int                       # 剩余移动力（尺）
+    action_available: bool = True
+    bonus_action_available: bool = True
+    reaction_available: bool = True
+    movement_left: int = 30
 
 
-# 战斗对局整体状态（扁平化动作经济管理）
-class CombatState(TypedDict, total=False):
-    round: int                               # 当前回合数
-    participants: dict[str, CombatantState]  # 参战方字典，使用 id 作为键
-    initiative_order: list[str]              # 行动顺序 (按 id)
-    current_actor_id: str                    # 当前回合活跃的单位 id
+class CombatState(BaseModel, extra="allow"):
+    """战斗对局整体状态（扁平化动作经济管理）"""
+    round: int = 0
+    participants: dict[str, CombatantState] = Field(default_factory=dict)
+    initiative_order: list[str] = Field(default_factory=list)
+    current_actor_id: str = ""
 
 
-# 整个 LangGraph 在节点间传递的共享状态
+# ── LangGraph 共享状态 ─────────────────────────────────────────
+
+
 class GraphState(TypedDict, total=False):
+    """整个 LangGraph 在节点间传递的共享状态"""
+
     # --- 核心对话流程字段 ---
     messages: Annotated[list[AnyMessage], add_messages]
     output: str
 
-    conversation_summary: str          # 持久的大纲记忆
-    session_id: str                    # 会话唯一标识
+    conversation_summary: str
+    session_id: str
 
-    # --- 扩展领域字段（当前 chat 主链路未启用） ---
+    # --- 扩展领域字段 ---
     phase: Literal["exploration", "combat", "resolution"]
 
-    scene_summary: str             # 场景摘要，减少长上下文重复
+    scene_summary: str
     player: PlayerState
 
-    pending_check: Optional[CheckState]      # 等待掷骰解析的检定
-    last_roll: Optional[RollResultState]     # 最近一次检定/攻击结果
+    pending_check: Optional[CheckState]
+    last_roll: Optional[RollResultState]
 
-    combat: Optional[CombatState]  # 战斗上下级聚合
+    combat: Optional[CombatState]
 
-    event_log: list[dict]          # 记录关键事件，便于回放/调试
+    event_log: list[dict]

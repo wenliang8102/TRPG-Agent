@@ -5,7 +5,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 
 from app.graph import edges, nodes
-from app.graph.constants import ASSISTANT_NODE, ROUTER_NODE, TOOL_NODE, SUMMARIZE_NODE
+from app.graph.constants import ASSISTANT_NODE, ROUTER_NODE, TOOL_NODE, SUMMARIZE_NODE, MONSTER_COMBAT_NODE
 from app.graph.state import GraphState
 from app.services.tool_service import get_tools
 
@@ -17,6 +17,7 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None):
     graph.add_node(ASSISTANT_NODE, nodes.assistant_node)
     graph.add_node(TOOL_NODE, ToolNode(get_tools()))
     graph.add_node(SUMMARIZE_NODE, nodes.summarize_conversation_node)
+    graph.add_node(MONSTER_COMBAT_NODE, nodes.monster_combat_node)
 
     graph.add_edge(START, ROUTER_NODE)
 
@@ -45,9 +46,12 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None):
         edges.route_from_tool,
         {
             ASSISTANT_NODE: ASSISTANT_NODE,
-            "end": END,
+            MONSTER_COMBAT_NODE: MONSTER_COMBAT_NODE,
         },
     )
+
+    # 怪物自动战斗完成后回到 LLM 进行叙述
+    graph.add_edge(MONSTER_COMBAT_NODE, ASSISTANT_NODE)
 
     # 总结完一定直接结束本回合图流转。由于状态已被精简并落库，下一轮读取时将清爽上阵。
     graph.add_edge(SUMMARIZE_NODE, END)
