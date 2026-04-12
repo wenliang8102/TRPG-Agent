@@ -27,7 +27,8 @@ export function useChatSender(
   setError: (error: string) => void,
   setSending: (sending: boolean) => void,
   clearError: () => void,
-  pendingActionRef: Ref<any>
+  pendingActionRef: Ref<any>,
+  onDiceRollAnimation?: (rawRoll: number) => Promise<void>
 ) {
   // SSE 流式发送的通用逻辑
   const streamRequest = async (params: {
@@ -43,6 +44,11 @@ export function useChatSender(
         onAssistantMessage: (content) => addAssistantMessage(content),
         onCombatAction: (content, hpChanges) => addCombatMessage(content, hpChanges),
         onToolMessage: (content) => addToolMessage(content),
+        onDiceRoll: async (rawRoll) => {
+          if (onDiceRollAnimation) {
+            await onDiceRollAnimation(rawRoll)
+          }
+        },
         onStateUpdate: (player, combat) => {
           if (player !== undefined) setPlayerState(player)
           if (combat !== undefined) setCombatState(combat)

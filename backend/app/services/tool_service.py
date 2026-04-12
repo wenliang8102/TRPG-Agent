@@ -258,8 +258,8 @@ def resolve_single_attack(
     target: dict,
     attack_name: str | None = None,
     advantage: str = "normal",
-) -> tuple[list[str], int, dict | None]:
-    """执行一次单体攻击的纯计算逻辑，返回 (日志行列表, 实际伤害值, hp_change 信息)。
+) -> tuple[list[str], int, dict | None, dict]:
+    """执行一次单体攻击的纯计算逻辑，返回 (日志行列表, 实际伤害值, hp_change 信息, extra_info 字典)。
     会原地修改 target["hp"] 与 attacker["action_available"]。"""
     import re
 
@@ -307,6 +307,7 @@ def resolve_single_attack(
 
     damage_dealt = 0
     hp_change: dict | None = None
+    extra_info: dict = {"raw_roll": natural, "hit": hit, "crit": crit}
     if hit:
         if crit:
             crit_dice = re.sub(r"(\d+)d(\d+)", lambda m: f"{int(m.group(1))*2}d{m.group(2)}", dmg_dice)
@@ -336,7 +337,7 @@ def resolve_single_attack(
         lines.append("未命中！" if natural != 1 else "严重失误！攻击完全落空！")
 
     attacker["action_available"] = False
-    return lines, damage_dealt, hp_change
+    return lines, damage_dealt, hp_change, extra_info
 
 
 def advance_turn(combat_dict: dict) -> str:
@@ -506,7 +507,7 @@ def attack_action(
             ]})
 
     # 委托核心计算函数
-    lines, _, hp_change = resolve_single_attack(attacker, target, attack_name, advantage)
+    lines, _, hp_change, extra_info = resolve_single_attack(attacker, target, attack_name, advantage)
 
     update: dict = {
         "combat": combat_dict,
@@ -514,8 +515,28 @@ def attack_action(
             ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)
         ],
     }
+    
+    # 额外附加攻击判定的原始骰值数据以供前端 3D 骰子捕获
+    if "raw_roll" in extra_info:
+        # 我们把骰子总数据加到 messages 的 additional_kwargs 或者通过把 content 变 dict 来传给前端
+        # 但 LangChain 推荐 ToolMessage 就是 string。那我们在额外返回一条隐藏信息的 ToolMessage 专门装 DiceResult 吗？
+        # 更简洁做法：我们把这个 ToolMessage 的附加参数带上，然后在 chat_session_service 拦截？
+        pass
+        
+    # 为了方便对接前一回合的 JSON 检测，我们修改 `chat_session_service.py` 时可以通过读取 ToolMessage.artifact 拿信息（需要 langchain 0.2）
+    # 或者就附带一段隐藏 JSON。我们使用 artifact：
+    tool_msg = ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)
+    tool_msg.artifact = {"raw_roll": extra_info.get("raw_roll")}
+    
+    update["messages"] = [tool_msg]
+
     if hp_change:
         update["hp_changes"] = [hp_change]
+        # 【修复BUG】同步更新角色的实际状态对象，防止由于状态脱节导致虚空回血
+        if target.get("side") == "player" and state.get("player"):
+            player_dict = state.get("player").model_dump() if hasattr(state.get("player"), "model_dump") else dict(state.get("player"))
+            player_dict["hp"] = hp_change["new_hp"]
+            update["player"] = player_dict
 
     return Command(update=update)
 

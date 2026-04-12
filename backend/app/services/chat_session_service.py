@@ -155,6 +155,26 @@ class ChatSessionService:
 
                     elif isinstance(msg, ToolMessage):
                         payload: dict = {"content": msg.content}
+                        
+                        # 拦截掷骰子工具投出的自然值（普通的掷骰请求在 content 格式中解析，如果是带有 artifact 的也能取）
+                        if msg.name == "request_dice_roll":
+                            try:
+                                roll_data = json.loads(msg.content)
+                                if "raw_roll" in roll_data:
+                                    yield self._sse_event("dice_roll", {
+                                        "raw_roll": roll_data["raw_roll"],
+                                        "final_total": roll_data.get("final_total", roll_data["raw_roll"])
+                                    })
+                            except Exception:
+                                pass
+
+                        # 拦截携带 raw_roll artifact 的 ToolMessage (通常是攻击行动)
+                        if hasattr(msg, "artifact") and isinstance(msg.artifact, dict) and "raw_roll" in msg.artifact:
+                            yield self._sse_event("dice_roll", {
+                                "raw_roll": msg.artifact["raw_roll"],
+                                "final_total": msg.artifact["raw_roll"]
+                            })
+
                         # 怪物战斗或攻击动作产生的 ToolMessage 携带 hp_changes
                         if hp_changes:
                             yield self._sse_event("combat_action", {
@@ -166,6 +186,13 @@ class ChatSessionService:
                             yield self._sse_event("tool_message", payload)
 
                     elif isinstance(msg, HumanMessage) and isinstance(msg.content, str) and msg.content.startswith("[系统:"):
+                        # 拦截怪物系统消息中的掷骰
+                        if hasattr(msg, "artifact") and isinstance(msg.artifact, dict) and "raw_roll" in msg.artifact:
+                            yield self._sse_event("dice_roll", {
+                                "raw_roll": msg.artifact["raw_roll"],
+                                "final_total": msg.artifact["raw_roll"]
+                            })
+                            
                         # 怪物行动的系统消息
                         yield self._sse_event("combat_action", {
                             "content": msg.content,
