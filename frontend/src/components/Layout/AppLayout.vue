@@ -33,7 +33,7 @@
     <!-- 骰子动画页面 -->
     <DiceAnimationPage v-if="diceAnimationVisible" @close="diceAnimationVisible = false" />
 
-    <!-- 全局骰子按钮（右下角悬浮） -->
+    <!-- 全局骰子按钮（右下角悬浮，样式改为导航栏风格） -->
     <button class="dice-fab" @click="openDiceAnimation">
       🎲
     </button>
@@ -47,7 +47,7 @@ import WelcomePage from '../../Pages_/WelcomePage.vue'
 import ChatPage from '../../Pages_/Chatpages.vue'
 import SettingsPage from '../../Pages_/SettingsPage.vue'
 import DiceDialog from '../DiceDialog/DiceDialog.vue'
-import DiceAnimationPage from '../../Pages_/DiceAnimationPage.vue'  // 新增
+import DiceAnimationPage from '../../Pages_/DiceAnimationPage.vue'
 
 // 页面组件映射
 const componentMap: Record<string, any> = {
@@ -93,7 +93,6 @@ const closeDiceAnimation = () => {
 </script>
 
 <style scoped>
-/* 样式保持不变 */
 .app-layout {
   display: flex;
   width: 100%;
@@ -107,7 +106,8 @@ const closeDiceAnimation = () => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #0d0d0d;
+  background: rgba(13, 13, 13, 0.85);
+  backdrop-filter: blur(4px);
   position: relative;
 }
 
@@ -132,8 +132,8 @@ const closeDiceAnimation = () => {
   width: 32px;
   height: 32px;
   border-radius: 0 12px 12px 0;
-  background: rgba(30, 30, 35, 0.9);
-  backdrop-filter: blur(20px);
+  background: rgba(30, 30, 35, 0.85);
+  backdrop-filter: blur(12px);
   border: 0.5px solid rgba(255, 255, 255, 0.2);
   border-left: none;
   color: white;
@@ -155,6 +155,7 @@ const closeDiceAnimation = () => {
   width: 36px;
 }
 
+/* 骰子按钮玻璃质感增强 */
 .dice-fab {
   position: fixed;
   bottom: 24px;
@@ -162,9 +163,9 @@ const closeDiceAnimation = () => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: rgba(66, 184, 131, 0.95);
-  backdrop-filter: blur(20px);
-  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(30, 30, 35, 0.85);
+  backdrop-filter: blur(12px);
+  border: 0.5px solid rgba(255, 255, 255, 0.25);
   font-size: 28px;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -173,11 +174,13 @@ const closeDiceAnimation = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #e6e6c3;
 }
 
 .dice-fab:hover {
+  background: #8b5a2b;
   transform: scale(1.08);
-  background: #359f6b;
+  border-color: #b87c4f;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 </style>

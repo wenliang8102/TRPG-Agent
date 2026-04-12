@@ -1,14 +1,14 @@
 <template>
   <div class="combat-panel">
-    <h3>ս��״̬</h3>
+    <h3>角色栏</h3>
 
     <div v-if="!combat || !combat.participants" class="empty-state">
-      ��ǰû�н����е�ս��
+      目前没有参与的角色
     </div>
 
     <div v-else>
       <div class="round-info">
-        ��ǰ�� {{ combat.round }} �غ� | �ж���: {{ combat.current_actor_id }}
+        当前回合 {{ combat.round }} | 角色: {{ combat.current_actor_id }}
       </div>
 
       <div class="participants-list">

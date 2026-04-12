@@ -3,12 +3,10 @@
   <div class="chat-page" ref="containerRef">
     <!-- 左侧聊天区 -->
     <div class="chat-main" :class="{ hidden: rightWidth === 100 }">
-      <!-- 聊天组件 -->
       <div class="chat-container">
         <header class="chat-header">
           <h1>TRPG 助手</h1>
           <div class="header-actions">
-            <!-- 调试模式开关 -->
             <button
               class="debug-toggle"
               :class="{ active: debugMode }"
@@ -38,7 +36,6 @@
           @end-combat="respondToPlayerDeath('end')"
         />
 
-        <!-- 下一回合按钮：战斗中玩家回合且无挂起动作时显示 -->
         <div v-if="showNextTurnBtn" class="next-turn-bar">
           <button
             class="next-turn-btn"
@@ -65,9 +62,13 @@
       @mousedown="startDrag"
     ></div>
 
-    <!-- 右侧功能区 -->
+    <!-- 右侧功能区：动态切换组件 -->
     <div class="function-area" :style="{ width: rightWidth + '%' }">
-      <CombatPanel :combat="combatState" />
+      <component 
+        :is="rightPanelComponent" 
+        :combat="combatState"
+        :player="playerState"
+      />
     </div>
 
     <!-- 圆形控制按钮 -->
@@ -90,6 +91,7 @@ import ChatMessage from '../components/Chat/ChatMessage.vue'
 import ChatInput from '../components/Chat/ChatInput.vue'
 import ActionPanel from '../components/Chat/ActionPanel.vue'
 import CombatPanel from '../components/Chat/CombatPanel.vue'
+import CharacterPanel from '../components/Chat/CharacterPanel.vue'  // 新增
 import { useChatSession } from '../composables/useChatSession'
 import { useChatMessages } from '../composables/useChatMessages'
 import { useChatSender } from '../composables/useChatSender'
@@ -112,6 +114,7 @@ const {
   errorText,
   isSending,
   combatState,
+  playerState,        // 新增：获取玩家状态
   debugMode,
   addUserMessage,
   addAssistantMessage,
@@ -127,6 +130,11 @@ const {
   setMessages,
   toggleDebugMode,
 } = useChatMessages()
+
+// 动态右侧组件：有战斗时显示 CombatPanel，否则显示 CharacterPanel
+const rightPanelComponent = computed(() => {
+  return combatState.value ? CombatPanel : CharacterPanel
+})
 
 // 通过 provide 向子组件注入 debugMode
 provide('debugMode', debugMode)
@@ -248,6 +256,7 @@ const handleMouseMove = (e: MouseEvent) => {
 </script>
 
 <style scoped>
+/* 原有样式保持不变 */
 .header-actions {
   display: flex;
   align-items: center;

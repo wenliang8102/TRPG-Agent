@@ -19,14 +19,24 @@ let diceBody: CANNON.Body | null = null
 let world: CANNON.World | null = null
 let animationId: number | null = null
 let isRolling = false
+let isDecelerating = false          // 是否正在缓停引导中
+let decelerationStartTime = 0
+let decelerationDuration = 2000     // 2秒
+let startQuat: THREE.Quaternion = new THREE.Quaternion()
+let targetQuat: THREE.Quaternion = new THREE.Quaternion()
 let resolveRoll: ((value: number) => void) | null = null
+// ============================================================
+// 后端数据接收：expectedResult 存储父组件传入的预期骰子点数
+// 该值通过 throwDice(expectedNumber) 参数接收，来源通常是后端返回的掷骰结果
+// ============================================================
+let expectedResult: number | null = null
 
 // 存储纹理
 let faceTextures: THREE.CanvasTexture[] = []
 let currentGlowNumber: number = -1
 let glowTimer: ReturnType<typeof setTimeout> | null = null
 
-// 存储每个面的中心点世界坐标（用于法线检测）
+// 存储每个面的中心点（局部坐标）
 let faceCenters: THREE.Vector3[] = []
 
 // ==================== 视觉重心偏移计算 ====================
@@ -202,11 +212,9 @@ const computeFaceCenters = (geometry: THREE.BufferGeometry) => {
 
 // ==================== 创建骰子 ====================
 const createDice = () => {
-  // IcosahedronGeometry 默认就是非索引的，不需要 toNonIndexed
   const geometry = new THREE.IcosahedronGeometry(1.2, 0)
   createCustomUVs(geometry)
   
-  // 计算每个面的中心点（局部坐标）
   faceCenters = computeFaceCenters(geometry)
   
   faceTextures = createAllTextures()
@@ -240,32 +248,21 @@ const createDice = () => {
   return mesh
 }
 
-// ==================== 检测正面数字（法线点积法 - 100%准确） ====================
+// ==================== 检测正面数字 ====================
 const getFrontNumber = (): number => {
   if (!diceMesh || !camera || faceCenters.length === 0) {
     return Math.floor(Math.random() * 20) + 1
   }
   
-  // 获取相机位置（世界坐标）
   const cameraPos = camera.getWorldPosition(new THREE.Vector3())
-  // 获取骰子世界矩阵
-  const matrixWorld = diceMesh.matrixWorld
   
   let maxDot = -Infinity
   let frontFaceIndex = -1
   
-  // 遍历所有20个面
   for (let i = 0; i < faceCenters.length; i++) {
-    // 将面的中心点转换到世界坐标
     const worldCenter = faceCenters[i].clone().applyQuaternion(diceMesh.quaternion).add(diceMesh.position)
-    
-    // 计算从面中心指向相机的方向
     const toCamera = new THREE.Vector3().subVectors(cameraPos, worldCenter).normalize()
-    
-    // 计算面的法线（从骰子中心指向面中心）
     const faceNormal = worldCenter.clone().sub(diceMesh.position).normalize()
-    
-    // 点积：越接近1表示面正对相机
     const dot = faceNormal.dot(toCamera)
     
     if (dot > maxDot) {
@@ -274,15 +271,42 @@ const getFrontNumber = (): number => {
     }
   }
   
-  // 额外验证：点积太小说明没有面正对相机，返回随机数
   if (maxDot < 0.3) {
     console.warn('没有面正对相机，返回随机数字')
     return Math.floor(Math.random() * 20) + 1
   }
   
-
-// 返回最终确定的正面数字（1-20）
   return frontFaceIndex + 1
+}
+
+// ==================== 计算目标四元数（使指定面朝向相机） ====================
+const getTargetQuaternion = (targetNumber: number): THREE.Quaternion => {
+  if (!diceMesh || !camera) return new THREE.Quaternion()
+  
+  const targetIdx = targetNumber - 1
+  const localNormal = faceCenters[targetIdx].clone().normalize()
+  const cameraPos = camera.getWorldPosition(new THREE.Vector3())
+  const targetDir = cameraPos.clone().sub(diceMesh.position).normalize()
+  const worldNormal = localNormal.clone().applyQuaternion(diceMesh.quaternion)
+  const quatRot = new THREE.Quaternion().setFromUnitVectors(worldNormal, targetDir)
+  return quatRot.clone().multiply(diceMesh.quaternion)
+}
+
+// ==================== 缓停引导（2秒内逐渐减速并转向目标面） ====================
+// 该函数用于当实际停止面与期望数字不一致时，优雅地修正结果
+const startDeceleratingToFace = (targetNumber: number) => {
+  if (!diceMesh || !diceBody) return
+  
+  // 记录起始旋转
+  startQuat.copy(diceMesh.quaternion)
+  // 计算目标旋转
+  targetQuat = getTargetQuaternion(targetNumber)
+  decelerationStartTime = performance.now()
+  isDecelerating = true
+  isRolling = false  // 物理滚动结束标志
+  
+  // 让物理体逐渐减速
+  // 注意：在动画循环中我们会每帧衰减速度，并强制设置旋转
 }
 
 // ==================== 物理世界 ====================
@@ -334,12 +358,25 @@ const initPhysics = () => {
   world.defaultContactMaterial.materials = [diceMaterial, groundMaterial]
 }
 
-// ==================== 掷骰子 ====================
-const throwDice = (): Promise<number> => {
+// ==================== 掷骰子（接受后端点数） ====================
+// 后端调用此方法，传入期望的数字（例如后端掷骰计算出的结果）
+// 前端会根据该数字播放动画，并最终通过 Promise 返回实际显示的数字
+const throwDice = (expectedNumber?: number): Promise<number> => {
   return new Promise((resolve) => {
-    if (isRolling || !diceBody) {
+    if (isRolling || isDecelerating || !diceBody) {
       resolve(0)
       return
+    }
+    
+    // ============================================================
+    // 接收后端数据：expectedNumber 来自父组件（通常由后端掷骰结果驱动）
+    // 如果后端未提供预期点数（例如独立投掷），则随机生成 1-20
+    // ============================================================
+    if (expectedNumber === undefined) {
+      expectedResult = Math.floor(Math.random() * 20) + 1
+    } else {
+      // 后端传入的预期点数存储到 expectedResult，用于后续缓停引导
+      expectedResult = expectedNumber
     }
     
     isRolling = true
@@ -361,32 +398,42 @@ const throwDice = (): Promise<number> => {
     
     diceBody.position.set(0, 3.5, 0)
     diceBody.velocity.set(0, 0, 0)
+    diceBody.wakeUp()
   })
 }
 
-// ==================== 停止检测 ====================
+// ==================== 停止检测与缓停引导 ====================
 const checkStopped = () => {
   if (!isRolling || !diceBody) return
   
   const speed = diceBody.velocity.length()
   const angularSpeed = diceBody.angularVelocity.length()
+  const yPos = diceBody.position.y
   
-  if (speed < 0.2 && angularSpeed < 0.15 && diceBody.position.y < 0.3) {
-    isRolling = false
-    
-    if (diceMesh && diceBody) {
-      diceMesh.position.copy(diceBody.position as any)
-      diceMesh.quaternion.copy(diceBody.quaternion as any)
-    }
-    
-    // 直接同步检测，不需要setTimeout
-    const frontNumber = getFrontNumber()
-    console.log(`检测到正面数字: ${frontNumber}`)
-    glowByNumber(frontNumber)
-    
-    if (resolveRoll) {
-      resolveRoll(frontNumber)
-      resolveRoll = null
+  // 当速度足够低且高度接近地面时，启动缓停引导
+  if (speed < 1.0 && angularSpeed < 1.0 && yPos < 0.8) {
+    const actualNumber = getFrontNumber()
+    const targetNumber = expectedResult
+    // ============================================================
+    // 后端数据对比：如果实际停止面与后端期望结果不符，
+    // 则启动 2 秒缓停动画，强制将骰子旋转到期望数字面朝相机。
+    // 这保证了前端展示结果与后端计算结果一致。
+    // ============================================================
+    if (targetNumber !== null && actualNumber !== targetNumber) {
+      console.log(`实际正面: ${actualNumber}, 期望: ${targetNumber}, 开始2秒缓停引导`)
+      startDeceleratingToFace(targetNumber)
+    } else {
+      // 如果已经正确，直接结束并返回结果
+      isRolling = false
+      const finalNumber = actualNumber
+      console.log(`最终正面数字: ${finalNumber}`)
+      glowByNumber(finalNumber)
+      if (resolveRoll) {
+        // 将最终数字返回给调用方（父组件）
+        resolveRoll(finalNumber)
+        resolveRoll = null
+      }
+      expectedResult = null
     }
   }
 }
@@ -412,7 +459,6 @@ const initScene = () => {
   renderer.shadowMap.enabled = true
   containerRef.value.appendChild(renderer.domElement)
   
-  // 灯光
   const ambientLight = new THREE.AmbientLight(0x404040, 0.6)
   scene.add(ambientLight)
   
@@ -433,23 +479,63 @@ const initScene = () => {
   rimLight.position.set(0, 1, -4.5)
   scene.add(rimLight)
   
-  // 网格已移除
-  
   diceMesh = createDice()
   scene.add(diceMesh)
 }
 
 // ==================== 动画循环 ====================
 const animate = () => {
+  const now = performance.now()
+  
   if (world) {
-    world.step(1 / 60)
-    
-    if (diceMesh && diceBody) {
-      diceMesh.position.copy(diceBody.position as any)
-      diceMesh.quaternion.copy(diceBody.quaternion as any)
+    // 如果处于缓停引导模式，每帧手动控制旋转和衰减速度
+    if (isDecelerating && diceMesh && diceBody) {
+      const elapsed = now - decelerationStartTime
+      let t = Math.min(1, elapsed / decelerationDuration)
+      // 使用 easeOutCubic 缓动，让减速更自然
+      t = 1 - Math.pow(1 - t, 3)
+      
+      // 四元数插值
+      const newQuat = startQuat.clone().slerp(targetQuat, t)
+      diceMesh.quaternion.copy(newQuat)
+      
+      // 同步到物理体
+      const cannonQuat = new CANNON.Quaternion(newQuat.x, newQuat.y, newQuat.z, newQuat.w)
+      diceBody.quaternion.copy(cannonQuat)
+      
+      // 逐渐衰减线速度和角速度，模拟减速
+      diceBody.velocity.scale(0.95, diceBody.velocity)
+      diceBody.angularVelocity.scale(0.95, diceBody.angularVelocity)
+      
+      // 如果插值完成，结束缓停
+      if (t >= 1.0) {
+        isDecelerating = false
+        // 完全停止物理运动
+        diceBody.angularVelocity.set(0, 0, 0)
+        diceBody.velocity.set(0, 0, 0)
+        diceBody.sleep()
+        
+        const finalNumber = getFrontNumber()
+        console.log(`缓停结束，最终正面数字: ${finalNumber}`)
+        glowByNumber(finalNumber)
+        if (resolveRoll) {
+          // 返回最终数字给后端调用方
+          resolveRoll(finalNumber)
+          resolveRoll = null
+        }
+        expectedResult = null
+      }
+    } else {
+      // 正常物理步进
+      world.step(1 / 60)
+      
+      if (diceMesh && diceBody) {
+        diceMesh.position.copy(diceBody.position as any)
+        diceMesh.quaternion.copy(diceBody.quaternion as any)
+      }
+      
+      checkStopped()
     }
-    
-    checkStopped()
   }
   
   if (renderer && scene && camera) {
@@ -535,9 +621,13 @@ const cleanup = () => {
   camera = null
   diceBody = null
   resolveRoll = null
+  expectedResult = null
+  isDecelerating = false
 }
 
 // ==================== 暴露接口 ====================
+// 父组件可通过 ref 调用 throwDice(expectedNumber) 方法，
+// 其中 expectedNumber 通常由后端掷骰计算得出
 defineExpose({
   throwDice
 })
