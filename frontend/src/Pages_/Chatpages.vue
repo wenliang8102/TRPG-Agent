@@ -91,13 +91,13 @@ import ChatMessage from '../components/Chat/ChatMessage.vue'
 import ChatInput from '../components/Chat/ChatInput.vue'
 import ActionPanel from '../components/Chat/ActionPanel.vue'
 import CombatPanel from '../components/Chat/CombatPanel.vue'
-import CharacterPanel from '../components/Chat/CharacterPanel.vue'  // 新增
+import CharacterPanel from '../components/Chat/CharacterPanel.vue'
 import { useChatSession } from '../composables/useChatSession'
 import { useChatMessages } from '../composables/useChatMessages'
 import { useChatSender } from '../composables/useChatSender'
 import { chatService } from '../Services_/chatService'
 
-import '../styles_/chat-page.css'
+import '../styles_/Chatpages.css'
 
 // 右侧面板状态
 const containerRef = ref<HTMLElement | null>(null)
@@ -114,7 +114,7 @@ const {
   errorText,
   isSending,
   combatState,
-  playerState,        // 新增：获取玩家状态
+  playerState,
   debugMode,
   addUserMessage,
   addAssistantMessage,
@@ -254,54 +254,3 @@ const handleMouseMove = (e: MouseEvent) => {
   showToggleBtn.value = distance < 50
 }
 </script>
-
-<style scoped>
-/* 原有样式保持不变 */
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.debug-toggle {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 14px;
-  cursor: pointer;
-  opacity: 0.5;
-  transition: all 0.2s;
-}
-.debug-toggle.active {
-  opacity: 1;
-  border-color: #a78bfa;
-  background: rgba(139, 92, 246, 0.15);
-}
-.debug-toggle:hover {
-  opacity: 0.8;
-}
-
-.next-turn-bar {
-  padding: 8px 16px;
-  text-align: center;
-}
-.next-turn-btn {
-  padding: 8px 28px;
-  background: #42b883;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.next-turn-btn:hover:not(:disabled) {
-  background: #38a373;
-}
-.next-turn-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>

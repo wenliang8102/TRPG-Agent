@@ -1,0 +1,305 @@
+/* frontend/src/styles_/chat-page.css */
+
+.chat-page {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* 左侧聊天区 */
+.chat-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0d0d0d;
+}
+
+.chat-main.hidden {
+  display: none;
+}
+
+/* 聊天容器 */
+.chat-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0d0d0d;
+}
+
+.chat-header {
+  padding: 16px 24px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* 消息列表 */
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px;
+}
+
+
+/*字体设置*/
+.message-text {
+  font-family: 'Cinzel', 'Georgia', serif;
+  color: #eeddbb;
+}
+.message-text h1, .message-text h2, .message-text h3 {
+  font-family: 'Cinzel', 'UnifrakturMaguntia', serif;
+  color: #e6c8a0;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+}
+.message-text strong {
+  color: #ffd966;
+}
+
+
+
+/* 自定义滚动条 */
+.message-list::-webkit-scrollbar {
+  width: 6px;
+}
+.message-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.message-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+/* 输入区域容器（若有） */
+.input-area-wrapper {
+  flex-shrink: 0;
+  padding: 16px 24px 24px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.05);
+}
+
+.error-text {
+  color: #ff6b6b;
+  margin: 8px 24px;
+  font-size: 13px;
+}
+
+/* 头部按钮区域 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.debug-toggle {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.2s;
+}
+.debug-toggle.active {
+  opacity: 1;
+  border-color: #a78bfa;
+  background: rgba(139, 92, 246, 0.15);
+}
+.debug-toggle:hover {
+  opacity: 0.8;
+}
+
+/* 下一回合按钮栏 */
+.next-turn-bar {
+  padding: 8px 16px;
+  text-align: center;
+}
+.next-turn-btn {
+  padding: 8px 28px;
+  background: #42b883;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.next-turn-btn:hover:not(:disabled) {
+  background: #38a373;
+}
+.next-turn-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==================== 拖拽条 - 纯金丝细线 + 灵动流动光晕 ==================== */
+.resize-handle {
+  position: relative;
+  width: 3px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 10;
+  outline: none;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* 金丝主线条：极细，纯金色渐变，无黑色 */
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1px;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, 
+    #f5d742 0%,
+    #fff0a8 25%,
+    #ffec80 50%,
+    #fff0a8 75%,
+    #f5d742 100%
+  );
+  box-shadow: 0 0 2px 0 #ffd966, 0 0 4px 1px rgba(255, 215, 0, 0.4);
+  border-radius: 0;
+  transition: all 0.2s ease;
+}
+
+/* 流动光晕：上下循环移动的半透高光条，模拟光线流动 */
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 3px;
+  height: 20%;
+  background: linear-gradient(180deg, 
+    transparent 0%,
+    rgba(255, 240, 150, 0.7) 50%,
+    transparent 100%
+  );
+  filter: blur(2px);
+  animation: flowGlow 3s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+@keyframes flowGlow {
+  0% {
+    top: -20%;
+    opacity: 0.3;
+  }
+  50% {
+    top: 80%;
+    opacity: 0.9;
+  }
+  100% {
+    top: -20%;
+    opacity: 0.3;
+  }
+}
+
+/* 悬浮时增强金丝亮度，光晕稍强但依然纤细 */
+.resize-handle:hover::before {
+  width: 1.5px;
+  left: 0.5px;
+  background: linear-gradient(180deg, 
+    #ffe066 0%,
+    #fff5cc 30%,
+    #ffffe0 70%,
+    #ffe066 100%
+  );
+  box-shadow: 0 0 4px 1px #ffcc55, 0 0 6px 2px rgba(255, 200, 0, 0.5);
+}
+
+.resize-handle:hover::after {
+  opacity: 0.9;
+  filter: blur(3px);
+  animation-duration: 2s;
+}
+
+/* 拖拽中：金丝更明显，光晕凝聚但不扩大外溢 */
+.resize-handle:active::before {
+  width: 2px;
+  left: 0;
+  background: linear-gradient(180deg, 
+    #ffe066 0%,
+    #ffffcc 40%,
+    #ffffff 60%,
+    #ffffcc 80%,
+    #ffe066 100%
+  );
+  box-shadow: 0 0 5px 1px #ffcc55, 0 0 8px 2px #ffaa33;
+  transition: 0.05s;
+}
+
+.resize-handle:active::after {
+  opacity: 1;
+  filter: blur(2px);
+  animation-duration: 1s;
+}
+
+/* 右侧功能区 */
+.function-area {
+  flex-shrink: 0;
+  background: rgba(30, 30, 35, 0.5);
+  border-left: 0.5px solid rgba(255, 255, 255, 0.1);
+  transition: width 0.2s ease;
+  overflow: hidden;
+}
+
+/* 圆形控制按钮 */
+.toggle-btn {
+  position: fixed;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(30, 30, 35, 0.8);
+  backdrop-filter: blur(10px);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  background: #42b883;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.toggle-btn.rotated {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.toggle-btn.rotated:hover {
+  transform: translateY(-50%) rotate(180deg) scale(1.1);
+}
+
+/* 淡入淡出 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
