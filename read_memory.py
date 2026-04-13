@@ -1,16 +1,17 @@
+import asyncio
 import sys
 from pathlib import Path
 
 # 把 backend 目录加到 Python 路径好引入官方 checkpointer
 sys.path.append(str(Path(__file__).parent / "backend"))
 
-from app.memory.checkpointer import get_checkpointer
+from app.memory.checkpointer import close_checkpointer, get_checkpointer
 
-def read_summary(db_path: str):
-    """使用 LangGraph 官方 Checkpointer 从最近的存档中提取摘要"""
+async def read_summary(db_path: str):
+    """使用 LangGraph 官方异步 Checkpointer 从最近的存档中提取摘要。"""
     try:
-        # 直接使用官方预置的反序列化能力
-        saver = get_checkpointer(db_path)
+        # 这里必须走异步工厂，否则拿到的只是 coroutine 而不是可用的 saver。
+        saver = await get_checkpointer(db_path)
         
         # 搜索所有 thread_id
         import sqlite3
@@ -30,8 +31,8 @@ def read_summary(db_path: str):
             thread_id = row[0]
             config = {"configurable": {"thread_id": thread_id}}
             
-            # 使用官方 get_tuple 获取该进程当前存盘记录
-            checkpoint_tuple = saver.get_tuple(config)
+            # AsyncSqliteSaver 在主线程事件循环中必须使用异步读取接口。
+            checkpoint_tuple = await saver.aget_tuple(config)
             
             if not checkpoint_tuple:
                 continue
@@ -49,16 +50,15 @@ def read_summary(db_path: str):
             print(f"  💬 [当前流转的真实消息窗口] (共保留 {len(messages)} 条):")
             for m in messages:
                 role = m.__class__.__name__.replace("Message", "")
-                content = str(m.content).replace('\n', ' ')
-                # 如果内容过长，做简单截断展示
-                if len(content) > 100:
-                    content = content[:97] + "..."
+                content = str(m.content)
                 print(f"    [{role}]: {content}")
             print("-" * 60)
             
     except Exception as e:
         print(f"读取数据库或解析存档失败: {e}")
+    finally:
+        await close_checkpointer()
 
 if __name__ == "__main__":
     # 由于 FastAPI 一般在 backend 目录运行，db 的默认相对路径在于 backend/data/... 
-    read_summary("backend/data/context_memory.sqlite3")
+    asyncio.run(read_summary("backend/data/context_memory.sqlite3"))

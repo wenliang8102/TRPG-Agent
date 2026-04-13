@@ -13,7 +13,7 @@ class _FlakySessionService:
         self.fail_every = fail_every
         self.counter = 0
 
-    def process_turn(
+    async def process_turn(
         self,
         message: str | None = None,
         session_id: str | None = None,

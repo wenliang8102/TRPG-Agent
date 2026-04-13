@@ -10,7 +10,7 @@ class _FakeSessionService:
     def __init__(self):
         self.calls = []
 
-    def process_turn(
+    async def process_turn(
         self,
         message: str | None = None,
         session_id: str | None = None,
@@ -33,7 +33,7 @@ class _FakeSessionService:
 
 
 class _RuntimeFailSessionService:
-    def process_turn(
+    async def process_turn(
         self,
         message: str | None = None,
         session_id: str | None = None,

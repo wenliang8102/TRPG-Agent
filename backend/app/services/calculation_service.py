@@ -3,7 +3,7 @@ from typing import Literal, Optional, Dict, Any
 from app.graph.state import (
     PlayerState, CheckState, RollResultState, CombatantState, AbilityBlock
 )
-from app.calculation.dice import roll_dice, roll_d20, roll_with_notation, parse_dice_notation
+from app.calculation.dice import roll_dice, roll_d20, roll_with_notation
 from app.calculation.abilities import (
     ability_to_modifier, calculate_modifiers, get_ability_modifier,
     calculate_passive_perception, validate_ability_scores, increase_ability_score
@@ -282,15 +282,12 @@ class CalculationService:
     # ======================
 
     def parse_dice_notation(self, notation: str) -> Dict[str, int]:
-        """
-        解析骰子表达式
-        """
-        from app.calculation.dice import parse_dice_notation as dice_parse
-        num_dice, sides, modifier = dice_parse(notation)
+        """解析骰子表达式（通过 d20 库执行后提取结构）"""
+        import d20
+        result = d20.roll(notation)
         return {
-            "num_dice": num_dice,
-            "sides": sides,
-            "modifier": modifier
+            "expression": notation,
+            "total": result.total,
         }
 
     def quick_roll(self, dice_type: int = 20, modifier: int = 0) -> Dict[str, Any]:
@@ -304,7 +301,7 @@ class CalculationService:
         result = roll_with_notation(dice_notation)
         return {
             "dice": dice_notation,
-            "result": result["total"],
-            "raw": result["raw"],
-            "modifier": result["modifier"]
+            "result": result.total,
+            "raw": result.raw,
+            "modifier": result.modifier
         }

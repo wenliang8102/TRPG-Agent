@@ -31,6 +31,10 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {},
+        "weapons": [
+            {"name": "Longsword", "damage_dice": "1d8", "damage_type": "slashing", "weapon_type": "melee", "properties": ["versatile"]},
+            {"name": "Handaxe", "damage_dice": "1d6", "damage_type": "slashing", "weapon_type": "melee", "properties": ["light", "thrown"]},
+        ],
     },
     "法师": {
         "name": "预设-法师",
@@ -58,6 +62,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
+        "weapons": [
+            {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
+        ],
     },
     "游荡者": {
         "name": "预设-游荡者",
@@ -85,6 +92,10 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {},
+        "weapons": [
+            {"name": "Shortsword", "damage_dice": "1d6", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light"]},
+            {"name": "Shortbow", "damage_dice": "1d6", "damage_type": "piercing", "weapon_type": "ranged", "properties": []},
+        ],
     },
     "牧师": {
         "name": "预设-牧师",
@@ -112,6 +123,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
+        "weapons": [
+            {"name": "Mace", "damage_dice": "1d6", "damage_type": "bludgeoning", "weapon_type": "melee", "properties": []},
+        ],
     },
     "术士": {
         "name": "预设-术士",
@@ -139,6 +153,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
+        "weapons": [
+            {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
+        ],
     },
     "游侠": {
         "name": "预设-游侠",
@@ -166,6 +183,10 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 1},
+        "weapons": [
+            {"name": "Shortsword", "damage_dice": "1d6", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light"]},
+            {"name": "Longbow", "damage_dice": "1d8", "damage_type": "piercing", "weapon_type": "ranged", "properties": []},
+        ],
     },
     "武僧": {
         "name": "预设-武僧",
@@ -193,6 +214,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"ki_points": 2},
+        "weapons": [
+            {"name": "Shortsword", "damage_dice": "1d6", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light"]},
+        ],
     },
     "圣武士": {
         "name": "预设-圣武士",
@@ -220,6 +244,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 0},
+        "weapons": [
+            {"name": "Longsword", "damage_dice": "1d8", "damage_type": "slashing", "weapon_type": "melee", "properties": ["versatile"]},
+        ],
     },
     "邪术师": {
         "name": "预设-邪术师",
@@ -247,6 +274,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"pact_magic_lv1": 1},
+        "weapons": [
+            {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
+        ],
     },
     "德鲁伊": {
         "name": "预设-德鲁伊",
@@ -274,6 +304,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
+        "weapons": [
+            {"name": "Scimitar", "damage_dice": "1d6", "damage_type": "slashing", "weapon_type": "melee", "properties": ["finesse", "light"]},
+        ],
     },
     "吟游诗人": {
         "name": "预设-吟游诗人",
@@ -301,6 +334,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
+        "weapons": [
+            {"name": "Rapier", "damage_dice": "1d8", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse"]},
+        ],
     },
     "野蛮人": {
         "name": "预设-野蛮人",
@@ -328,5 +364,9 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"rage_uses": 2},
+        "weapons": [
+            {"name": "Greataxe", "damage_dice": "1d12", "damage_type": "slashing", "weapon_type": "melee", "properties": ["heavy", "two-handed"]},
+            {"name": "Javelin", "damage_dice": "1d6", "damage_type": "piercing", "weapon_type": "melee", "properties": ["thrown"]},
+        ],
     },
 }

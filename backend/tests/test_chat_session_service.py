@@ -1,6 +1,6 @@
 import unittest
-from uuid import UUID
 from types import SimpleNamespace
+from uuid import UUID
 
 from langchain_core.messages import AIMessage
 
@@ -15,19 +15,19 @@ class FakeGraph:
         self.values = {"messages": []}
         self.tasks = []
 
-    def invoke(self, graph_input, config):
+    async def ainvoke(self, graph_input, config):
         self.last_input = graph_input
         self.last_config = config
         self.values = self.result
         return self.result
 
-    def get_state(self, config):
+    async def aget_state(self, config):
         self.last_config = config
         return SimpleNamespace(values=self.values, tasks=self.tasks)
 
 
-class ChatSessionServiceTests(unittest.TestCase):
-    def test_process_turn_returns_last_non_tool_ai_message(self):
+class ChatSessionServiceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_process_turn_returns_last_non_tool_ai_message(self):
         graph = FakeGraph(
             {
                 "messages": [
@@ -38,7 +38,7 @@ class ChatSessionServiceTests(unittest.TestCase):
         )
         service = ChatSessionService(graph=graph)
 
-        result = service.process_turn(message="北京天气怎么样", session_id="s1")
+        result = await service.process_turn(message="北京天气怎么样", session_id="s1")
 
         self.assertEqual("北京今天晴，22C。", result["reply"])
         self.assertEqual("s1", result["session_id"])
@@ -46,11 +46,11 @@ class ChatSessionServiceTests(unittest.TestCase):
         self.assertEqual("s1", graph.last_config["configurable"]["thread_id"])
         self.assertEqual("北京天气怎么样", graph.last_input["messages"][0].content)
 
-    def test_process_turn_generates_session_id_when_missing(self):
+    async def test_process_turn_generates_session_id_when_missing(self):
         graph = FakeGraph({"messages": [AIMessage(content="ok", tool_calls=[])]})
         service = ChatSessionService(graph=graph)
 
-        result = service.process_turn(message="hello")
+        result = await service.process_turn(message="hello")
 
         UUID(result["session_id"])
         self.assertEqual(result["session_id"], graph.last_config["configurable"]["thread_id"])

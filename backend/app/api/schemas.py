@@ -16,4 +16,6 @@ class ChatResponse(BaseModel):
     plan: Optional[str] = None
     session_id: str
     pending_action: Optional[dict] = Field(default=None, description="Action required from the user before continuing")
+    player: Optional[dict] = Field(default=None, description="Player state")
+    combat: Optional[dict] = Field(default=None, description="Combat state")
 

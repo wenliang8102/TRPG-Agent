@@ -8,6 +8,7 @@
     "dev:backend": "cd backend && .venv\\Scripts\\python.exe -m uvicorn app.main:app"
   },
   "devDependencies": {
+    "@types/three": "^0.183.1",
     "concurrently": "^8.2.2"
   }
 }

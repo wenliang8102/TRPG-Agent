@@ -1,0 +1,159 @@
+/* frontend/src/styles_/sidebar.css */
+
+/* 引入 Google Fonts 中世纪风格字体 */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=UnifrakturMaguntia&display=swap');
+
+/* 侧边栏基础结构 */
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background: rgba(20, 20, 25, 0.7) !important;
+  backdrop-filter: blur(16px) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 折叠状态 */
+.sidebar.collapsed {
+  width: 72px;
+  background: rgba(20, 20, 25, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+/* 标题容器（仅展开时显示） */
+.sidebar-header {
+  padding: 28px 16px 16px 24px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 黑魂中世纪风格字体标题 */
+.brand-title {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  font-family: 'Cinzel', 'UnifrakturMaguntia', 'MedievalSharp', 'Germania One', serif;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+  background: linear-gradient(135deg, #e6d5a8 0%, #b88a44 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+  transform: skew(-2deg) rotate(-1deg);
+  transition: all 0.2s ease;
+  user-select: none;
+  cursor: default;
+}
+
+/* 导航区域 */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+/* 导航按钮基础样式 */
+.nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 10px 12px;
+  background: transparent !important;
+  border: none;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  font-size: 15px;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(4px);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.nav-btn.active {
+  background: rgba(66, 184, 131, 0.12) !important;
+  color: #42b883;
+  box-shadow: 0 2px 8px rgba(66, 184, 131, 0.08);
+  border-left: 2px solid #42b883;
+}
+
+/* 折叠时按钮居中 */
+.sidebar.collapsed .nav-btn {
+  justify-content: center;
+  padding: 10px;
+}
+
+/* 图标 */
+.nav-icon {
+  flex-shrink: 0;
+  min-width: 20px;
+}
+
+/* 标签文字 */
+.nav-label {
+  font-size: 14px;
+  font-weight: 470;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+/* 最后一个按钮（用户按钮）底部固定 + 特殊样式 */
+.nav-btn:last-child {
+  margin-top: auto;
+  margin-bottom: 8px;
+  border: 0.5px solid rgba(210, 180, 140, 0.25);
+  background: rgba(25, 25, 30, 0.8) !important;
+}
+
+.nav-btn:last-child:hover {
+  border: 0.5px solid rgba(210, 180, 140, 0.55);
+  background: rgba(210, 180, 140, 0.08) !important;
+  box-shadow: 0 0 10px rgba(210, 180, 140, 0.12);
+  transform: translateY(-1px);
+}
+
+.nav-btn:last-child.active {
+  border: 0.5px solid rgba(66, 184, 131, 0.4);
+  background: rgba(66, 184, 131, 0.1) !important;
+  color: #42b883;
+}
+
+.sidebar.collapsed .nav-btn:last-child {
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
+  justify-content: center;
+}
+
+.sidebar.collapsed .nav-btn:last-child:hover {
+  transform: scale(1.02);
+}
