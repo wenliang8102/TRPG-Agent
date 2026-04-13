@@ -446,14 +446,15 @@ const initScene = () => {
   const height = window.innerHeight
   
   scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x050308)
-  scene.fog = new THREE.FogExp2(0x050308, 0.008)
+  scene.background = null // 透明背景以便在此之上显示聊天
+  // scene.fog = new THREE.FogExp2(0x050308, 0.008)
   
   camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
   camera.position.set(5.5, 2.5, 7)
   camera.lookAt(0, 0, 0)
   
-  renderer = new THREE.WebGLRenderer({ antialias: true })
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }) // 允许背景透明
+  renderer.setClearColor(0x000000, 0)
   renderer.setSize(width, height)
   renderer.setPixelRatio(window.devicePixelRatio)
   renderer.shadowMap.enabled = true
@@ -653,8 +654,9 @@ onUnmounted(() => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #050308;
+  background: transparent;
   pointer-events: none;
+  z-index: 9999;
 }
 
 .dice-3d-container canvas {

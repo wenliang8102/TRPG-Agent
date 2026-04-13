@@ -190,10 +190,13 @@ def monster_combat_node(state: GraphState) -> dict:
         if not target:
             log_lines.append("所有玩家单位已倒下！")
         else:
-            atk_lines, _, hp_change = resolve_single_attack(actor, target)
+            atk_lines, _, hp_change, extra_info = resolve_single_attack(actor, target)
             log_lines.extend(atk_lines)
             if hp_change:
                 hp_changes.append(hp_change)
+                
+            # 这里保存一份 raw_roll 供最后构建 message
+            actor["_last_raw_roll"] = extra_info.get("raw_roll")
 
             # 推进回合
             turn_text = advance_turn(combat_dict)
@@ -215,29 +218,59 @@ def monster_combat_node(state: GraphState) -> dict:
             "hp_changes": hp_changes,
         })
         # 恢复后：根据玩家选择处理
+        player_dict = state.get("player").model_dump() if hasattr(state.get("player"), "model_dump") else dict(state.get("player")) if state.get("player") else {}
+        
         if user_choice == "revive":
             for p in participants.values():
                 if p.get("side") == "player":
                     p["hp"] = max(1, p.get("max_hp", 1) // 2)
+                    if player_dict and f"player_{player_dict.get('name')}" == p.get("id"):
+                        player_dict["hp"] = p["hp"]
+            
             combat_dict["participants"] = participants
             return {
                 "combat": None,
+                "player": player_dict,
                 "phase": "exploration",
-                "messages": [HumanMessage(content="[系统] 玩家选择复活。角色恢复了部分生命值，战斗结束。")],
+                "messages": [HumanMessage(content="[系统] 玩家角色倒下，战斗结束。")],
                 "hp_changes": [],
             }
         else:
+            for p in participants.values():
+                if p.get("side") == "player":
+                    p["hp"] = 0
+                    if player_dict and f"player_{player_dict.get('name')}" == p.get("id"):
+                        player_dict["hp"] = 0
+
             return {
                 "combat": None,
+                "player": player_dict,
                 "phase": "exploration",
                 "messages": [HumanMessage(content="[系统] 玩家角色倒下，战斗结束。")],
                 "hp_changes": [],
             }
 
     combat_report = "[系统:怪物行动]\n" + "\n".join(log_lines)
+    msg = HumanMessage(content=combat_report)
+    
+    # 从上面暂存的 _last_raw_roll 中取回值挂载，然后清理
+    raw_roll = actor.pop("_last_raw_roll", None)
+    if raw_roll is not None:
+        setattr(msg, "artifact", {"raw_roll": raw_roll})
 
-    return {
+    result_state = {
         "combat": combat_dict,
-        "messages": [HumanMessage(content=combat_report)],
+        "messages": [msg],
         "hp_changes": hp_changes,
     }
+    
+    # 同步更新玩家本体状态
+    if hp_changes and state.get("player"):
+        player_dict = state.get("player").model_dump() if hasattr(state.get("player"), "model_dump") else dict(state.get("player"))
+        # 只取当回合受击的玩家HP
+        for hc in hp_changes:
+            if hc.get("id", "").startswith("player_"):
+                player_dict["hp"] = hc["new_hp"]
+        result_state["player"] = player_dict
+
+    return result_state

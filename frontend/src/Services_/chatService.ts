@@ -43,6 +43,7 @@ export interface SSECallbacks {
   onToolMessage?: (content: string) => void
   onStateUpdate?: (player: any, combat: any) => void
   onPendingAction?: (action: PendingAction) => void
+  onDiceRoll?: (rawRoll: number, finalTotal: number) => void | Promise<void>
   onDone?: (sessionId: string) => void
   onError?: (message: string) => void
 }
@@ -202,6 +203,11 @@ export const chatService = {
               break
             case 'tool_message':
               callbacks.onToolMessage?.(parsed.content)
+              break
+            case 'dice_roll':
+              if (callbacks.onDiceRoll) {
+                await callbacks.onDiceRoll(parsed.raw_roll, parsed.final_total)
+              }
               break
             case 'state_update':
               callbacks.onStateUpdate?.(parsed.player, parsed.combat)
