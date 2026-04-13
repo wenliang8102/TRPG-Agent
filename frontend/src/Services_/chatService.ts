@@ -9,6 +9,7 @@ export interface ChatMessage {
   // 扩展字段：消息子类型 + 元数据
   type?: 'text' | 'combat_action' | 'tool'
   metadata?: { hp_changes?: HpChange[] }
+ isHistory?: boolean   // 新增：标记是否为历史消息
 }
 
 export interface HpChange {

@@ -17,6 +17,15 @@ AbilityBlock = dict[str, int]
 ModifierBlock = dict[str, int]
 
 
+class WeaponData(BaseModel):
+    """武器基础数据 — 对应 D&D 5e SRD 武器表"""
+    name: str
+    damage_dice: str = "1d4"
+    damage_type: str = "bludgeoning"
+    weapon_type: Literal["melee", "ranged"] = "melee"
+    properties: list[str] = Field(default_factory=list)  # finesse, light, thrown, ...
+
+
 class PlayerState(BaseModel, extra="allow"):
     """玩家常驻状态"""
     name: str = ""
@@ -49,15 +58,6 @@ class RollResultState(BaseModel, extra="allow"):
     modifier: int = 0
     total: int = 0
     success: bool = False
-
-
-class WeaponData(BaseModel):
-    """武器基础数据 — 对应 D&D 5e SRD 武器表"""
-    name: str
-    damage_dice: str = "1d4"
-    damage_type: str = "bludgeoning"
-    weapon_type: Literal["melee", "ranged"] = "melee"
-    properties: list[str] = Field(default_factory=list)  # finesse, light, thrown, ...
 
 
 class AttackInfo(BaseModel):
@@ -125,7 +125,13 @@ class GraphState(TypedDict, total=False):
     pending_check: Optional[CheckState]
     last_roll: Optional[RollResultState]
 
+    # 场景单位池 — spawn 产出放这里，start_combat 从中挑选参战者
+    scene_units: dict[str, CombatantState]
+
     combat: Optional[CombatState]
+
+    # 战斗结束后的死亡单位归档（搜尸体等剧情用途）
+    dead_units: dict[str, CombatantState]
 
     # 本轮攻击产生的 HP 变动记录，供前端渲染血条动画
     hp_changes: list[dict]

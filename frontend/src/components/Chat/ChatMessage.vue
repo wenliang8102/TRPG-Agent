@@ -1,12 +1,11 @@
-<!-- frontend/src/components/Chat/ChatMessage.vue -->
 <template>
-  <!-- 调试消息：仅调试模式可见 -->
+  <!-- 调试消息 -->
   <div v-if="message.type === 'tool'" v-show="debugMode" class="tool-message-wrapper">
     <div class="tool-badge">TOOL</div>
     <pre class="tool-content">{{ message.content }}</pre>
   </div>
 
-  <!-- 普通消息 / 战斗动作消息 -->
+  <!-- 普通消息 -->
   <div v-else :class="['message-wrapper', message.role]">
     <div class="avatar">
       <img v-if="avatarUrl" :src="avatarUrl" :alt="displayName" />
@@ -17,7 +16,7 @@
         <span class="display-name">{{ displayName }}</span>
         <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
       </div>
-      <div class="message-bubble" :class="{ 'combat-bubble': message.type === 'combat_action' }">
+      <div class="message-bubble" :class="{ 'combat-bubble': message.type === 'combat_action' }" @click="handleMessageClick">
         <div v-if="message.content" class="message-text" v-html="renderedContent"></div>
         <HpBar
           v-for="(hpc, i) in hpChanges"
@@ -33,13 +32,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed, inject, watch, onUnmounted } from 'vue'
 import { marked } from 'marked'
 import type { ChatMessage } from '../../Services_/chatService'
 import HpBar from './HpBar.vue'
 import { adaptLLMOutput } from '../../composables/markdownAdapter'
+import { useTypewriter } from '../../composables/useTypewriter'
 
-// 确保 marked 不会转义 HTML 标签
 marked.setOptions({
   breaks: true,
   gfm: true,
@@ -67,15 +66,74 @@ const formatTime = (timestamp?: string | number) => {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 }
 
-const renderedContent = computed(() => {
+// 预处理内容（列表适配 + 关键词高亮）
+const rawProcessedContent = computed(() => {
   if (!props.message.content) return ''
-  const adapted = adaptLLMOutput(props.message.content)
-  return marked.parse(adapted, { async: false }) as string
+  return adaptLLMOutput(props.message.content)
+})
+
+const isUser = props.message.role === 'user'
+const isHistory = props.message.isHistory === true   // 判断是否为历史消息
+
+// 只有用户消息或历史消息才跳过动画
+const skipAnimation = computed(() => isUser || isHistory)
+
+// 打字机效果（注意：不再依赖 props.isStreaming）
+const { displayText, skip, cleanup, reset, flush } = useTypewriter(
+  rawProcessedContent,
+  35,        // 毫秒/字符，可调整速度
+  undefined,
+  skipAnimation
+)
+
+// 监听消息内容变化，检测新消息开始（可选，用于重置状态）
+watch(() => props.message.content, (newContent, oldContent) => {
+  // 如果内容长度突然变短（新消息覆盖），重置打字机
+  if (oldContent && newContent.length < oldContent.length) {
+    reset()
+  }
+}, { immediate: false })
+
+// 渲染内容：历史消息或用户消息直接显示完整内容，否则显示打字机效果
+const renderedContent = computed(() => {
+  const content = skipAnimation.value ? rawProcessedContent.value : displayText.value
+  if (!content) return ''
+  return marked.parse(content, { async: false }) as string
+})
+
+// 点击消息跳过动画（仅当动画播放时有效）
+const handleMessageClick = () => {
+  if (!skipAnimation.value) {
+    skip()
+  }
+}
+
+onUnmounted(() => {
+  cleanup()
 })
 </script>
 
 <style scoped>
-/* 保留所有原有样式，只修改关键词高亮部分（移除旧样式，只保留黄色） */
+/* 保持原有样式不变，只添加淡入动画 */
+.message-wrapper {
+  display: flex;
+  gap: 12px;
+  padding: 16px 0;
+  max-width: 100%;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .message-wrapper {
   display: flex;
   gap: 12px;

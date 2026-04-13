@@ -1,5 +1,6 @@
 // ==================== 关键词高亮（作用于纯文本） ====================
 function highlightKeywords(text: string): string {
+ 
   // 1. 去掉所有的 ** 标记
   let result = text.replace(/\*\*/g, '');
   

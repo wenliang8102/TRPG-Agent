@@ -20,10 +20,12 @@
 
         <div class="message-list" ref="messageListRef">
           <ChatMessage
-            v-for="msg in messages"
-            :key="msg.id"
-            :message="msg"
-          />
+      v-for="(msg, index) in messages"
+      :key="msg.id"
+      :message="msg"
+      :is-streaming="isStreaming && index === messages.length - 1 && msg.role === 'assistant'"
+    />
+
         </div>
 
         <p v-if="errorText" class="error-text">{{ errorText }}</p>
@@ -134,6 +136,7 @@ const {
   clearError,
   setMessages,
   toggleDebugMode,
+  isStreaming,
 } = useChatMessages()
 
 // 动态右侧组件：有战斗时显示 CombatPanel，否则显示 CharacterPanel

@@ -30,6 +30,11 @@ ASSISTANT_SYSTEM_PROMPT = (
     "你必须如实向玩家转达该错误，绝对不能忽略错误而自行编造攻击效果。\n"
     "7. 禁止虚构战斗结果：在战斗阶段，你绝不可以在没有成功调用 attack_action 工具的情况下"
     "描述任何攻击命中、伤害或 HP 变化。所有战斗数值必须来自工具返回。\n"
+    "8. 状态变更规范：所有涉及角色 HP、AC、能力值、状态效果等变化，必须通过 modify_character_state 工具执行，"
+    "不要自行编造数值后果。\n"
+    "9. 场景单位管理：spawn_monsters 生成的单位进入场景单位池。开战前你需要获取可用单位 ID 列表，"
+    "并通过 start_combat 的 combatant_ids 参数指定参战者。未参战单位仍保留在场景中。\n"
+    "10. 死亡单位：战斗结束后，死亡单位会归入死亡档案。若玩家希望搜刮尸体等，可描述剧情后使用 clear_dead_units 清理。\n"
 )
 
 
@@ -54,11 +59,12 @@ def assistant_node(state: GraphState) -> dict:
     if summary := state.get("conversation_summary"):
         system_prompt += f"\n\n[前情提要（必须铭记的游戏大纲）]\n{summary}"
 
+    hud_text = ""
     if player := state.get("player"):
         player_context = json.dumps(player, ensure_ascii=False, indent=2)
-        system_prompt += f"\n\n[当前玩家状态]\n{player_context}"
+        hud_text += f"\n\n[当前玩家状态]\n{player_context}"
     else:
-        system_prompt += "\n\n[当前玩家状态]\n玩家尚未加载或创建角色卡。"
+        hud_text += "\n\n[当前玩家状态]\n玩家尚未加载或创建角色卡。"
 
     # 注入战斗态势，让 LLM 知道当前行动者、各单位 HP 与可用攻击
     if combat := state.get("combat"):
@@ -78,13 +84,59 @@ def assistant_node(state: GraphState) -> dict:
                 f"HP:{p.get('hp')}/{p.get('max_hp')} AC:{p.get('ac')} "
                 f"attacks=[{attacks_desc}]{marker}"
             )
-        system_prompt += "\n\n[当前战斗状态]\n" + "\n".join(combat_lines)
+        hud_text += "\n\n[当前战斗状态]\n" + "\n".join(combat_lines)
+
+    # 注入场景单位池，让 LLM 知道可用战斗单位
+    if scene_units := state.get("scene_units"):
+        scene_data = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()} if hasattr(scene_units, "items") else scene_units
+        if scene_data:
+            scene_lines = [f"  {uid}: {p.get('name', uid)} (side={p.get('side')}, HP:{p.get('hp')}/{p.get('max_hp')})" for uid, p in scene_data.items()]
+            hud_text += "\n\n[场景单位池（可用 start_combat 指定参战）]\n" + "\n".join(scene_lines)
+
+    # 注入死亡单位档案
+    if dead_units := state.get("dead_units"):
+        dead_data = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in dead_units.items()} if hasattr(dead_units, "items") else dead_units
+        if dead_data:
+            dead_lines = [f"  {uid}: {p.get('name', uid)}" for uid, p in dead_data.items()]
+            hud_text += "\n\n[死亡单位档案]\n" + "\n".join(dead_lines)
+
+    hud_text = "\n\n=== 实时系统监控窗(HUD) ===\n" + hud_text.strip() + "\n===========================\n"
+
+    invoke_messages = list(messages)
+    if invoke_messages:
+        import copy
+        last_msg = invoke_messages[-1]
+        modified_msg = copy.copy(last_msg)
+        
+        if isinstance(modified_msg.content, str):
+            modified_msg.content = modified_msg.content + hud_text
+        elif isinstance(modified_msg.content, list):
+            modified_msg.content.append({"type": "text", "text": hud_text})
+            
+        invoke_messages[-1] = modified_msg
+
+    from app.utils.logger import logger
+    logger.info("=== [Assistant Node Invocation] ===")
+    logger.debug(f"HUD Info [injected into latest message]:\n{hud_text}")
+    
+    # Elegant formatting for Dialogue History / Tool Returns
+    logger.debug("--- [Message Dialogue & Context History] ---")
+    for i, msg in enumerate(invoke_messages):
+        msg_type = msg.__class__.__name__
+        content_preview = str(msg.content)[:200] + "..." if len(str(msg.content)) > 200 else msg.content
+        logger.debug(f"Msg {i} [{msg_type}]: {content_preview}")
 
     response = _get_llm_service().invoke_with_tools(
-        messages=messages,
+        messages=invoke_messages,
         tools=get_tools(),
         system_prompt=system_prompt,
     )
+    
+    if hasattr(response, "tool_calls") and response.tool_calls:
+        logger.info(f"LLM Called Tools -> {response.tool_calls}")
+    else:
+        info_resp = str(getattr(response, 'content', ''))[:100]
+        logger.info(f"LLM Responsed [Text] -> {info_resp}...")
 
     output = response.content if isinstance(response.content, str) and not response.tool_calls else ""
     return {

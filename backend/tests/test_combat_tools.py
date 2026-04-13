@@ -119,7 +119,7 @@ class TestStartCombatPlayerJoin:
 
     def _invoke_start_combat(self, state: dict):
         from app.services.tool_service import start_combat
-        return _invoke_tool(start_combat, tool_input={"state": state})
+        return _invoke_tool(start_combat, tool_input={"combatant_ids": ["goblin_1"], "state": state})
 
     def test_player_added_to_participants(self):
         """玩家角色卡存在时，start_combat 后 participants 应包含玩家"""

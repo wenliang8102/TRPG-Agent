@@ -212,6 +212,8 @@ class ChatSessionService:
 
         player_data = None
         combat_data = None
+        scene_units_data = None
+        dead_units_data = None
         if hasattr(state, "values"):
             player = state.values.get("player")
             if player:
@@ -219,10 +221,18 @@ class ChatSessionService:
             combat = state.values.get("combat")
             if combat:
                 combat_data = combat.model_dump() if hasattr(combat, "model_dump") else dict(combat)
+            scene_units = state.values.get("scene_units")
+            if scene_units:
+                scene_units_data = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()} if hasattr(scene_units, "items") else scene_units
+            dead_units = state.values.get("dead_units")
+            if dead_units:
+                dead_units_data = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in dead_units.items()} if hasattr(dead_units, "items") else dead_units
 
         yield self._sse_event("state_update", {
             "player": player_data,
             "combat": combat_data,
+            "scene_units": scene_units_data,
+            "dead_units": dead_units_data,
         })
 
         pending = self._get_pending_action(state)
