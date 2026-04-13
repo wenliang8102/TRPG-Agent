@@ -11,12 +11,31 @@ import d20
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import BaseTool, InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedState
-from langgraph.types import Command, interrupt
+from langgraph.types import Command
 
+from app.utils.logger import logger
 from app.calculation.predefined_characters import PREDEFINED_CHARACTERS
 from app.calculation.bestiary import spawn_combatants
 from app.calculation.abilities import ability_to_modifier
 from app.graph.state import AttackInfo, CombatState, CombatantState
+
+
+# ── 统一状态变更辅助 ─────────────────────────────────────────────
+
+
+def _apply_hp_change(target: dict, delta: int) -> dict:
+    """对目标施加 HP 变化（正数=治疗, 负数=伤害），返回 hp_change 记录。原地修改 target['hp']。"""
+    old_hp = target.get("hp", 0)
+    max_hp = target.get("max_hp", old_hp)
+    new_hp = max(0, min(old_hp + delta, max_hp))
+    target["hp"] = new_hp
+    return {
+        "id": target.get("id", ""),
+        "name": target.get("name", "?"),
+        "old_hp": old_hp,
+        "new_hp": new_hp,
+        "max_hp": max_hp,
+    }
 
 
 @tool
@@ -64,40 +83,28 @@ def request_dice_roll(
     modifier = 0
     if ability and state.get("player") and "modifiers" in state["player"]:
         modifier = state["player"]["modifiers"].get(ability, 0)
-        
-    # 挂起 Graph 并将请求下发前端呈现按钮
-    user_response = interrupt({
-        "type": "dice_roll",
-        "reason": reason,
-        "ability": ability,
-        "formula": formula,
-    })
-    
-    if user_response == "confirmed":
-        # 使用 d20 库解析并执行掷骰
-        result = d20.roll(formula)
-        raw_roll = result.total
-        final_total = raw_roll + modifier
-        
 
-        sign = '+' if modifier >= 0 else ''
-        modifier_str = f"属性修正({ability}){sign}{modifier}" if ability else "无属性修正"
-        
-        note_str = (
-            f"系统已完成严谨计算：基础骰值(raw_roll)={raw_roll}，"
-            f"{modifier_str}，最终总值(final_total)={final_total}。\n"
-            "【特别指令】：请向玩家如实播报这个算式（例：“基础X + 修正Y = 最终Z”），并严格仅使用 final_total 判断检定成败，不要自己重新做加法！"
-        )
+    # 全自动掷骰，不再中断等待前端确认
+    result = d20.roll(formula)
+    raw_roll = result.total
+    final_total = raw_roll + modifier
 
-        return {
-            "raw_roll": raw_roll,
-            "modifier": modifier,
-            "final_total": final_total,
-            "status": "success",
-            "note": note_str
-        }
+    sign = '+' if modifier >= 0 else ''
+    modifier_str = f"属性修正({ability}){sign}{modifier}" if ability else "无属性修正"
     
-    return {"status": "failed", "note": "玩家拒绝了掷骰或动作未知。"}
+    note_str = (
+        f"系统已完成严谨计算：基础骰值(raw_roll)={raw_roll}，"
+        f"{modifier_str}，最终总值(final_total)={final_total}。\n"
+        "【特别指令】：请向玩家如实播报这个算式（例：“基础X + 修正Y = 最终Z”），并严格仅使用 final_total 判断检定成败，不要自己重新做加法！"
+    )
+
+    return {
+        "raw_roll": raw_roll,
+        "modifier": modifier,
+        "final_total": final_total,
+        "status": "success",
+        "note": note_str
+    }
 
 
 @tool
@@ -133,6 +140,124 @@ def load_character_profile(
             ]
         }
     )
+
+
+@tool
+def modify_character_state(
+    target_id: str,
+    changes: dict,
+    reason: str = "",
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """调整任意角色/战斗单位的状态属性。所有涉及 HP、AC、能力值等数值变化都应通过该工具执行。
+
+    支持的 changes 键包括：hp_delta(增减HP)、set_hp(直接设置HP)、ac、speed、
+    abilities(dict)、conditions(list)、add_condition(str)、remove_condition(str) 等。
+    对于 HP 变化，优先使用 hp_delta（正=治疗, 负=伤害）以确保边界安全。
+
+    Args:
+        target_id: 目标单位 ID（如 "player_预设-战士"、"goblin_1"）或 "player" 表示当前玩家。
+        changes: 要修改的属性字典，如 {"hp_delta": -5} 或 {"ac": 18, "add_condition": "prone"}。
+        reason: 修改原因的简短描述，用于日志。
+    """
+    update: dict = {}
+    lines: list[str] = [f"[状态变更] {reason}" if reason else "[状态变更]"]
+    hp_changes: list[dict] = []
+
+    # 定位目标：可能是玩家本体、场景单位或战斗参与者
+    is_player = target_id == "player"
+    player_raw = state.get("player")
+    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+
+    if is_player and player_dict:
+        target_id = f"player_{player_dict.get('name', 'player')}"
+
+    # 在战斗参与者中查找
+    combat_raw = state.get("combat")
+    combat_dict = None
+    combat_target = None
+    if combat_raw:
+        combat_dict = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw)
+        combat_target = combat_dict.get("participants", {}).get(target_id)
+
+    # 在场景单位中查找
+    scene_units: dict = state.get("scene_units") or {}
+    scene_raw = scene_units
+    if hasattr(scene_units, "model_dump"):
+        scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()}
+    elif isinstance(scene_units, dict):
+        scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()}
+    scene_target = scene_raw.get(target_id)
+
+    # 确定实际操作对象
+    target = combat_target or scene_target
+    if not target and player_dict and target_id == f"player_{player_dict.get('name', 'player')}":
+        # 不在战斗也不在场景，操作玩家本体
+        target = player_dict
+    if not target:
+        return Command(update={"messages": [
+            ToolMessage(content=f"找不到目标 '{target_id}'。", tool_call_id=tool_call_id)
+        ]})
+
+    target_name = target.get("name", target_id)
+
+    # 应用各项变更
+    if "hp_delta" in changes:
+        hc = _apply_hp_change(target, changes["hp_delta"])
+        hp_changes.append(hc)
+        lines.append(f"  {target_name} HP: {hc['old_hp']} → {hc['new_hp']}")
+    if "set_hp" in changes:
+        old_hp = target.get("hp", 0)
+        max_hp = target.get("max_hp", old_hp)
+        new_hp = max(0, min(int(changes["set_hp"]), max_hp))
+        target["hp"] = new_hp
+        hp_changes.append({"id": target.get("id", target_id), "name": target_name, "old_hp": old_hp, "new_hp": new_hp, "max_hp": max_hp})
+        lines.append(f"  {target_name} HP 设为 {new_hp}")
+    if "ac" in changes:
+        target["ac"] = int(changes["ac"])
+        lines.append(f"  {target_name} AC → {target['ac']}")
+    if "speed" in changes:
+        target["speed"] = int(changes["speed"])
+        lines.append(f"  {target_name} 速度 → {target['speed']}")
+    if "abilities" in changes:
+        for k, v in changes["abilities"].items():
+            target.setdefault("abilities", {})[k] = int(v)
+            target.setdefault("modifiers", {})[k] = ability_to_modifier(int(v))
+        lines.append(f"  {target_name} 能力值已更新")
+    if "add_condition" in changes:
+        conds = target.setdefault("conditions", [])
+        c = changes["add_condition"]
+        if c not in conds:
+            conds.append(c)
+        lines.append(f"  {target_name} +状态: {c}")
+    if "remove_condition" in changes:
+        conds = target.get("conditions", [])
+        c = changes["remove_condition"]
+        if c in conds:
+            conds.remove(c)
+        lines.append(f"  {target_name} -状态: {c}")
+
+    # 回写变更
+    if combat_target and combat_dict:
+        combat_dict["participants"][target_id] = target
+        update["combat"] = combat_dict
+    if scene_target:
+        scene_raw[target_id] = target
+        update["scene_units"] = scene_raw
+
+    # 同步玩家本体
+    if player_dict and target_id == f"player_{player_dict.get('name', 'player')}":
+        for key in ("hp", "ac", "abilities", "modifiers", "conditions"):
+            if key in target:
+                player_dict[key] = target[key]
+        update["player"] = player_dict
+
+    if hp_changes:
+        update["hp_changes"] = hp_changes
+
+    update["messages"] = [ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)]
+    return Command(update=update)
 
 
 
@@ -187,8 +312,9 @@ def spawn_monsters(
     state: Annotated[dict, InjectedState] = None,
     tool_call_id: Annotated[str, InjectedToolCallId] = None
 ) -> Command:
-    """根据怪物图鉴生成战斗单位实例并加入当前战场环境。
+    """根据怪物图鉴生成战斗单位实例并加入当前场景。
     怪物数据来自 Open5e SRD（使用英文 slug，如 "goblin", "owlbear", "adult-red-dragon"）。
+    生成后的单位进入场景单位池（scene_units），需要通过 start_combat 指定参战。
 
     Args:
         monster_index: 怪物的 Open5e slug（如 "goblin"）。必须输入其英文代号。
@@ -200,25 +326,24 @@ def spawn_monsters(
     except Exception as e:
         return f"生成战斗单位失败: {str(e)}"
 
-    existing = state.get("combat")
-    if existing and hasattr(existing, "model_dump"):
-        combat_dict = existing.model_dump()
-    elif existing:
-        combat_dict = dict(existing)
+    # 写入 scene_units 而非 combat.participants
+    scene_units: dict = state.get("scene_units") or {}
+    if hasattr(scene_units, "items"):
+        scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()}
     else:
-        combat_dict = {"round": 0, "participants": {}, "initiative_order": [], "current_actor_id": ""}
+        scene_raw = {}
 
     for c in new_combatants:
-        combat_dict["participants"][c.id] = c.model_dump()
+        scene_raw[c.id] = c.model_dump()
 
     names = [f"{c.name} [ID: {c.id}]" for c in new_combatants]
 
     return Command(
         update={
-            "combat": combat_dict,
+            "scene_units": scene_raw,
             "messages": [
                 ToolMessage(
-                    content=f"成功在战场中生成了 {count} 只 {monster_index}，ID/名字分别为: {', '.join(names)}",
+                    content=f"成功在场景中生成了 {count} 只 {monster_index}: {', '.join(names)}。\n可用 start_combat 指定哪些单位参加战斗。",
                     tool_call_id=tool_call_id
                 )
             ]
@@ -382,22 +507,40 @@ def advance_turn(combat_dict: dict) -> str:
 
 @tool
 def start_combat(
+    combatant_ids: list[str],
     state: Annotated[dict, InjectedState] = None,
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
-    """开始战斗：为所有已在战场中的参与者投先攻骰并排定行动顺序。
-    前置条件：必须先用 spawn_monsters 生成至少一个战斗单位。
+    """开始战斗：从场景单位池中选取指定 ID 的单位作为参战者，投先攻骰并排定行动顺序。
+    前置条件：必须先用 spawn_monsters 生成单位到场景中。
+    玩家角色会自动加入，无需在 combatant_ids 中指定。
+
+    Args:
+        combatant_ids: 从场景中参加本次战斗的单位 ID 列表（如 ["goblin_1", "goblin_2"]）。
     """
-    combat_raw = state.get("combat")
-    if not combat_raw:
-        return "当前没有任何战斗单位。请先使用 spawn_monsters 工具生成怪物。"
+    scene_units: dict = state.get("scene_units") or {}
+    if hasattr(scene_units, "items"):
+        scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()}
+    else:
+        scene_raw = {}
 
-    combat_dict = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw)
-    participants = combat_dict.get("participants", {})
-    if not participants:
-        return "战场上没有参与者，请先生成怪物。"
+    if not combatant_ids and not scene_raw:
+        return "场景中没有任何单位。请先使用 spawn_monsters 生成怪物。"
 
-    # 玩家自动入场：将已加载的角色卡转为战斗单位
+    participants: dict[str, dict] = {}
+    missing: list[str] = []
+    for uid in combatant_ids:
+        unit = scene_raw.get(uid)
+        if unit:
+            participants[uid] = unit
+        else:
+            missing.append(uid)
+
+    if missing:
+        available = ", ".join(scene_raw.keys()) or "无"
+        return f"找不到以下单位: {', '.join(missing)}。场景中可用单位: {available}"
+
+    # 玩家自动入场
     player_raw = state.get("player")
     if player_raw:
         player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw)
@@ -405,21 +548,26 @@ def start_combat(
         if player_id not in participants:
             participants[player_id] = _build_player_combatant(player_dict)
 
+    if not participants:
+        return "没有参战者，请先生成怪物或加载角色卡。"
+
     # 为每个参战单位投先攻
     initiative_list: list[tuple[str, int]] = []
     for uid, p in participants.items():
-        dex_mod = p.get("modifiers", {}).get("dex", 0) if isinstance(p, dict) else getattr(p, "modifiers", {}).get("dex", 0)
+        dex_mod = p.get("modifiers", {}).get("dex", 0)
         init_roll = d20.roll(f"1d20+{dex_mod}")
         p["initiative"] = init_roll.total
         initiative_list.append((uid, init_roll.total))
 
-    # 按先攻降序排列
     initiative_list.sort(key=lambda x: x[1], reverse=True)
     order = [uid for uid, _ in initiative_list]
 
-    combat_dict["round"] = 1
-    combat_dict["initiative_order"] = order
-    combat_dict["current_actor_id"] = order[0]
+    combat_dict = {
+        "round": 1,
+        "participants": participants,
+        "initiative_order": order,
+        "current_actor_id": order[0],
+    }
 
     order_desc = "\n".join(
         f"  {i+1}. {participants[uid].get('name', uid)} [ID: {uid}] (先攻 {init})"
@@ -485,54 +633,21 @@ def attack_action(
     if not attacker.get("action_available", True):
         return _reject(f"{attacker.get('name', attacker_id)} 本回合的动作已用尽。")
 
-    # 玩家攻击需要前端确认掷骰
-    if attacker.get("side") == "player":
-        # 先确定武器名用于弹窗展示
-        attacks = attacker.get("attacks", [])
-        if attack_name:
-            chosen = next((a for a in attacks if a["name"].lower() == attack_name.lower()), None)
-        else:
-            chosen = attacks[0] if attacks else None
-        display_name = chosen["name"] if chosen else "徒手攻击"
-        atk_bonus = chosen["attack_bonus"] if chosen else 0
-
-        user_response = interrupt({
-            "type": "dice_roll",
-            "reason": f"{attacker.get('name', attacker_id)} 使用 [{display_name}] 攻击 {target.get('name', target_id)}",
-            "formula": f"1d20+{atk_bonus}",
-        })
-        if user_response != "confirmed":
-            return Command(update={"messages": [
-                ToolMessage(content="玩家取消了攻击。", tool_call_id=tool_call_id)
-            ]})
-
+    # 全自动掷骰，玩家攻击不再中断等待确认
     # 委托核心计算函数
     lines, _, hp_change, extra_info = resolve_single_attack(attacker, target, attack_name, advantage)
 
-    update: dict = {
-        "combat": combat_dict,
-        "messages": [
-            ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)
-        ],
-    }
-    
-    # 额外附加攻击判定的原始骰值数据以供前端 3D 骰子捕获
-    if "raw_roll" in extra_info:
-        # 我们把骰子总数据加到 messages 的 additional_kwargs 或者通过把 content 变 dict 来传给前端
-        # 但 LangChain 推荐 ToolMessage 就是 string。那我们在额外返回一条隐藏信息的 ToolMessage 专门装 DiceResult 吗？
-        # 更简洁做法：我们把这个 ToolMessage 的附加参数带上，然后在 chat_session_service 拦截？
-        pass
-        
-    # 为了方便对接前一回合的 JSON 检测，我们修改 `chat_session_service.py` 时可以通过读取 ToolMessage.artifact 拿信息（需要 langchain 0.2）
-    # 或者就附带一段隐藏 JSON。我们使用 artifact：
     tool_msg = ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)
     tool_msg.artifact = {"raw_roll": extra_info.get("raw_roll")}
-    
-    update["messages"] = [tool_msg]
+
+    update: dict = {
+        "combat": combat_dict,
+        "messages": [tool_msg],
+    }
 
     if hp_change:
         update["hp_changes"] = [hp_change]
-        # 【修复BUG】同步更新角色的实际状态对象，防止由于状态脱节导致虚空回血
+        # 同步玩家本体 HP
         if target.get("side") == "player" and state.get("player"):
             player_dict = state.get("player").model_dump() if hasattr(state.get("player"), "model_dump") else dict(state.get("player"))
             player_dict["hp"] = hp_change["new_hp"]
@@ -573,31 +688,99 @@ def end_combat(
     state: Annotated[dict, InjectedState] = None,
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
-    """结束当前战斗，清理战斗状态并返回总结。"""
+    """结束当前战斗。存活的非玩家单位回归场景，死亡单位归入死亡档案（可搜尸等）。"""
     combat_raw = state.get("combat")
     summary = "战斗结束。"
+    update: dict = {"combat": None, "phase": "exploration"}
+
     if combat_raw:
         combat_dict = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw)
         rounds = combat_dict.get("round", 0)
         participants = combat_dict.get("participants", {})
-        alive = [p.get("name", uid) for uid, p in participants.items() if p.get("hp", 0) > 0]
-        fallen = [p.get("name", uid) for uid, p in participants.items() if p.get("hp", 0) <= 0]
+
+        alive_names: list[str] = []
+        fallen_names: list[str] = []
+
+        # 拿到现有场景单位和死亡单位快照
+        scene_units: dict = state.get("scene_units") or {}
+        scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()} if hasattr(scene_units, "items") else {}
+        dead_units: dict = state.get("dead_units") or {}
+        dead_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in dead_units.items()} if hasattr(dead_units, "items") else {}
+
+        # 同步玩家 HP 回本体
+        player_raw = state.get("player")
+        player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+
+        for uid, p in participants.items():
+            name = p.get("name", uid)
+            if p.get("side") == "player":
+                # 玩家不进 scene_units/dead_units，只同步 HP
+                if p.get("hp", 0) > 0:
+                    alive_names.append(name)
+                else:
+                    fallen_names.append(name)
+                if player_dict and uid == f"player_{player_dict.get('name', 'player')}":
+                    player_dict["hp"] = p.get("hp", 0)
+                continue
+
+            if p.get("hp", 0) > 0:
+                alive_names.append(name)
+                scene_raw[uid] = p  # 存活单位回归场景
+            else:
+                fallen_names.append(name)
+                dead_raw[uid] = p  # 死亡单位归档
+                scene_raw.pop(uid, None)
+
         parts = [f"共进行了 {rounds} 回合。"]
-        if alive:
-            parts.append(f"存活: {', '.join(alive)}")
-        if fallen:
-            parts.append(f"倒下: {', '.join(fallen)}")
+        if alive_names:
+            parts.append(f"存活: {', '.join(alive_names)}")
+        if fallen_names:
+            parts.append(f"倒下: {', '.join(fallen_names)}")
         summary = " ".join(parts)
 
-    return Command(
-        update={
-            "combat": None,
-            "phase": "exploration",
-            "messages": [
-                ToolMessage(content=summary, tool_call_id=tool_call_id)
-            ],
-        }
-    )
+        update["scene_units"] = scene_raw
+        update["dead_units"] = dead_raw
+        if player_dict:
+            update["player"] = player_dict
+
+    update["messages"] = [ToolMessage(content=summary, tool_call_id=tool_call_id)]
+    return Command(update=update)
+
+
+@tool
+def clear_dead_units(
+    unit_ids: list[str] | None = None,
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """清除死亡单位档案。可指定 ID 列表部分清除，或不传参数清除全部。
+    适用于剧情上玩家已完成搜刮尸体、处理遗骸等环节后的清理。
+
+    Args:
+        unit_ids: 要清除的死亡单位 ID 列表。为空则清除全部。
+    """
+    dead_units: dict = state.get("dead_units") or {}
+    dead_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in dead_units.items()} if hasattr(dead_units, "items") else {}
+
+    if not dead_raw:
+        return Command(update={"messages": [
+            ToolMessage(content="当前没有死亡单位。", tool_call_id=tool_call_id)
+        ]})
+
+    if unit_ids:
+        removed = [uid for uid in unit_ids if uid in dead_raw]
+        for uid in removed:
+            del dead_raw[uid]
+        msg = f"已清除死亡单位: {', '.join(removed)}" if removed else "指定的 ID 不在死亡单位列表中。"
+    else:
+        count = len(dead_raw)
+        dead_raw.clear()
+        msg = f"已清除全部 {count} 个死亡单位。"
+
+    return Command(update={
+        "dead_units": dead_raw,
+        "messages": [ToolMessage(content=msg, tool_call_id=tool_call_id)],
+    })
 
 
 @lru_cache(maxsize=1)
@@ -606,9 +789,11 @@ def get_tools() -> list[BaseTool]:
         weather,
         request_dice_roll,
         load_character_profile,
+        modify_character_state,
         spawn_monsters,
         start_combat,
         attack_action,
         next_turn,
         end_combat,
+        clear_dead_units,
     ]
