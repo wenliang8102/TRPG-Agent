@@ -318,3 +318,53 @@ class TestWeaponDataModel:
         assert w.damage_dice == "1d4"
         assert w.weapon_type == "melee"
         assert w.properties == []
+
+
+# ── Phase 7: modify_character_state 资源同步 ─────────────────────
+
+
+class TestModifyCharacterStateResources:
+    """验证战斗中恢复资源时，玩家本体与战斗快照保持一致"""
+
+    def test_player_spell_slot_recovery_uses_actual_current_value_in_combat(self):
+        from app.services.tool_service import modify_character_state
+
+        player = dict(PREDEFINED_CHARACTERS["法师"])
+        player["resources"] = {"spell_slot_lv1": 1}
+        player_c = _build_player_combatant(player)
+        combat = _make_combat_state({player_c["id"]: player_c}, current_actor_id=player_c["id"])
+        state = {"player": player, "combat": combat}
+
+        result = _invoke_tool(
+            modify_character_state,
+            tool_input={
+                "target_id": "player",
+                "changes": {"resource_delta": {"spell_slot_lv1": 1}},
+                "reason": "恢复法术位",
+                "state": state,
+            },
+        )
+
+        assert isinstance(result, Command)
+        assert result.update["player"]["resources"]["spell_slot_lv1"] == 2
+        assert result.update["combat"]["participants"][player_c["id"]]["resources"]["spell_slot_lv1"] == 2
+
+    def test_player_spell_slot_set_resource_clamps_to_predefined_cap(self):
+        from app.services.tool_service import modify_character_state
+
+        player = dict(PREDEFINED_CHARACTERS["法师"])
+        player["resources"] = {"spell_slot_lv1": 0}
+        state = {"player": player}
+
+        result = _invoke_tool(
+            modify_character_state,
+            tool_input={
+                "target_id": "player",
+                "changes": {"set_resource": {"spell_slot_lv1": 99}},
+                "reason": "长休恢复至上限",
+                "state": state,
+            },
+        )
+
+        assert isinstance(result, Command)
+        assert result.update["player"]["resources"]["spell_slot_lv1"] == 2

@@ -15,6 +15,32 @@ from app.calculation.predefined_characters import PREDEFINED_CHARACTERS
 from app.services.tools._helpers import apply_hp_change
 
 
+# 资源恢复需要知道“当前值”和“上限”，否则战斗中的玩家快照会丢失法术位信息。
+def _clone_state_value(value: object) -> object:
+    """复制可变状态，避免玩家本体与战斗快照意外共享引用。"""
+    if isinstance(value, dict):
+        return {k: _clone_state_value(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_clone_state_value(v) for v in value]
+    return value
+
+
+def _get_resource_caps(target: dict, player_dict: dict | None = None) -> dict[str, int]:
+    """优先从角色模板推断资源上限，供恢复法术位/职业资源时截断。"""
+    owner = player_dict or target
+
+    raw_caps = owner.get("resource_caps")
+    if isinstance(raw_caps, dict):
+        return {k: int(v) for k, v in raw_caps.items()}
+
+    role_class = owner.get("role_class", "")
+    template = PREDEFINED_CHARACTERS.get(role_class)
+    if template:
+        return {k: int(v) for k, v in template.get("resources", {}).items()}
+
+    return {}
+
+
 @tool
 def load_character_profile(
     role_class: str,
@@ -59,6 +85,7 @@ def modify_character_state(
     支持的 changes 键包括：hp_delta(增减HP)、set_hp(直接设置HP)、ac、speed、
     abilities(dict)、conditions(list)、add_condition(str 或 dict)、remove_condition(str)、
     resource_delta(dict, 如 {"spell_slot_lv1": -1} 增减资源)、set_resource(dict, 直接设置资源值) 等。
+    对于资源恢复，系统会优先参考角色模板中的默认上限进行截断；set_resource 也可传 "max" 表示恢复到上限。
     对于 HP 变化，优先使用 hp_delta（正=治疗, 负=伤害）以确保边界安全。
     add_condition 接受状态 ID 字符串（如 "blinded"）或完整字典（如 {"id": "charmed", "source_id": "goblin_1", "duration": 3}）。
 
@@ -107,6 +134,14 @@ def modify_character_state(
 
     target_name = target.get("name", target_id)
 
+    # 玩家在战斗中的快照默认可能缺失 resources；这里以玩家本体为准补齐一次。
+    if player_dict and target_id == f"player_{player_dict.get('name', 'player')}":
+        for key in ("role_class", "resources", "known_spells", "spellcasting_ability"):
+            if key in player_dict:
+                target[key] = _clone_state_value(player_dict[key])
+
+    resource_caps = _get_resource_caps(target, player_dict)
+
     # 应用各项变更
     if "hp_delta" in changes:
         hc = apply_hp_change(target, changes["hp_delta"])
@@ -150,14 +185,28 @@ def modify_character_state(
     if "resource_delta" in changes:
         res = target.setdefault("resources", {})
         for rk, rv in changes["resource_delta"].items():
-            old_v = res.get(rk, 0)
-            res[rk] = max(0, old_v + int(rv))
-            lines.append(f"  {target_name} {rk}: {old_v} → {res[rk]}")
+            old_v = int(res.get(rk, 0))
+            new_v = max(0, old_v + int(rv))
+            cap = resource_caps.get(rk)
+            if cap is not None:
+                new_v = min(new_v, cap)
+            res[rk] = new_v
+            suffix = f" / {cap}" if cap is not None else ""
+            lines.append(f"  {target_name} {rk}: {old_v} → {res[rk]}{suffix}")
     if "set_resource" in changes:
         res = target.setdefault("resources", {})
         for rk, rv in changes["set_resource"].items():
-            res[rk] = max(0, int(rv))
-            lines.append(f"  {target_name} {rk} 设为 {res[rk]}")
+            old_v = int(res.get(rk, 0))
+            cap = resource_caps.get(rk)
+            if isinstance(rv, str) and rv.strip().lower() in {"max", "full", "all", "上限", "满", "全部恢复"}:
+                new_v = cap if cap is not None else old_v
+            else:
+                new_v = max(0, int(rv))
+                if cap is not None:
+                    new_v = min(new_v, cap)
+            res[rk] = new_v
+            suffix = f" / {cap}" if cap is not None else ""
+            lines.append(f"  {target_name} {rk}: {old_v} → {res[rk]}{suffix}")
 
     # 回写变更
     if combat_target and combat_dict:
