@@ -1,10 +1,12 @@
+// frontend/src/composables/useTypewriter.ts
 import { ref, watch, type Ref } from 'vue'
 
 export function useTypewriter(
   content: Ref<string>,        // 后端推送的原始内容（会不断增长）
-  speed: number = 35,          // 毫秒/字符，例如 35ms/字 → 约28字/秒
+  speed: number = 10,          // 毫秒/字符，例如 35ms/字 → 约28字/秒
   onComplete?: () => void,
-  skipAnimation: Ref<boolean> = ref(false)
+  skipAnimation: Ref<boolean> = ref(false),
+  onChar?: () => void          // 🔥 新增：每输出一个字符时触发
 ) {
   const displayText = ref('')
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -13,8 +15,8 @@ export function useTypewriter(
   let isOutputting = false           // 是否正在输出中
 
   // 计算每秒可输出的字符数，作为启动阈值（至少为1）
-  const charsPerSecond = Math.max(50, Math.floor(1000 / speed))
-  const threshold = charsPerSecond   // 缓存池积累到该数量时开始输出
+  const charsPerSecond = Math.max(1, Math.floor(1000 / speed))
+  const threshold = 10 // 缓存池积累到该数量时开始输出
 
   const stopTimer = () => {
     if (timer) {
@@ -32,7 +34,11 @@ export function useTypewriter(
       return
     }
     const char = cacheQueue.shift()
-    if (char) displayText.value += char
+    if (char) {
+      displayText.value += char
+      // 🔥 每输出一个字符，调用外部传入的回调（用于滚动）
+      if (onChar) onChar()
+    }
     timer = setTimeout(outputNextChar, speed)
   }
 

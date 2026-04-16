@@ -19,13 +19,13 @@
         </header>
 
         <div class="message-list" ref="messageListRef">
-          <ChatMessage
-      v-for="(msg, index) in messages"
-      :key="msg.id"
-      :message="msg"
-      :is-streaming="isStreaming && index === messages.length - 1 && msg.role === 'assistant'"
-    />
-
+      <ChatMessage
+     v-for="(msg, index) in messages"
+    :key="msg.id"
+    :message="msg"
+    :is-streaming="isStreaming && index === messages.length - 1 && msg.role === 'assistant'"
+    :scroll-to-bottom="scrollToBottom"   
+       />
         </div>
 
         <p v-if="errorText" class="error-text">{{ errorText }}</p>

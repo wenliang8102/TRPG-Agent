@@ -1,3 +1,4 @@
+<!-- frontend/src/components/Chat/ChatMessage.vue -->
 <template>
   <!-- 调试消息 -->
   <div v-if="message.type === 'tool'" v-show="debugMode" class="tool-message-wrapper">
@@ -46,6 +47,7 @@ marked.setOptions({
 
 const props = defineProps<{
   message: ChatMessage
+  scrollToBottom?: () => void   // 🔥 新增：父组件传入的滚动函数
 }>()
 
 const debugMode = inject<boolean>('debugMode', false)
@@ -78,12 +80,13 @@ const isHistory = props.message.isHistory === true   // 判断是否为历史消
 // 只有用户消息或历史消息才跳过动画
 const skipAnimation = computed(() => isUser || isHistory)
 
-// 打字机效果（注意：不再依赖 props.isStreaming）
+// 打字机效果，传入 scrollToBottom 回调 🔥
 const { displayText, skip, cleanup, reset, flush } = useTypewriter(
   rawProcessedContent,
   35,        // 毫秒/字符，可调整速度
   undefined,
-  skipAnimation
+  skipAnimation,
+  props.scrollToBottom   // 🔥 每输出一个字符触发滚动
 )
 
 // 监听消息内容变化，检测新消息开始（可选，用于重置状态）

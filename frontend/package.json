@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vueuse/core": "^14.2.1",
     "cannon-es": "^0.20.0",
     "highlight.js": "^11.11.1",
     "lucide-vue-next": "^1.0.0",

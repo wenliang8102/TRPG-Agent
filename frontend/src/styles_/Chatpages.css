@@ -49,6 +49,7 @@
 .message-list {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;   /* 关键：flex 子项溢出控制 */
   padding: 0 24px;
 }
 
