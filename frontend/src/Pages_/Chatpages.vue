@@ -18,7 +18,7 @@
           </div>
         </header>
 
-        <div class="message-list" ref="messageListRef">
+        <div class="message-list" ref="messageListRef"  @scroll="handleScroll" >
       <ChatMessage
      v-for="(msg, index) in messages"
     :key="msg.id"
@@ -183,14 +183,39 @@ const showNextTurnBtn = computed(() => {
   return currentActorId.startsWith('player_')
 })
 
-// 消息自动滚动到底部
+// 是否
+// 禁用自动滚动（用户手动向上滚动时设为 true）
+
+
+const autoScrollDisabled = ref(false)
+
+// 检查当前是否在底部（允许一定误差）
+const isNearBottom = (): boolean => {
+  const el = messageListRef.value
+  if (!el) return true
+  const threshold = 50 // 距离底部小于50px视为在底部
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold
+}
+
+// 监听滚动事件：若用户滚离底部，则禁用自动滚动；若用户滚回底部，则重新启用
+const handleScroll = () => {
+  if (isNearBottom()) {
+    autoScrollDisabled.value = false
+  } else {
+    autoScrollDisabled.value = true
+  }
+}
+
+// 修改原有的 scrollToBottom 函数，加入条件判断
 const scrollToBottom = () => {
   nextTick(() => {
-    if (messageListRef.value) {
+    if (!autoScrollDisabled.value && messageListRef.value) {
       messageListRef.value.scrollTop = messageListRef.value.scrollHeight
     }
   })
 }
+
+
 watch(messages, scrollToBottom, { deep: true })
 
 // 初始化：加载历史消息
