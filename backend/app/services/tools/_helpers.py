@@ -266,6 +266,13 @@ def resolve_single_attack(
     else:
         lines.append("未命中！" if natural != 1 else "严重失误！攻击完全落空！")
 
+    # 移除被标记为受击即消耗的状态
+    target_conditions = target.get("conditions", [])
+    if target_conditions:
+        surviving_conditions = [c for c in target_conditions if not c.get("extra", {}).get("consume_on_attacked")]
+        if len(surviving_conditions) != len(target_conditions):
+            target["conditions"] = surviving_conditions
+
     attacker["action_available"] = False
     return lines, damage_dealt, hp_change, extra_info
 
