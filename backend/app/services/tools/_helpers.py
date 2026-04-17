@@ -1,4 +1,10 @@
-"""统一状态变更辅助 + 战斗解算纯函数"""
+"""统一状态变更辅助 + 战斗解算纯函数
+
+核心设计：战斗期间玩家数据不再复制到 combat.participants，
+而是直接在 player_dict 上叠加战斗字段（id, attacks, action_available 等）。
+NPC/怪物仍然使用 CombatantState 存储在 combat.participants 中。
+所有工具通过 get_combatant() 统一访问参战者，从根本上消除双写同步问题。
+"""
 
 from __future__ import annotations
 
@@ -7,7 +13,16 @@ import re
 import d20
 
 from app.conditions import get_combat_effects, has_condition
-from app.graph.state import AttackInfo, CombatantState
+from app.graph.state import AttackInfo
+
+
+# ── 战斗覆盖字段 ────────────────────────────────────────────────
+# 战斗期间叠加到 player_dict 上的字段，战斗结束后清除
+COMBAT_OVERLAY_KEYS = frozenset({
+    "id", "side", "initiative", "proficiency_bonus", "attacks",
+    "action_available", "bonus_action_available", "reaction_available",
+    "speed", "movement_left",
+})
 
 
 def apply_hp_change(target: dict, delta: int) -> dict:
@@ -25,13 +40,14 @@ def apply_hp_change(target: dict, delta: int) -> dict:
     }
 
 
-def build_player_combatant(player: dict) -> dict:
-    """从 PlayerState 字典 + 已装备武器生成 CombatantState 字典"""
-    modifiers = player.get("modifiers", {})
+def prepare_player_for_combat(player_dict: dict) -> dict:
+    """在 player_dict 上直接叠加战斗字段（原地修改），替代旧的 build_player_combatant。
+    不再创建独立的 CombatantState 副本，从而消除数据双写问题。"""
+    modifiers = player_dict.get("modifiers", {})
     prof = 2  # 1 级角色标准熟练加值
 
     attacks: list[dict] = []
-    for w in player.get("weapons", []):
+    for w in player_dict.get("weapons", []):
         props = w.get("properties", [])
         if "finesse" in props:
             ability_mod = max(modifiers.get("str", 0), modifiers.get("dex", 0))
@@ -47,21 +63,43 @@ def build_player_combatant(player: dict) -> dict:
             damage_type=w.get("damage_type", "bludgeoning"),
         ).model_dump())
 
-    name = player.get("name", "player")
-    return CombatantState(
-        id=f"player_{name}",
-        name=name,
-        side="player",
-        hp=player.get("hp", 1),
-        max_hp=player.get("max_hp", 1),
-        ac=player.get("ac", 10),
-        speed=30,
-        abilities=player.get("abilities", {}),
-        modifiers=modifiers,
-        proficiency_bonus=prof,
-        attacks=[AttackInfo(**a) for a in attacks],
-        conditions=player.get("conditions", []),
-    ).model_dump()
+    name = player_dict.get("name", "player")
+    player_dict["id"] = f"player_{name}"
+    player_dict["side"] = "player"
+    player_dict["proficiency_bonus"] = prof
+    player_dict["attacks"] = attacks
+    player_dict["action_available"] = True
+    player_dict["bonus_action_available"] = True
+    player_dict["reaction_available"] = True
+    player_dict["speed"] = 30
+    player_dict["movement_left"] = 30
+    return player_dict
+
+
+def clear_player_combat_fields(player_dict: dict) -> dict:
+    """清除战斗覆盖字段（原地修改），用于战斗结束后还原为纯 PlayerState"""
+    for key in COMBAT_OVERLAY_KEYS:
+        player_dict.pop(key, None)
+    return player_dict
+
+
+def get_combatant(
+    combat_dict: dict, player_dict: dict | None, combatant_id: str
+) -> dict | None:
+    """统一获取参战者字典。玩家从 player_dict 返回，NPC 从 combat.participants 返回。"""
+    if player_dict and combatant_id == player_dict.get("id"):
+        return player_dict
+    return combat_dict.get("participants", {}).get(combatant_id)
+
+
+def get_all_combatants(
+    combat_dict: dict, player_dict: dict | None
+) -> dict[str, dict]:
+    """获取所有参战者字典（含玩家），用于遍历全场"""
+    result = dict(combat_dict.get("participants", {}))
+    if player_dict and player_dict.get("id"):
+        result[player_dict["id"]] = player_dict
+    return result
 
 
 # ── 攻击解算 ────────────────────────────────────────────────────
@@ -235,10 +273,9 @@ def resolve_single_attack(
 # ── 回合推进 ────────────────────────────────────────────────────
 
 
-def advance_turn(combat_dict: dict) -> str:
-    """推进回合到下一个存活单位，返回描述文本。原地修改 combat_dict。"""
+def advance_turn(combat_dict: dict, player_dict: dict | None = None) -> str:
+    """推进回合到下一个存活单位，返回描述文本。原地修改 combat_dict 和 player_dict（如有）。"""
     order = combat_dict.get("initiative_order", [])
-    participants = combat_dict.get("participants", {})
     current_id = combat_dict.get("current_actor_id", "")
 
     if not order:
@@ -250,8 +287,8 @@ def advance_turn(combat_dict: dict) -> str:
     next_idx = (current_idx + 1) % total
     while checked < total:
         candidate_id = order[next_idx]
-        p = participants.get(candidate_id, {})
-        if p.get("hp", 0) > 0:
+        p = get_combatant(combat_dict, player_dict, candidate_id)
+        if p and p.get("hp", 0) > 0:
             break
         next_idx = (next_idx + 1) % total
         checked += 1
@@ -264,7 +301,7 @@ def advance_turn(combat_dict: dict) -> str:
     next_actor_id = order[next_idx]
     combat_dict["current_actor_id"] = next_actor_id
 
-    actor = participants.get(next_actor_id, {})
+    actor = get_combatant(combat_dict, player_dict, next_actor_id)
     actor["action_available"] = True
     actor["bonus_action_available"] = True
     actor["reaction_available"] = True

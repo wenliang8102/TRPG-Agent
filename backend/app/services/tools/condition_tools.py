@@ -10,24 +10,31 @@ from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
 from app.conditions import get_condition_def, has_condition, list_condition_defs
+from app.services.tools._helpers import get_combatant
 
 
 def _locate_target(state: dict, target_id: str) -> tuple[dict | None, dict, str]:
-    """定位目标单位，返回 (target_dict, state_update_dict, resolved_target_id)。
-    state_update_dict 用于调用方在修改 target 后回写状态。"""
+    """定位目标单位，返回 (target_dict, context_dict, resolved_target_id)。
+    context_dict 内部字段用于 _build_update 回写状态。"""
     player_raw = state.get("player")
     player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
 
     if target_id == "player" and player_dict:
         target_id = f"player_{player_dict.get('name', 'player')}"
 
-    # 战斗参与者
+    # 战斗中：通过统一接口查找（玩家从 player_dict，NPC 从 participants）
     combat_raw = state.get("combat")
     combat_dict = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw) if combat_raw else None
     if combat_dict:
-        target = combat_dict.get("participants", {}).get(target_id)
+        target = get_combatant(combat_dict, player_dict, target_id)
         if target:
-            return target, {"_combat_dict": combat_dict, "_player_dict": player_dict, "_target_id": target_id}, target_id
+            is_player = (player_dict and target is player_dict)
+            return target, {
+                "_combat_dict": combat_dict,
+                "_player_dict": player_dict,
+                "_target_id": target_id,
+                "_is_player": is_player,
+            }, target_id
 
     # 场景单位
     scene_units = state.get("scene_units") or {}
@@ -35,7 +42,7 @@ def _locate_target(state: dict, target_id: str) -> tuple[dict | None, dict, str]
     if target_id in scene_raw:
         return scene_raw[target_id], {"_scene_raw": scene_raw, "_player_dict": player_dict, "_target_id": target_id}, target_id
 
-    # 玩家本体
+    # 玩家本体（非战斗状态）
     if player_dict and target_id == f"player_{player_dict.get('name', 'player')}":
         return player_dict, {"_player_dict": player_dict, "_target_id": target_id}, target_id
 
@@ -47,19 +54,23 @@ def _build_update(target: dict, ctx: dict) -> dict:
     update: dict = {}
     target_id = ctx.get("_target_id", "")
     player_dict = ctx.get("_player_dict")
+    is_player = ctx.get("_is_player", False)
 
-    if "_combat_dict" in ctx:
+    if "_combat_dict" in ctx and not is_player:
         combat_dict = ctx["_combat_dict"]
         combat_dict["participants"][target_id] = target
         update["combat"] = combat_dict
+    elif "_combat_dict" in ctx and is_player:
+        # NPC 参与者可能被间接修改（如回合推进），仍需回写 combat
+        update["combat"] = ctx["_combat_dict"]
+
     if "_scene_raw" in ctx:
         scene_raw = ctx["_scene_raw"]
         scene_raw[target_id] = target
         update["scene_units"] = scene_raw
 
-    # 同步玩家本体
-    if player_dict and target_id == f"player_{player_dict.get('name', 'player')}":
-        player_dict["conditions"] = target.get("conditions", [])
+    # 玩家数据直接在 player_dict 上修改，无需额外同步
+    if player_dict and (is_player or target is player_dict):
         update["player"] = player_dict
 
     return update

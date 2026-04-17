@@ -21,7 +21,10 @@
 
     <!-- 右侧内容区 -->
     <main class="main-content">
-      <component :is="currentComponent" />
+      <component 
+    :is="currentComponent" 
+    @navigate="handleNavigate"
+    />
     </main>
 
     <!-- 骰子弹窗 -->
@@ -48,6 +51,17 @@ import ChatPage from '../../Pages_/Chatpages.vue'
 import SettingsPage from '../../Pages_/SettingsPage.vue'
 import DiceDialog from '../DiceDialog/DiceDialog.vue'
 import DiceAnimationPage from '../../Pages_/DiceAnimationPage.vue'
+import HistoryPage from '../../Pages_/HistoryPage.vue'
+
+// 在 script 中添加
+const handleNavigate = (tabId: string, params?: Record<string, any>) => {
+  currentTab.value = tabId
+  // 可以将 params 存储到全局状态（如 provide/inject 或 pinia），供 ChatPage 读取 session_id
+  // 简单起见，这里通过 sessionStorage 传递
+  if (params?.session_id) {
+    sessionStorage.setItem('pending_session_id', params.session_id)
+  }
+}
 
 // 页面组件映射
 const componentMap: Record<string, any> = {
@@ -55,7 +69,7 @@ const componentMap: Record<string, any> = {
   chat: ChatPage,
   page1: WelcomePage,
   page2: WelcomePage,
-  page3: WelcomePage,
+  page3: HistoryPage, 
   page4: WelcomePage,
   page5: WelcomePage,
   page6: WelcomePage,

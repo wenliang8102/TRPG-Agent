@@ -38,9 +38,18 @@ def _is_monster_turn(state: GraphState) -> bool:
         return False
     combat_dict = combat.model_dump() if hasattr(combat, "model_dump") else dict(combat)
     current_id = combat_dict.get("current_actor_id", "")
+
+    # 玩家不在 participants 中，通过 player.id 判断
+    player = state.get("player")
+    if player:
+        pd = player.model_dump() if hasattr(player, "model_dump") else dict(player)
+        if pd.get("id") == current_id:
+            return False
+
+    # 查 NPC participants
     participants = combat_dict.get("participants", {})
     actor = participants.get(current_id, {})
-    return actor.get("side") != "player" and actor.get("hp", 0) > 0
+    return actor.get("hp", 0) > 0
 
 
 def route_from_tool(state: GraphState) -> str:

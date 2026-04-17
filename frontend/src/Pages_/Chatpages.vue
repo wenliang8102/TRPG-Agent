@@ -66,12 +66,12 @@
 
     <!-- 右侧功能区：动态切换组件 -->
     <div class="function-area" :style="{ width: rightWidth + '%' }">
-      <component 
-        :is="rightPanelComponent" 
-        :combat="combatState"
-        :player="playerState"
-      />
-    </div>
+    <component 
+      :is="rightPanelComponent" 
+      :combat="combatState"
+      :external-player="playerState"
+    />
+  </div>
 
     <!-- 圆形控制按钮 -->
     <Transition name="fade">

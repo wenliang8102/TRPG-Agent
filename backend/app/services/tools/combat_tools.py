@@ -14,7 +14,10 @@ from app.calculation.bestiary import spawn_combatants
 from app.services.tools._helpers import (
     advance_turn,
     apply_hp_change,
-    build_player_combatant,
+    clear_player_combat_fields,
+    get_all_combatants,
+    get_combatant,
+    prepare_player_for_combat,
     resolve_single_attack,
 )
 
@@ -100,20 +103,23 @@ def start_combat(
         available = ", ".join(scene_raw.keys()) or "无"
         return f"找不到以下单位: {', '.join(missing)}。场景中可用单位: {available}"
 
-    # 玩家自动入场
+    # 玩家自动入场 — 直接在 player_dict 上叠加战斗字段，不再复制到 participants
     player_raw = state.get("player")
+    player_dict: dict | None = None
     if player_raw:
         player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw)
-        player_id = f"player_{player_dict.get('name', 'player')}"
-        if player_id not in participants:
-            participants[player_id] = build_player_combatant(player_dict)
+        prepare_player_for_combat(player_dict)
 
-    if not participants:
+    if not participants and not player_dict:
         return "没有参战者，请先生成怪物或加载角色卡。"
 
-    # 为每个参战单位投先攻
+    # 为所有参战单位投先攻（含玩家）
+    all_units: dict[str, dict] = dict(participants)
+    if player_dict:
+        all_units[player_dict["id"]] = player_dict
+
     initiative_list: list[tuple[str, int]] = []
-    for uid, p in participants.items():
+    for uid, p in all_units.items():
         dex_mod = p.get("modifiers", {}).get("dex", 0)
         init_roll = d20.roll(f"1d20+{dex_mod}")
         p["initiative"] = init_roll.total
@@ -122,6 +128,7 @@ def start_combat(
     initiative_list.sort(key=lambda x: x[1], reverse=True)
     order = [uid for uid, _ in initiative_list]
 
+    # combat.participants 仅存 NPC/怪物
     combat_dict = {
         "round": 1,
         "participants": participants,
@@ -130,22 +137,24 @@ def start_combat(
     }
 
     order_desc = "\n".join(
-        f"  {i+1}. {participants[uid].get('name', uid)} [ID: {uid}] (先攻 {init})"
+        f"  {i+1}. {all_units[uid].get('name', uid)} [ID: {uid}] (先攻 {init})"
         for i, (uid, init) in enumerate(initiative_list)
     )
 
-    return Command(
-        update={
-            "combat": combat_dict,
-            "phase": "combat",
-            "messages": [
-                ToolMessage(
-                    content=f"战斗开始！第 1 回合。\n先攻顺序：\n{order_desc}\n\n当前行动者：{participants[order[0]].get('name', order[0])} [ID: {order[0]}]",
-                    tool_call_id=tool_call_id,
-                )
-            ],
-        }
-    )
+    update: dict = {
+        "combat": combat_dict,
+        "phase": "combat",
+        "messages": [
+            ToolMessage(
+                content=f"战斗开始！第 1 回合。\n先攻顺序：\n{order_desc}\n\n当前行动者：{all_units[order[0]].get('name', order[0])} [ID: {order[0]}]",
+                tool_call_id=tool_call_id,
+            )
+        ],
+    }
+    if player_dict:
+        update["player"] = player_dict
+
+    return Command(update=update)
 
 
 @tool
@@ -172,10 +181,14 @@ def attack_action(
         return "当前不在战斗中。"
 
     combat_dict = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw)
-    participants = combat_dict.get("participants", {})
 
-    attacker = participants.get(attacker_id)
-    target = participants.get(target_id)
+    # 获取玩家字典（如有）
+    player_raw = state.get("player")
+    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+
+    # 通过统一接口获取攻防双方
+    attacker = get_combatant(combat_dict, player_dict, attacker_id)
+    target = get_combatant(combat_dict, player_dict, target_id)
 
     def _reject(msg: str) -> Command:
         return Command(update={"messages": [
@@ -198,17 +211,15 @@ def attack_action(
     tool_msg = ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)
     tool_msg.artifact = {"raw_roll": extra_info.get("raw_roll")}
 
+    # 玩家数据已在 player_dict 上原地修改，无需手动同步
     update: dict = {
         "combat": combat_dict,
         "messages": [tool_msg],
     }
-
+    if player_dict:
+        update["player"] = player_dict
     if hp_change:
         update["hp_changes"] = [hp_change]
-        if target.get("side") == "player" and state.get("player"):
-            player_dict = state.get("player").model_dump() if hasattr(state.get("player"), "model_dump") else dict(state.get("player"))
-            player_dict["hp"] = hp_change["new_hp"]
-            update["player"] = player_dict
 
     return Command(update=update)
 
@@ -225,19 +236,24 @@ def next_turn(
 
     combat_dict = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw)
 
+    player_raw = state.get("player")
+    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+
     if not combat_dict.get("initiative_order"):
         return "先攻顺序为空，请先调用 start_combat。"
 
-    result_text = advance_turn(combat_dict)
+    result_text = advance_turn(combat_dict, player_dict)
 
-    return Command(
-        update={
-            "combat": combat_dict,
-            "messages": [
-                ToolMessage(content=result_text, tool_call_id=tool_call_id)
-            ],
-        }
-    )
+    update: dict = {
+        "combat": combat_dict,
+        "messages": [
+            ToolMessage(content=result_text, tool_call_id=tool_call_id)
+        ],
+    }
+    if player_dict:
+        update["player"] = player_dict
+
+    return Command(update=update)
 
 
 @tool
@@ -249,6 +265,9 @@ def end_combat(
     combat_raw = state.get("combat")
     summary = "战斗结束。"
     update: dict = {"combat": None, "phase": "exploration"}
+
+    player_raw = state.get("player")
+    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
 
     if combat_raw:
         combat_dict = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw)
@@ -263,20 +282,17 @@ def end_combat(
         dead_units: dict = state.get("dead_units") or {}
         dead_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in dead_units.items()} if hasattr(dead_units, "items") else {}
 
-        player_raw = state.get("player")
-        player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+        # 处理玩家 — HP 已在 player_dict 上保持最新，只需清除战斗覆盖字段
+        if player_dict:
+            if player_dict.get("hp", 0) > 0:
+                alive_names.append(player_dict.get("name", "player"))
+            else:
+                fallen_names.append(player_dict.get("name", "player"))
+            clear_player_combat_fields(player_dict)
 
+        # 处理 NPC（仅存于 participants）
         for uid, p in participants.items():
             name = p.get("name", uid)
-            if p.get("side") == "player":
-                if p.get("hp", 0) > 0:
-                    alive_names.append(name)
-                else:
-                    fallen_names.append(name)
-                if player_dict and uid == f"player_{player_dict.get('name', 'player')}":
-                    player_dict["hp"] = p.get("hp", 0)
-                continue
-
             if p.get("hp", 0) > 0:
                 alive_names.append(name)
                 scene_raw[uid] = p
@@ -294,8 +310,9 @@ def end_combat(
 
         update["scene_units"] = scene_raw
         update["dead_units"] = dead_raw
-        if player_dict:
-            update["player"] = player_dict
+
+    if player_dict:
+        update["player"] = player_dict
 
     update["messages"] = [ToolMessage(content=summary, tool_call_id=tool_call_id)]
     return Command(update=update)

@@ -12,17 +12,8 @@ from langgraph.types import Command
 
 from app.calculation.abilities import ability_to_modifier
 from app.calculation.predefined_characters import PREDEFINED_CHARACTERS
-from app.services.tools._helpers import apply_hp_change
+from app.services.tools._helpers import apply_hp_change, get_combatant
 
-
-# 资源恢复需要知道“当前值”和“上限”，否则战斗中的玩家快照会丢失法术位信息。
-def _clone_state_value(value: object) -> object:
-    """复制可变状态，避免玩家本体与战斗快照意外共享引用。"""
-    if isinstance(value, dict):
-        return {k: _clone_state_value(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_clone_state_value(v) for v in value]
-    return value
 
 
 def _get_resource_caps(target: dict, player_dict: dict | None = None) -> dict[str, int]:
@@ -99,46 +90,48 @@ def modify_character_state(
     hp_changes: list[dict] = []
 
     # 定位目标
-    is_player = target_id == "player"
     player_raw = state.get("player")
     player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
 
-    if is_player and player_dict:
+    if target_id == "player" and player_dict:
         target_id = f"player_{player_dict.get('name', 'player')}"
 
-    # 在战斗参与者中查找
+    # 在战斗参与者 / 场景单位 / 玩家中查找目标
     combat_raw = state.get("combat")
     combat_dict = None
-    combat_target = None
+    target = None
+    target_source = None  # "combat" | "scene" | "player"
+
     if combat_raw:
         combat_dict = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw)
-        combat_target = combat_dict.get("participants", {}).get(target_id)
+        # 统一接口：玩家通过 get_combatant 从 player_dict 获取，NPC 从 participants 获取
+        target = get_combatant(combat_dict, player_dict, target_id)
+        if target:
+            target_source = "player" if (player_dict and target is player_dict) else "combat"
 
-    # 在场景单位中查找
-    scene_units: dict = state.get("scene_units") or {}
-    scene_raw = scene_units
-    if hasattr(scene_units, "model_dump"):
-        scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()}
-    elif isinstance(scene_units, dict):
-        scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()}
-    scene_target = scene_raw.get(target_id)
+    if not target:
+        scene_units: dict = state.get("scene_units") or {}
+        scene_raw = scene_units
+        if hasattr(scene_units, "model_dump"):
+            scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()}
+        elif isinstance(scene_units, dict):
+            scene_raw = {k: v.model_dump() if hasattr(v, "model_dump") else dict(v) for k, v in scene_units.items()}
+        scene_target = scene_raw.get(target_id)
+        if scene_target:
+            target = scene_target
+            target_source = "scene"
 
-    # 确定实际操作对象
-    target = combat_target or scene_target
+    # 非战斗状态下直接查找玩家
     if not target and player_dict and target_id == f"player_{player_dict.get('name', 'player')}":
         target = player_dict
+        target_source = "player"
+
     if not target:
         return Command(update={"messages": [
             ToolMessage(content=f"找不到目标 '{target_id}'。", tool_call_id=tool_call_id)
         ]})
 
     target_name = target.get("name", target_id)
-
-    # 玩家在战斗中的快照默认可能缺失 resources；这里以玩家本体为准补齐一次。
-    if player_dict and target_id == f"player_{player_dict.get('name', 'player')}":
-        for key in ("role_class", "resources", "known_spells", "spellcasting_ability"):
-            if key in player_dict:
-                target[key] = _clone_state_value(player_dict[key])
 
     resource_caps = _get_resource_caps(target, player_dict)
 
@@ -172,7 +165,6 @@ def modify_character_state(
         raw = changes["add_condition"]
         new_cond = {"id": raw} if isinstance(raw, str) else dict(raw)
         cond_id = new_cond["id"]
-        # 同 ID 不重复添加
         if not any(c.get("id") == cond_id for c in conds):
             conds.append(new_cond)
         lines.append(f"  {target_name} +状态: {cond_id}")
@@ -208,19 +200,15 @@ def modify_character_state(
             suffix = f" / {cap}" if cap is not None else ""
             lines.append(f"  {target_name} {rk}: {old_v} → {res[rk]}{suffix}")
 
-    # 回写变更
-    if combat_target and combat_dict:
+    # 回写变更 — 玩家数据在 player_dict 上原地修改，无需手动同步
+    if target_source == "combat" and combat_dict:
         combat_dict["participants"][target_id] = target
         update["combat"] = combat_dict
-    if scene_target:
+    elif target_source == "scene":
         scene_raw[target_id] = target
         update["scene_units"] = scene_raw
 
-    # 同步玩家本体
-    if player_dict and target_id == f"player_{player_dict.get('name', 'player')}":
-        for key in ("hp", "ac", "abilities", "modifiers", "conditions", "resources"):
-            if key in target:
-                player_dict[key] = target[key]
+    if target_source == "player" or (player_dict and target is player_dict):
         update["player"] = player_dict
 
     if hp_changes:
@@ -252,15 +240,16 @@ def inspect_unit(
             ]})
         target_id = f"player_{player_dict.get('name', 'player')}"
 
-    # 按优先级搜索：战斗参与者 → 场景单位 → 死亡单位 → 玩家本体
+    # 按优先级搜索：战斗参战者（含玩家）→ 场景单位 → 死亡单位 → 玩家本体
     result = None
     source = ""
 
     combat_raw = state.get("combat")
     if combat_raw:
         cd = combat_raw.model_dump() if hasattr(combat_raw, "model_dump") else dict(combat_raw)
-        if target_id in cd.get("participants", {}):
-            result = cd["participants"][target_id]
+        found = get_combatant(cd, player_dict, target_id)
+        if found:
+            result = found
             source = "战斗参与者"
 
     if not result:

@@ -76,7 +76,13 @@ def assistant_node(state: GraphState) -> dict:
     if combat := state.get("combat"):
         combat_data = combat.model_dump() if hasattr(combat, "model_dump") else dict(combat)
         current_id = combat_data.get("current_actor_id", "")
-        participants = combat_data.get("participants", {})
+        participants = dict(combat_data.get("participants", {}))
+
+        # 将玩家纳入 HUD 显示（玩家不在 participants 中，但是参战者）
+        if player := state.get("player"):
+            pd = player.model_dump() if hasattr(player, "model_dump") else dict(player)
+            if pd.get("id"):
+                participants[pd["id"]] = pd
 
         combat_lines = [
             f"第 {combat_data.get('round', '?')} 回合 | 当前行动者: {current_id}",
@@ -214,6 +220,7 @@ def monster_combat_node(state: GraphState) -> dict:
     """怪物/NPC 自动战斗节点：只处理当前一个非玩家单位的攻击 + 推进回合。
     graph 条件边控制循环：下一个仍是怪物则再次进入本节点。"""
     from app.services.tool_service import resolve_single_attack, advance_turn
+    from app.services.tools._helpers import get_all_combatants, get_combatant
     from langgraph.types import interrupt
 
     combat = state.get("combat")
@@ -222,6 +229,10 @@ def monster_combat_node(state: GraphState) -> dict:
 
     combat_dict = combat.model_dump() if hasattr(combat, "model_dump") else dict(combat)
     participants = combat_dict.get("participants", {})
+
+    # 获取玩家字典
+    player_raw = state.get("player")
+    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
 
     current_id = combat_dict.get("current_actor_id", "")
     actor = participants.get(current_id)
@@ -235,12 +246,13 @@ def monster_combat_node(state: GraphState) -> dict:
 
     # 已死亡的怪物：跳过，直接推进回合
     if actor.get("hp", 0) <= 0:
-        turn_text = advance_turn(combat_dict)
+        turn_text = advance_turn(combat_dict, player_dict)
         log_lines.append(turn_text)
     else:
-        # 选择第一个存活的玩家单位作为目标
+        # 选择第一个存活的玩家单位作为目标（通过统一接口获取）
         target = None
-        for uid, p in participants.items():
+        all_combatants = get_all_combatants(combat_dict, player_dict)
+        for uid, p in all_combatants.items():
             if p.get("side") == "player" and p.get("hp", 0) > 0:
                 target = p
                 break
@@ -253,39 +265,30 @@ def monster_combat_node(state: GraphState) -> dict:
             if hp_change:
                 hp_changes.append(hp_change)
                 
-            # 这里保存一份 raw_roll 供最后构建 message
             actor["_last_raw_roll"] = extra_info.get("raw_roll")
 
             # 推进回合
-            turn_text = advance_turn(combat_dict)
+            turn_text = advance_turn(combat_dict, player_dict)
             log_lines.append(turn_text)
 
     # 检测玩家全灭 → 中断，等待前端选择复活/结束
+    all_combatants = get_all_combatants(combat_dict, player_dict)
     all_players_down = all(
         p.get("hp", 0) <= 0
-        for p in participants.values()
+        for p in all_combatants.values()
         if p.get("side") == "player"
     )
-    if all_players_down and any(p.get("side") == "player" for p in participants.values()):
-        # 先提交当前战斗状态，再中断
+    if all_players_down and any(p.get("side") == "player" for p in all_combatants.values()):
         combat_report = "[系统:怪物行动]\n" + "\n".join(log_lines)
-        # interrupt 挂起 graph，前端收到 pending_action
         user_choice = interrupt({
             "type": "player_death",
             "summary": combat_report,
             "hp_changes": hp_changes,
         })
-        # 恢复后：根据玩家选择处理
-        player_dict = state.get("player").model_dump() if hasattr(state.get("player"), "model_dump") else dict(state.get("player")) if state.get("player") else {}
-        
         if user_choice == "revive":
-            for p in participants.values():
-                if p.get("side") == "player":
-                    p["hp"] = max(1, p.get("max_hp", 1) // 2)
-                    if player_dict and f"player_{player_dict.get('name')}" == p.get("id"):
-                        player_dict["hp"] = p["hp"]
+            if player_dict:
+                player_dict["hp"] = max(1, player_dict.get("max_hp", 1) // 2)
             
-            combat_dict["participants"] = participants
             return {
                 "combat": None,
                 "player": player_dict,
@@ -294,11 +297,8 @@ def monster_combat_node(state: GraphState) -> dict:
                 "hp_changes": [],
             }
         else:
-            for p in participants.values():
-                if p.get("side") == "player":
-                    p["hp"] = 0
-                    if player_dict and f"player_{player_dict.get('name')}" == p.get("id"):
-                        player_dict["hp"] = 0
+            if player_dict:
+                player_dict["hp"] = 0
 
             return {
                 "combat": None,
@@ -311,24 +311,18 @@ def monster_combat_node(state: GraphState) -> dict:
     combat_report = "[系统:怪物行动]\n" + "\n".join(log_lines)
     msg = HumanMessage(content=combat_report)
     
-    # 从上面暂存的 _last_raw_roll 中取回值挂载，然后清理
     raw_roll = actor.pop("_last_raw_roll", None)
     if raw_roll is not None:
         setattr(msg, "artifact", {"raw_roll": raw_roll})
 
-    result_state = {
+    result_state: dict = {
         "combat": combat_dict,
         "messages": [msg],
         "hp_changes": hp_changes,
     }
     
-    # 同步更新玩家本体状态
-    if hp_changes and state.get("player"):
-        player_dict = state.get("player").model_dump() if hasattr(state.get("player"), "model_dump") else dict(state.get("player"))
-        # 只取当回合受击的玩家HP
-        for hc in hp_changes:
-            if hc.get("id", "").startswith("player_"):
-                player_dict["hp"] = hc["new_hp"]
+    # 玩家 HP 变化已在 player_dict 上原地修改，直接回写
+    if player_dict:
         result_state["player"] = player_dict
 
     return result_state

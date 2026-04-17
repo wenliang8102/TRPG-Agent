@@ -5,6 +5,7 @@ from app.services.tools import (  # noqa: F401
     get_tools,
     resolve_single_attack,
     advance_turn,
+    prepare_player_for_combat,
     build_player_combatant,
 )
 from app.services.tools._helpers import apply_hp_change as _apply_hp_change  # noqa: F401
@@ -26,4 +27,4 @@ from app.services.tools.spell_tools import cast_spell  # noqa: F401
 from app.services.tools.condition_tools import apply_condition, remove_condition  # noqa: F401
 
 # 旧名称兼容
-_build_player_combatant = build_player_combatant
+_build_player_combatant = prepare_player_for_combat

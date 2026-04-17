@@ -26,9 +26,12 @@ from app.services.tools.condition_tools import apply_condition, remove_condition
 # 供外部模块直接引用的战斗计算函数
 from app.services.tools._helpers import (
     advance_turn,
-    build_player_combatant,
+    prepare_player_for_combat,
     resolve_single_attack,
 )
+
+# 向后兼容旧名称
+build_player_combatant = prepare_player_for_combat
 
 
 @lru_cache(maxsize=1)

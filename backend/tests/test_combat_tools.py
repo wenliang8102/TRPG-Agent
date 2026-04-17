@@ -15,7 +15,7 @@ if str(backend_dir) not in sys.path:
 
 from app.graph.state import AttackInfo, CombatantState, CombatState, WeaponData
 from app.calculation.predefined_characters import PREDEFINED_CHARACTERS
-from app.services.tool_service import _build_player_combatant
+from app.services.tool_service import _build_player_combatant, prepare_player_for_combat
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
 
@@ -37,14 +37,26 @@ def _make_combat_state(
     participants: dict[str, dict],
     current_actor_id: str = "",
     round_num: int = 1,
+    player_dict: dict | None = None,
 ) -> CombatState:
-    """构建 CombatState Pydantic 实例"""
+    """构建 CombatState Pydantic 实例。
+    新模型中玩家不在 participants 里，需要在 initiative_order 中包含玩家 ID。"""
+    # 从 participants 中过滤掉玩家条目（适配新模型）
+    npc_participants = {k: v for k, v in participants.items() if not k.startswith("player_")}
+    all_ids = list(participants.keys())
     return CombatState(
         round=round_num,
-        participants={k: CombatantState(**v) for k, v in participants.items()},
-        initiative_order=list(participants.keys()),
-        current_actor_id=current_actor_id or next(iter(participants)),
+        participants={k: CombatantState(**v) for k, v in npc_participants.items()},
+        initiative_order=all_ids,
+        current_actor_id=current_actor_id or next(iter(all_ids)),
     )
+
+
+def _make_player_combatant(profile_key: str = "战士") -> dict:
+    """从预设角色卡生成已叠加战斗字段的玩家字典"""
+    player = dict(PREDEFINED_CHARACTERS[profile_key])
+    prepare_player_for_combat(player)
+    return player
 
 
 def _invoke_tool(tool_func, *, tool_input: dict) -> object:
@@ -62,12 +74,11 @@ def _invoke_tool(tool_func, *, tool_input: dict) -> object:
 
 
 class TestBuildPlayerCombatant:
-    """验证玩家角色卡 → 战斗单位转换逻辑"""
+    """验证玩家角色卡 → 战斗字段叠加逻辑"""
 
     def test_melee_weapon_bonus(self):
         """战士→长剑: attack_bonus = prof(2) + STR mod(3) = 5"""
-        player = PREDEFINED_CHARACTERS["战士"]
-        result = _build_player_combatant(player)
+        result = _make_player_combatant("战士")
 
         assert result["id"] == "player_预设-战士"
         assert result["side"] == "player"
@@ -81,16 +92,14 @@ class TestBuildPlayerCombatant:
 
     def test_finesse_weapon_takes_higher(self):
         """游荡者→短剑(finesse): 取 max(STR=0, DEX=3) → bonus = 2+3 = 5"""
-        player = PREDEFINED_CHARACTERS["游荡者"]
-        result = _build_player_combatant(player)
+        result = _make_player_combatant("游荡者")
 
         shortsword = next(a for a in result["attacks"] if a["name"] == "Shortsword")
         assert shortsword["attack_bonus"] == 5  # prof(2) + max(STR=0, DEX=3)
 
     def test_ranged_weapon_uses_dex(self):
         """游荡者→短弓(ranged): 使用 DEX mod(3) → bonus = 2+3 = 5"""
-        player = PREDEFINED_CHARACTERS["游荡者"]
-        result = _build_player_combatant(player)
+        result = _make_player_combatant("游荡者")
 
         shortbow = next(a for a in result["attacks"] if a["name"] == "Shortbow")
         assert shortbow["attack_bonus"] == 5  # prof(2) + DEX(3)
@@ -102,8 +111,8 @@ class TestBuildPlayerCombatant:
             "hp": 5, "max_hp": 5, "ac": 10,
             "abilities": {}, "modifiers": {},
         }
-        result = _build_player_combatant(player)
-        assert result["attacks"] == []
+        prepare_player_for_combat(player)
+        assert player["attacks"] == []
 
     def test_all_predefined_have_weapons(self):
         """所有预设职业都应有至少一把武器"""
@@ -115,72 +124,39 @@ class TestBuildPlayerCombatant:
 
 
 class TestStartCombatPlayerJoin:
-    """验证 start_combat 自动将已加载的玩家角色纳入 participants"""
+    """验证 start_combat 自动将已加载的玩家角色纳入战斗（玩家在 player 字段，不在 participants）"""
 
     def _invoke_start_combat(self, state: dict):
         from app.services.tool_service import start_combat
         return _invoke_tool(start_combat, tool_input={"combatant_ids": ["goblin_1"], "state": state})
 
-    def test_player_added_to_participants(self):
-        """玩家角色卡存在时，start_combat 后 participants 应包含玩家"""
+    def test_player_added_to_initiative(self):
+        """玩家角色卡存在时，start_combat 后 initiative_order 应包含玩家 ID"""
         player = PREDEFINED_CHARACTERS["战士"]
         goblin = _make_goblin()
-        combat = CombatState(
-            round=0,
-            participants={"goblin_1": CombatantState(**goblin)},
-            initiative_order=[], current_actor_id="",
-        )
-
-        state = {"player": player, "combat": combat}
+        state = {"player": player, "scene_units": {"goblin_1": goblin}}
         result = self._invoke_start_combat(state)
 
         combat_update = result.update["combat"]
-        assert "player_预设-战士" in combat_update["participants"]
-        assert combat_update["participants"]["player_预设-战士"]["side"] == "player"
-
-    def test_player_not_duplicated(self):
-        """玩家已在 participants 中时不应重复添加"""
-        player = PREDEFINED_CHARACTERS["战士"]
-        player_combatant = _build_player_combatant(player)
-        goblin = _make_goblin()
-
-        combat = CombatState(
-            round=0,
-            participants={
-                "player_预设-战士": CombatantState(**player_combatant),
-                "goblin_1": CombatantState(**goblin),
-            },
-            initiative_order=[], current_actor_id="",
-        )
-
-        state = {"player": player, "combat": combat}
-        result = self._invoke_start_combat(state)
-        participants = result.update["combat"]["participants"]
-        player_entries = [k for k in participants if k.startswith("player_")]
-        assert len(player_entries) == 1
+        assert "player_预设-战士" in combat_update["initiative_order"]
+        # 玩家不在 participants 中（新模型）
+        assert "player_预设-战士" not in combat_update["participants"]
+        # 玩家战斗字段叠加在 player 上
+        assert result.update["player"]["id"] == "player_预设-战士"
+        assert result.update["player"]["side"] == "player"
 
     def test_phase_set_to_combat(self):
         """start_combat 应将 phase 设为 'combat'"""
         player = PREDEFINED_CHARACTERS["战士"]
         goblin = _make_goblin()
-        combat = CombatState(
-            round=0,
-            participants={"goblin_1": CombatantState(**goblin)},
-            initiative_order=[], current_actor_id="",
-        )
-        state = {"player": player, "combat": combat}
+        state = {"player": player, "scene_units": {"goblin_1": goblin}}
         result = self._invoke_start_combat(state)
         assert result.update.get("phase") == "combat"
 
     def test_no_player_still_works(self):
         """没有加载玩家角色时，start_combat 仍然正常运行"""
         goblin = _make_goblin()
-        combat = CombatState(
-            round=0,
-            participants={"goblin_1": CombatantState(**goblin)},
-            initiative_order=[], current_actor_id="",
-        )
-        state = {"combat": combat}
+        state = {"scene_units": {"goblin_1": goblin}}
         result = self._invoke_start_combat(state)
         assert "goblin_1" in result.update["combat"]["participants"]
 
@@ -202,22 +178,25 @@ class TestAttackActionValidation:
         return _invoke_tool(attack_action, tool_input=params)
 
     def _build_state(self, current_actor_id: str, player_action_available: bool = True) -> dict:
-        """构建含玩家+怪物的标准战斗状态"""
-        player = PREDEFINED_CHARACTERS["战士"]
-        player_c = _build_player_combatant(player)
+        """构建含玩家+怪物的标准战斗状态（新模型：玩家在 player 字段）"""
+        player_c = _make_player_combatant("战士")
         player_c["action_available"] = player_action_available
 
         goblin = _make_goblin()
-        participants = {"player_预设-战士": player_c, "goblin_1": goblin}
-        combat = _make_combat_state(participants, current_actor_id=current_actor_id)
-        return {"combat": combat}
+        combat = _make_combat_state(
+            {"player_预设-战士": player_c, "goblin_1": goblin},
+            current_actor_id=current_actor_id,
+            player_dict=player_c,
+        )
+        return {"combat": combat, "player": player_c}
 
     def test_wrong_turn_rejected(self):
         """攻击者不是当前行动者 → 返回错误"""
         state = self._build_state(current_actor_id="goblin_1")
         result = self._invoke_attack(state, "player_预设-战士", "goblin_1")
-        assert isinstance(result, ToolMessage)
-        assert "回合" in result.content
+        assert isinstance(result, Command)
+        msg = result.update["messages"][0].content
+        assert "回合" in msg
 
     def test_dead_target_rejected(self):
         """目标 hp=0 → 返回错误"""
@@ -227,15 +206,17 @@ class TestAttackActionValidation:
         state["combat"] = CombatState(**combat_dict)
 
         result = self._invoke_attack(state, "player_预设-战士", "goblin_1")
-        assert isinstance(result, ToolMessage)
-        assert "倒下" in result.content
+        assert isinstance(result, Command)
+        msg = result.update["messages"][0].content
+        assert "倒下" in msg
 
     def test_no_action_rejected(self):
         """action_available=False → 返回错误"""
         state = self._build_state(current_actor_id="player_预设-战士", player_action_available=False)
         result = self._invoke_attack(state, "player_预设-战士", "goblin_1")
-        assert isinstance(result, ToolMessage)
-        assert "用尽" in result.content
+        assert isinstance(result, Command)
+        msg = result.update["messages"][0].content
+        assert "用尽" in msg
 
     def test_successful_attack_consumes_action(self):
         """攻击成功后 attacker.action_available 应为 False（使用怪物攻击以避免玩家 interrupt）"""
@@ -253,7 +234,6 @@ class TestAttackActionValidation:
 
         assert isinstance(result, Command)
         msg_content = result.update["messages"][0].content
-        # 怪物使用 Scimitar 或其默认武器
         assert "攻击" in msg_content
 
 
@@ -266,14 +246,18 @@ class TestNextTurnReset:
     def test_next_actor_action_reset(self):
         from app.services.tool_service import next_turn
 
-        player_c = _build_player_combatant(PREDEFINED_CHARACTERS["战士"])
+        player_c = _make_player_combatant("战士")
         player_c["action_available"] = False  # 上个回合已用
+
         goblin = _make_goblin()
         goblin["action_available"] = False
 
-        participants = {"player_预设-战士": player_c, "goblin_1": goblin}
-        combat = _make_combat_state(participants, current_actor_id="player_预设-战士")
-        state = {"combat": combat}
+        combat = _make_combat_state(
+            {"player_预设-战士": player_c, "goblin_1": goblin},
+            current_actor_id="player_预设-战士",
+            player_dict=player_c,
+        )
+        state = {"combat": combat, "player": player_c}
 
         result = _invoke_tool(next_turn, tool_input={"state": state})
         assert isinstance(result, Command)
@@ -324,15 +308,19 @@ class TestWeaponDataModel:
 
 
 class TestModifyCharacterStateResources:
-    """验证战斗中恢复资源时，玩家本体与战斗快照保持一致"""
+    """验证战斗中恢复资源时，玩家数据保持一致（新模型中玩家就是单一数据源）"""
 
     def test_player_spell_slot_recovery_uses_actual_current_value_in_combat(self):
         from app.services.tool_service import modify_character_state
 
         player = dict(PREDEFINED_CHARACTERS["法师"])
         player["resources"] = {"spell_slot_lv1": 1}
-        player_c = _build_player_combatant(player)
-        combat = _make_combat_state({player_c["id"]: player_c}, current_actor_id=player_c["id"])
+        prepare_player_for_combat(player)
+        combat = _make_combat_state(
+            {player["id"]: player},
+            current_actor_id=player["id"],
+            player_dict=player,
+        )
         state = {"player": player, "combat": combat}
 
         result = _invoke_tool(
@@ -346,8 +334,8 @@ class TestModifyCharacterStateResources:
         )
 
         assert isinstance(result, Command)
+        # 新模型中只需检查 player 字段，不存在双写问题
         assert result.update["player"]["resources"]["spell_slot_lv1"] == 2
-        assert result.update["combat"]["participants"][player_c["id"]]["resources"]["spell_slot_lv1"] == 2
 
     def test_player_spell_slot_set_resource_clamps_to_predefined_cap(self):
         from app.services.tool_service import modify_character_state

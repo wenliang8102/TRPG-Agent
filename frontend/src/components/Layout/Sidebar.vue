@@ -65,7 +65,7 @@ const navItems: NavItem[] = [
   { id: 'chat', label: '聊天助手', icon: MessageCircle },
   { id: 'page1', label: '1', icon: Hash },
   { id: 'page2', label: '2', icon: Star },
-  { id: 'page3', label: '3', icon: BookOpen },
+  { id: 'page3', label: '历史', icon: BookOpen },
   { id: 'page4', label: '4', icon: Sword },
   { id: 'page5', label: '5', icon: Trophy },
   { id: 'page6', label: '6', icon: BarChart3 },
