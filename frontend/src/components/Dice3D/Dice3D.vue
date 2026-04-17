@@ -8,7 +8,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 
-// ==================== 响应式变量声明 ====================
+// ==================== 响应式变量 ====================
 const containerRef = ref<HTMLDivElement | null>(null)
 
 let scene: THREE.Scene | null = null
@@ -19,27 +19,30 @@ let diceBody: CANNON.Body | null = null
 let world: CANNON.World | null = null
 let animationId: number | null = null
 let isRolling = false
-let isDecelerating = false          // 是否正在缓停引导中
+let isDecelerating = false
 let decelerationStartTime = 0
-let decelerationDuration = 2000     // 2秒
-let startQuat: THREE.Quaternion = new THREE.Quaternion()
-let targetQuat: THREE.Quaternion = new THREE.Quaternion()
+let decelerationDuration = 3000 // 最大引导时长3秒
 let resolveRoll: ((value: number) => void) | null = null
-// ============================================================
-// 后端数据接收：expectedResult 存储父组件传入的预期骰子点数
-// 该值通过 throwDice(expectedNumber) 参数接收，来源通常是后端返回的掷骰结果
-// ============================================================
 let expectedResult: number | null = null
 
-// 存储纹理
+// 扭矩引导参数（轻柔）
+const kpGentle = 5.0
+const kdStrong = 8.0
+const maxTorqueGentle = 15.0
+let targetQuatCannon: CANNON.Quaternion | null = null
+
+// 低高度持续时间检测
+let lowHeightStartTime: number | null = null
+const LOW_HEIGHT_THRESHOLD = 0.3
+const LOW_HEIGHT_DURATION = 1530 // 毫秒
+
+// 纹理与发光
 let faceTextures: THREE.CanvasTexture[] = []
 let currentGlowNumber: number = -1
 let glowTimer: ReturnType<typeof setTimeout> | null = null
-
-// 存储每个面的中心点（局部坐标）
 let faceCenters: THREE.Vector3[] = []
 
-// ==================== 视觉重心偏移计算 ====================
+// ==================== 视觉偏移 ====================
 const getVisualOffset = (num: number): number => {
   const offsets: Record<number, number> = {
     1: 25, 2: 10, 3: 8, 4: 0, 5: 0,
@@ -50,7 +53,7 @@ const getVisualOffset = (num: number): number => {
   return offsets[num] || 0
 }
 
-// ==================== 纹理生成功能 ====================
+// ==================== 纹理生成 ====================
 const createNumberTexture = (num: number, glow: boolean = false): THREE.CanvasTexture => {
   const canvas = document.createElement('canvas')
   canvas.width = 512
@@ -115,7 +118,7 @@ const createAllTextures = () => {
   return textures
 }
 
-// ==================== 数字发光效果 ====================
+// ==================== 数字发光 ====================
 const glowByNumber = (number: number) => {
   if (!diceMesh || !faceTextures.length) return
   
@@ -193,7 +196,6 @@ const createCustomUVs = (geometry: THREE.BufferGeometry) => {
   geometry.setAttribute('uv', uvAttribute)
 }
 
-// ==================== 计算每个面的中心点 ====================
 const computeFaceCenters = (geometry: THREE.BufferGeometry) => {
   const centers: THREE.Vector3[] = []
   const positionAttribute = geometry.attributes.position
@@ -279,7 +281,7 @@ const getFrontNumber = (): number => {
   return frontFaceIndex + 1
 }
 
-// ==================== 计算目标四元数（使指定面朝向相机） ====================
+// ==================== 计算目标四元数 ====================
 const getTargetQuaternion = (targetNumber: number): THREE.Quaternion => {
   if (!diceMesh || !camera) return new THREE.Quaternion()
   
@@ -292,21 +294,24 @@ const getTargetQuaternion = (targetNumber: number): THREE.Quaternion => {
   return quatRot.clone().multiply(diceMesh.quaternion)
 }
 
-// ==================== 缓停引导（2秒内逐渐减速并转向目标面） ====================
-// 该函数用于当实际停止面与期望数字不一致时，优雅地修正结果
+// ==================== 缓停引导 ====================
 const startDeceleratingToFace = (targetNumber: number) => {
   if (!diceMesh || !diceBody) return
   
-  // 记录起始旋转
-  startQuat.copy(diceMesh.quaternion)
-  // 计算目标旋转
-  targetQuat = getTargetQuaternion(targetNumber)
+  const targetThreeQuat = getTargetQuaternion(targetNumber)
+  targetQuatCannon = new CANNON.Quaternion(
+    targetThreeQuat.x,
+    targetThreeQuat.y,
+    targetThreeQuat.z,
+    targetThreeQuat.w
+  )
+  
   decelerationStartTime = performance.now()
   isDecelerating = true
-  isRolling = false  // 物理滚动结束标志
+  isRolling = false
+  lowHeightStartTime = null // 重置计时
   
-  // 让物理体逐渐减速
-  // 注意：在动画循环中我们会每帧衰减速度，并强制设置旋转
+  diceBody.velocity.scale(0.7, diceBody.velocity)
 }
 
 // ==================== 物理世界 ====================
@@ -358,9 +363,7 @@ const initPhysics = () => {
   world.defaultContactMaterial.materials = [diceMaterial, groundMaterial]
 }
 
-// ==================== 掷骰子（接受后端点数） ====================
-// 后端调用此方法，传入期望的数字（例如后端掷骰计算出的结果）
-// 前端会根据该数字播放动画，并最终通过 Promise 返回实际显示的数字
+// ==================== 掷骰子 ====================
 const throwDice = (expectedNumber?: number): Promise<number> => {
   return new Promise((resolve) => {
     if (isRolling || isDecelerating || !diceBody) {
@@ -368,19 +371,16 @@ const throwDice = (expectedNumber?: number): Promise<number> => {
       return
     }
     
-    // ============================================================
-    // 接收后端数据：expectedNumber 来自父组件（通常由后端掷骰结果驱动）
-    // 如果后端未提供预期点数（例如独立投掷），则随机生成 1-20
-    // ============================================================
     if (expectedNumber === undefined) {
       expectedResult = Math.floor(Math.random() * 20) + 1
     } else {
-      // 后端传入的预期点数存储到 expectedResult，用于后续缓停引导
       expectedResult = expectedNumber
     }
     
     isRolling = true
     resolveRoll = resolve
+    targetQuatCannon = null
+    lowHeightStartTime = null
     
     const angleX = (Math.random() - 0.5) * Math.PI * 1.2
     const angleZ = (Math.random() - 0.5) * Math.PI * 1.2
@@ -402,39 +402,45 @@ const throwDice = (expectedNumber?: number): Promise<number> => {
   })
 }
 
-// ==================== 停止检测与缓停引导 ====================
+// ==================== 停止检测（带持续低高度判断） ====================
 const checkStopped = () => {
   if (!isRolling || !diceBody) return
   
+  const now = performance.now()
   const speed = diceBody.velocity.length()
   const angularSpeed = diceBody.angularVelocity.length()
   const yPos = diceBody.position.y
   
-  // 当速度足够低且高度接近地面时，启动缓停引导
-  if (speed < 1.0 && angularSpeed < 1.0 && yPos < 0.8) {
-    const actualNumber = getFrontNumber()
-    const targetNumber = expectedResult
-    // ============================================================
-    // 后端数据对比：如果实际停止面与后端期望结果不符，
-    // 则启动 2 秒缓停动画，强制将骰子旋转到期望数字面朝相机。
-    // 这保证了前端展示结果与后端计算结果一致。
-    // ============================================================
-    if (targetNumber !== null && actualNumber !== targetNumber) {
-      console.log(`实际正面: ${actualNumber}, 期望: ${targetNumber}, 开始2秒缓停引导`)
-      startDeceleratingToFace(targetNumber)
-    } else {
-      // 如果已经正确，直接结束并返回结果
-      isRolling = false
-      const finalNumber = actualNumber
-      console.log(`最终正面数字: ${finalNumber}`)
-      glowByNumber(finalNumber)
-      if (resolveRoll) {
-        // 将最终数字返回给调用方（父组件）
-        resolveRoll(finalNumber)
-        resolveRoll = null
-      }
-      expectedResult = null
+  // 检查是否低于高度阈值
+  if (yPos < LOW_HEIGHT_THRESHOLD) {
+    if (lowHeightStartTime === null) {
+      lowHeightStartTime = now
     }
+    
+    const lowHeightElapsed = now - lowHeightStartTime
+    // 速度条件满足且低高度持续足够时间，启动引导
+    if (speed < 1.5 && angularSpeed < 2.0 && lowHeightElapsed >= LOW_HEIGHT_DURATION) {
+      const actualNumber = getFrontNumber()
+      const targetNumber = expectedResult
+      if (targetNumber !== null && actualNumber !== targetNumber) {
+        console.log(`实际: ${actualNumber}, 期望: ${targetNumber}, 启动温柔扭矩引导`)
+        startDeceleratingToFace(targetNumber)
+      } else {
+        isRolling = false
+        lowHeightStartTime = null
+        const finalNumber = actualNumber
+        console.log(`最终: ${finalNumber}`)
+        glowByNumber(finalNumber)
+        if (resolveRoll) {
+          resolveRoll(finalNumber)
+          resolveRoll = null
+        }
+        expectedResult = null
+      }
+    }
+  } else {
+    // 高度回升，重置计时
+    lowHeightStartTime = null
   }
 }
 
@@ -446,14 +452,13 @@ const initScene = () => {
   const height = window.innerHeight
   
   scene = new THREE.Scene()
-  scene.background = null // 透明背景以便在此之上显示聊天
-  // scene.fog = new THREE.FogExp2(0x050308, 0.008)
+  scene.background = null
   
   camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
   camera.position.set(5.5, 2.5, 7)
   camera.lookAt(0, 0, 0)
   
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }) // 允许背景透明
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
   renderer.setClearColor(0x000000, 0)
   renderer.setSize(width, height)
   renderer.setPixelRatio(window.devicePixelRatio)
@@ -488,52 +493,71 @@ const initScene = () => {
 const animate = () => {
   const now = performance.now()
   
-  if (world) {
-    // 如果处于缓停引导模式，每帧手动控制旋转和衰减速度
-    if (isDecelerating && diceMesh && diceBody) {
-      const elapsed = now - decelerationStartTime
-      let t = Math.min(1, elapsed / decelerationDuration)
-      // 使用 easeOutCubic 缓动，让减速更自然
-      t = 1 - Math.pow(1 - t, 3)
+  if (world && diceBody && diceMesh) {
+    if (isDecelerating && targetQuatCannon) {
+      // 扭矩引导模式
+      const qCurrent = diceBody.quaternion
+      const qTarget = targetQuatCannon
       
-      // 四元数插值
-      const newQuat = startQuat.clone().slerp(targetQuat, t)
-      diceMesh.quaternion.copy(newQuat)
+      const qError = qTarget.mult(qCurrent.conjugate())
+      let angle = 2 * Math.acos(Math.max(-1, Math.min(1, qError.w)))
+      const axis = new CANNON.Vec3(qError.x, qError.y, qError.z)
+      const len = axis.length()
+      if (len > 1e-6) {
+        axis.scale(1 / len, axis)
+      } else {
+        axis.set(0, 1, 0)
+      }
       
-      // 同步到物理体
-      const cannonQuat = new CANNON.Quaternion(newQuat.x, newQuat.y, newQuat.z, newQuat.w)
-      diceBody.quaternion.copy(cannonQuat)
+      const speedFactor = Math.max(0.3, 1.0 - diceBody.velocity.length() / 5.0)
+      const angSpeedFactor = Math.max(0.3, 1.0 - diceBody.angularVelocity.length() / 8.0)
+      const dynamicGain = kpGentle * speedFactor * angSpeedFactor
       
-      // 逐渐衰减线速度和角速度，模拟减速
+      const torque = axis.clone().scale(dynamicGain * angle)
+      const dampingTorque = diceBody.angularVelocity.clone().scale(-kdStrong)
+      torque.vadd(dampingTorque, torque)
+      
+      const torqueMag = torque.length()
+      if (torqueMag > maxTorqueGentle) {
+        torque.normalize()
+        torque.scale(maxTorqueGentle, torque)
+      }
+      
+      diceBody.torque.copy(torque)
       diceBody.velocity.scale(0.95, diceBody.velocity)
-      diceBody.angularVelocity.scale(0.95, diceBody.angularVelocity)
+      diceBody.angularVelocity.scale(0.96, diceBody.angularVelocity)
       
-      // 如果插值完成，结束缓停
-      if (t >= 1.0) {
+      world.step(1 / 60)
+      
+      diceMesh.position.copy(diceBody.position as any)
+      diceMesh.quaternion.copy(diceBody.quaternion as any)
+      
+      const angleDeg = Math.abs(angle) * (180 / Math.PI)
+      const angVel = diceBody.angularVelocity.length()
+      const elapsed = now - decelerationStartTime
+      
+      if ((angleDeg < 3.0 && angVel < 0.5) || elapsed > decelerationDuration) {
         isDecelerating = false
-        // 完全停止物理运动
         diceBody.angularVelocity.set(0, 0, 0)
         diceBody.velocity.set(0, 0, 0)
         diceBody.sleep()
+        targetQuatCannon = null
         
         const finalNumber = getFrontNumber()
-        console.log(`缓停结束，最终正面数字: ${finalNumber}`)
+        console.log(`引导完成，最终: ${finalNumber}`)
         glowByNumber(finalNumber)
         if (resolveRoll) {
-          // 返回最终数字给后端调用方
           resolveRoll(finalNumber)
           resolveRoll = null
         }
         expectedResult = null
       }
     } else {
-      // 正常物理步进
+      // 正常物理模拟
       world.step(1 / 60)
       
-      if (diceMesh && diceBody) {
-        diceMesh.position.copy(diceBody.position as any)
-        diceMesh.quaternion.copy(diceBody.quaternion as any)
-      }
+      diceMesh.position.copy(diceBody.position as any)
+      diceMesh.quaternion.copy(diceBody.quaternion as any)
       
       checkStopped()
     }
@@ -562,59 +586,47 @@ const cleanup = () => {
     cancelAnimationFrame(animationId)
     animationId = null
   }
-  
   if (glowTimer) {
     clearTimeout(glowTimer)
     glowTimer = null
   }
-  
   window.removeEventListener('resize', handleResize)
   
   if (world) {
-    world.bodies.forEach(body => {
-      world!.removeBody(body)
-    })
-    world.contactmaterials.forEach((cm: CANNON.ContactMaterial) => {
-      world!.removeContactMaterial(cm)
-    })
+    world.bodies.forEach(body => world!.removeBody(body))
+    world.contactmaterials.forEach((cm: CANNON.ContactMaterial) => world!.removeContactMaterial(cm))
     world = null
   }
-  
   if (diceMesh) {
     diceMesh.geometry.dispose()
     if (Array.isArray(diceMesh.material)) {
-      diceMesh.material.forEach((material: THREE.Material) => material.dispose())
+      diceMesh.material.forEach(m => m.dispose())
     } else if (diceMesh.material) {
       diceMesh.material.dispose()
     }
     diceMesh = null
   }
-  
   if (scene) {
-    scene.traverse((object: THREE.Object3D) => {
-      if (object instanceof THREE.Mesh) {
-        object.geometry.dispose()
-        if (object.material) {
-          if (Array.isArray(object.material)) {
-            object.material.forEach((material: THREE.Material) => material.dispose())
-          } else {
-            object.material.dispose()
-          }
+    scene.traverse(obj => {
+      if (obj instanceof THREE.Mesh) {
+        obj.geometry.dispose()
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose())
+        } else if (obj.material) {
+          obj.material.dispose()
         }
       }
     })
     scene.clear()
     scene = null
   }
-  
   if (renderer) {
     renderer.dispose()
-    if (renderer.domElement && renderer.domElement.parentNode) {
+    if (renderer.domElement.parentNode) {
       renderer.domElement.parentNode.removeChild(renderer.domElement)
     }
     renderer = null
   }
-  
   if (containerRef.value) {
     containerRef.value.innerHTML = ''
   }
@@ -624,16 +636,12 @@ const cleanup = () => {
   resolveRoll = null
   expectedResult = null
   isDecelerating = false
+  targetQuatCannon = null
+  lowHeightStartTime = null
 }
 
-// ==================== 暴露接口 ====================
-// 父组件可通过 ref 调用 throwDice(expectedNumber) 方法，
-// 其中 expectedNumber 通常由后端掷骰计算得出
-defineExpose({
-  throwDice
-})
+defineExpose({ throwDice })
 
-// ==================== 生命周期 ====================
 onMounted(() => {
   initScene()
   initPhysics()
@@ -658,7 +666,6 @@ onUnmounted(() => {
   pointer-events: none;
   z-index: 9999;
 }
-
 .dice-3d-container canvas {
   pointer-events: auto;
 }
