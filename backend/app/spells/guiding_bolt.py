@@ -2,6 +2,7 @@
 
 import d20
 
+from app.conditions._base import ActiveCondition
 from app.spells._base import SpellDef, SpellResult, get_spellcasting_mod
 
 SPELL_DEF: SpellDef = {
@@ -30,10 +31,30 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
     caster_name = caster.get("name", "未知施法者")
     target_ac = target.get("ac", 10)
     
-    # 攻击检定 (d20 + 熟练加值 + 施法属性修正)
-    attack_roll = d20.roll(f"1d20+{attack_bonus}")
+    # 延迟按需导入，避免循环引用
+    from app.services.tools._helpers import _determine_advantage_from_conditions
+    advantage = _determine_advantage_from_conditions(
+        caster.get("conditions", []), target.get("conditions", [])
+    )
+    
+    if advantage == "advantage":
+        hit_expr = f"2d20kh1+{attack_bonus}"
+    elif advantage == "disadvantage":
+        hit_expr = f"2d20kl1+{attack_bonus}"
+    else:
+        hit_expr = f"1d20+{attack_bonus}"
+    
+    # 攻击检定
+    attack_roll = d20.roll(hit_expr)
     is_hit = attack_roll.total >= target_ac
     
+    # 本次检定结束，如果目标身上有单次受击消耗标记，立刻消耗掉
+    target_conditions = target.get("conditions", [])
+    if target_conditions:
+        surviving_conditions = [c for c in target_conditions if not c.get("extra", {}).get("consume_on_attacked")]
+        if len(surviving_conditions) != len(target_conditions):
+            target["conditions"] = surviving_conditions
+            
     lines = [
         f"{caster_name} 施放 曳光弹（{slot_level}环） 发起远程法术攻击！"
     ]
@@ -41,6 +62,16 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
     hp_changes = []
     
     if is_hit:
+        # 添加受击即消耗的曳光弹标记状态
+        target_conditions = target.setdefault("conditions", [])
+        mark_cond = ActiveCondition(
+            id="guiding_bolt_mark",
+            source_id=caster_name,
+            duration=1,
+            extra={"consume_on_attacked": True}
+        )
+        target_conditions.append(mark_cond.model_dump())
+
         # 计算伤害: 基础 1 环 4d6，每升一环加 1d6
         dice_count = 4 + max(0, slot_level - 1)
         formula = f"{dice_count}d6"
