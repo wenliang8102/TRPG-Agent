@@ -356,3 +356,44 @@ class TestModifyCharacterStateResources:
 
         assert isinstance(result, Command)
         assert result.update["player"]["resources"]["spell_slot_lv1"] == 2
+
+
+# ── Phase 8: Mage Armor 法术回归测试 ───────────────────────────
+
+
+class TestMageArmorSpell:
+    """验证法师护甲已注册、已装载到预设施法者，并能通过状态系统生效"""
+
+    def test_mage_armor_loaded_on_wizard_and_sorcerer(self):
+        assert "mage_armor" in PREDEFINED_CHARACTERS["法师"]["known_spells"]
+        assert "mage_armor" in PREDEFINED_CHARACTERS["术士"]["known_spells"]
+
+    def test_mage_armor_condition_is_registered(self):
+        from app.conditions import get_condition_def
+
+        condition_def = get_condition_def("mage_armor")
+        assert condition_def is not None
+        assert condition_def.name_cn == "法师护甲"
+
+    def test_cast_mage_armor_sets_ac_and_condition(self):
+        from app.services.tool_service import cast_spell
+
+        player = dict(PREDEFINED_CHARACTERS["法师"])
+        state = {"player": player}
+
+        result = _invoke_tool(
+            cast_spell,
+            tool_input={
+                "spell_id": "mage_armor",
+                "target_ids": ["self"],
+                "slot_level": 1,
+                "state": state,
+            },
+        )
+
+        assert isinstance(result, Command)
+        updated_player = result.update["player"]
+        assert updated_player["ac"] == 15
+        assert updated_player["resources"]["spell_slot_lv1"] == 1
+        assert any(c.get("id") == "mage_armor" for c in updated_player["conditions"])
+

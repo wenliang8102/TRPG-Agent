@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from app.spells import burning_hands, cure_wounds, magic_missile, shield, ice_knife, fireball, guiding_bolt, thunderwave
+from app.spells import burning_hands, cure_wounds, magic_missile, shield, ice_knife, fireball, guiding_bolt, thunderwave, mage_armor
 from app.spells._base import SpellDef, SpellResult  # noqa: F401 — re-export
 
 # 法术 ID → 模块；新增法术只需在此注册并创建同名模块
@@ -17,6 +17,7 @@ SPELL_REGISTRY: dict[str, ModuleType] = {
     "guiding_bolt": guiding_bolt,
     "fireball": fireball,
     "thunderwave": thunderwave,
+    "mage_armor": mage_armor,
 }
 
 

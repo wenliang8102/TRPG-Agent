@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from app.conditions import blinded, charmed, incapacitated, invisible, guiding_bolt_mark
+from app.conditions import blinded, charmed, incapacitated, invisible, guiding_bolt_mark, mage_armor
 from app.conditions._base import (  # noqa: F401 — re-export
     ActiveCondition,
     CombatEffects,
@@ -21,6 +21,7 @@ CONDITION_REGISTRY: dict[str, ModuleType] = {
     "incapacitated": incapacitated,
     "invisible": invisible,
     "guiding_bolt_mark": guiding_bolt_mark,
+    "mage_armor": mage_armor,
 }
 
 

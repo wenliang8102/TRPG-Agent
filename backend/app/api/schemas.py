@@ -4,6 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.graph.state import PlayerState
 
 class ChatRequest(BaseModel):
     message: Optional[str] = Field(default=None, description="User input message")
@@ -16,6 +17,6 @@ class ChatResponse(BaseModel):
     plan: Optional[str] = None
     session_id: str
     pending_action: Optional[dict] = Field(default=None, description="Action required from the user before continuing")
-    player: Optional[dict] = Field(default=None, description="Player state")
+    player: Optional[PlayerState] = Field(default=None, description="Player state")
     combat: Optional[dict] = Field(default=None, description="Combat state")
 

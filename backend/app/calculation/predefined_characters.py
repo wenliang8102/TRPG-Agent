@@ -64,7 +64,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
-        "known_spells": ["magic_missile", "shield", "burning_hands", "ice_knife", "guiding_bolt", "thunderwave"],
+        "known_spells": ["magic_missile", "shield", "mage_armor", "burning_hands", "ice_knife", "guiding_bolt", "thunderwave"],
         "spellcasting_ability": "int",
         "weapons": [
             {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
@@ -161,7 +161,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
-        "known_spells": ["magic_missile", "burning_hands", "ice_knife"],
+        "known_spells": ["magic_missile", "mage_armor", "burning_hands", "ice_knife"],
         "spellcasting_ability": "cha",
         "weapons": [
             {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
