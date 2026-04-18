@@ -1,4 +1,5 @@
 <!-- frontend/src/Pages_/ChatPage.vue -->
+<!-- frontend/src/Pages_/ChatPage.vue -->
 <template>
   <div class="chat-page" ref="containerRef">
     <!-- 左侧聊天区 -->
@@ -18,14 +19,14 @@
           </div>
         </header>
 
-        <div class="message-list" ref="messageListRef"  @scroll="handleScroll" >
-      <ChatMessage
-     v-for="(msg, index) in messages"
-    :key="msg.id"
-    :message="msg"
-    :is-streaming="isStreaming && index === messages.length - 1 && msg.role === 'assistant'"
-    :scroll-to-bottom="scrollToBottom"   
-       />
+        <div class="message-list" ref="messageListRef">
+          <ChatMessage
+            v-for="(msg, index) in messages"
+            :key="msg.id"
+            :message="msg"
+            :is-streaming="isStreaming && index === messages.length - 1 && msg.role === 'assistant'"
+            :scroll-to-bottom="scrollToBottom"
+          />
         </div>
 
         <p v-if="errorText" class="error-text">{{ errorText }}</p>
@@ -58,25 +59,25 @@
     </div>
 
     <!-- 拖拽条 -->
-    <div 
-      v-if="rightWidth > 0 && rightWidth < 100" 
-      class="resize-handle" 
+    <div
+      v-if="rightWidth > 0 && rightWidth < 100"
+      class="resize-handle"
       @mousedown="startDrag"
     ></div>
 
-    <!-- 右侧功能区：动态切换组件 -->
+    <!-- 右侧功能区：始终显示 CharacterPanel -->
     <div class="function-area" :style="{ width: rightWidth + '%' }">
-    <component 
-      :is="rightPanelComponent" 
-      :combat="combatState"
-      :external-player="playerState"
-    />
-  </div>
+      <CharacterPanel
+        ref="characterPanelRef"
+        :external-player="playerState"
+        :combat="combatState"
+      />
+    </div>
 
     <!-- 圆形控制按钮 -->
     <Transition name="fade">
-      <button 
-        v-if="showToggleBtn" 
+      <button
+        v-if="showToggleBtn"
         class="toggle-btn"
         :class="{ rotated: rightWidth === 0 }"
         @click="togglePanel"
@@ -94,7 +95,6 @@ import { ref, computed, provide, onMounted, onUnmounted, watch, nextTick } from 
 import ChatMessage from '../components/Chat/ChatMessage.vue'
 import ChatInput from '../components/Chat/ChatInput.vue'
 import ActionPanel from '../components/Chat/ActionPanel.vue'
-import CombatPanel from '../components/Chat/CombatPanel.vue'
 import CharacterPanel from '../components/Chat/CharacterPanel.vue'
 import Dice3D from '../components/Dice3D/Dice3D.vue'
 import { useChatSession } from '../composables/useChatSession'
@@ -108,6 +108,7 @@ import '../styles_/Chatpages.css'
 const containerRef = ref<HTMLElement | null>(null)
 const messageListRef = ref<HTMLElement | null>(null)
 const dice3dRef = ref<InstanceType<typeof Dice3D> | null>(null)
+const characterPanelRef = ref<InstanceType<typeof CharacterPanel> | null>(null)
 const showDiceAnimation = ref(false)
 const rightWidth = ref(25)
 const showToggleBtn = ref(false)
@@ -139,20 +140,27 @@ const {
   isStreaming,
 } = useChatMessages()
 
-// 动态右侧组件：有战斗时显示 CombatPanel，否则显示 CharacterPanel
-const rightPanelComponent = computed(() => {
-  return combatState.value ? CombatPanel : CharacterPanel
-})
-
 // 通过 provide 向子组件注入 debugMode
 provide('debugMode', debugMode)
+
+// 监听战斗状态变化，自动切换 CharacterPanel 视图
+watch(combatState, (hasCombat) => {
+  if (characterPanelRef.value) {
+    if (hasCombat) {
+      // 战斗开始/进行中 → 切换到血条视图
+      characterPanelRef.value.setViewMode('hp')
+    } else {
+      // 战斗结束 → 切换回角色详情视图
+      characterPanelRef.value.setViewMode('character')
+    }
+  }
+}, { immediate: true })
 
 const handleDiceRollAnim = async (rawRoll: number) => {
   showDiceAnimation.value = true
   await nextTick()
   if (dice3dRef.value) {
     await dice3dRef.value.throwDice(rawRoll)
-    // 动画播完后再停留一会儿让玩家看清
     await new Promise((resolve) => setTimeout(resolve, 1500))
   }
   showDiceAnimation.value = false
@@ -176,37 +184,25 @@ const { sendTextMessage, confirmDiceRoll, respondToPlayerDeath } = useChatSender
   handleDiceRollAnim
 )
 
-// 下一回合按钮：战斗中、玩家回合、无挂起动作
 const showNextTurnBtn = computed(() => {
   if (!combatState.value || pendingAction.value) return false
   const currentActorId: string = combatState.value.current_actor_id || ''
   return currentActorId.startsWith('player_')
 })
 
-// 是否
-// 禁用自动滚动（用户手动向上滚动时设为 true）
-
-
 const autoScrollDisabled = ref(false)
 
-// 检查当前是否在底部（允许一定误差）
 const isNearBottom = (): boolean => {
   const el = messageListRef.value
   if (!el) return true
-  const threshold = 50 // 距离底部小于50px视为在底部
+  const threshold = 50
   return el.scrollHeight - el.scrollTop - el.clientHeight < threshold
 }
 
-// 监听滚动事件：若用户滚离底部，则禁用自动滚动；若用户滚回底部，则重新启用
 const handleScroll = () => {
-  if (isNearBottom()) {
-    autoScrollDisabled.value = false
-  } else {
-    autoScrollDisabled.value = true
-  }
+  autoScrollDisabled.value = !isNearBottom()
 }
 
-// 修改原有的 scrollToBottom 函数，加入条件判断
 const scrollToBottom = () => {
   nextTick(() => {
     if (!autoScrollDisabled.value && messageListRef.value) {
@@ -215,10 +211,8 @@ const scrollToBottom = () => {
   })
 }
 
-
 watch(messages, scrollToBottom, { deep: true })
 
-// 初始化：加载历史消息
 onMounted(async () => {
   document.addEventListener('mousemove', handleMouseMove)
   if (sessionId.value) {
@@ -239,7 +233,7 @@ onMounted(async () => {
       if (history.player) setPlayerState(history.player)
       if (history.combat) setCombatState(history.combat)
     } catch {
-      // 无历史则使用默认欢迎消息
+      // 忽略错误
     }
   }
 })
@@ -248,16 +242,14 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', handleMouseMove)
 })
 
-// 切换面板
 const togglePanel = () => {
   rightWidth.value = rightWidth.value === 0 ? 25 : 0
 }
 
-// 拖拽逻辑
 const startDrag = (e: MouseEvent) => {
   if (!containerRef.value) return
   isDragging.value = true
-  
+
   const container = containerRef.value
   const startX = e.clientX
   const startWidth = rightWidth.value
@@ -265,11 +257,11 @@ const startDrag = (e: MouseEvent) => {
 
   const onMouseMove = (moveEvent: MouseEvent) => {
     if (!isDragging.value) return
-    
+
     const deltaX = moveEvent.clientX - startX
     let newPercent = startWidth - (deltaX / containerWidth) * 100
     newPercent = Math.max(0, Math.min(100, newPercent))
-    
+
     if (newPercent >= 80) {
       rightWidth.value = 100
       endDrag()
@@ -278,9 +270,7 @@ const startDrag = (e: MouseEvent) => {
     }
   }
 
-  const onMouseUp = () => {
-    endDrag()
-  }
+  const onMouseUp = () => endDrag()
 
   const endDrag = () => {
     isDragging.value = false
@@ -292,7 +282,6 @@ const startDrag = (e: MouseEvent) => {
   document.addEventListener('mouseup', onMouseUp)
 }
 
-// 鼠标靠近右边缘显示按钮
 const handleMouseMove = (e: MouseEvent) => {
   const windowWidth = window.innerWidth
   const distance = windowWidth - e.clientX

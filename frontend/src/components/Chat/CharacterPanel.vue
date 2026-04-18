@@ -1,7 +1,6 @@
 <!-- frontend/src/components/Chat/CharacterPanel.vue -->
 <template>
   <div class="character-panel">
-    <!-- 固定头部：标题 + 切换按钮 -->
     <div class="panel-header">
       <h3>{{ viewMode === 'character' ? '角色状态' : '生命值概览' }}</h3>
       <button
@@ -13,12 +12,11 @@
       </button>
     </div>
 
-    <!-- 可滚动内容区域 -->
     <div class="panel-scrollable-content">
       <!-- 视图 A：详细角色状态 -->
       <div v-if="viewMode === 'character'">
         <div v-if="player" class="character-stats">
-          <!-- 基础信息：名称 + 职业/等级 -->
+          <!-- 基础信息 -->
           <div class="stat-row">
             <span class="stat-label">名称</span>
             <span class="stat-value">{{ player.name || '无名冒险者' }}</span>
@@ -93,7 +91,7 @@
             </div>
           </div>
 
-          <!-- 资源（法术位等） -->
+          <!-- 资源 -->
           <div v-if="player.resources && Object.keys(player.resources).length" class="resources-section">
             <div class="section-title">资源</div>
             <div class="resources-grid">
@@ -104,12 +102,11 @@
             </div>
           </div>
 
-          <!-- 道具栏（占位） -->
+          <!-- 道具栏 -->
           <details class="inventory-section">
             <summary class="section-title">道具</summary>
             <div class="inventory-list">
               <div class="empty-state" style="padding: 8px 0;">暂无道具数据</div>
-              <!-- 未来若后端提供 player.inventory，可在此处遍历 -->
             </div>
           </details>
 
@@ -172,12 +169,10 @@ import { ArrowLeftRight } from 'lucide-vue-next'
 import { useCharacterState, type PlayerState, ABILITY_LIST, formatConditionName } from '../../Services_/characterStateService'
 
 const props = defineProps<{
-  // 外部传入的玩家数据（由父组件同步）
   externalPlayer: PlayerState | null
   combat?: any | null
 }>()
 
-// 使用 service 管理角色状态
 const {
   player,
   hpChanged,
@@ -192,20 +187,28 @@ const {
   getModifierDisplay,
 } = useCharacterState(props.externalPlayer)
 
-// 监听外部玩家数据变化，同步到 service
 watch(() => props.externalPlayer, (newPlayer) => {
   if (newPlayer) {
     updatePlayer(newPlayer)
   }
 }, { deep: true, immediate: true })
 
-// 视图切换
 const viewMode = ref<'character' | 'hp'>('character')
+
 const toggleView = () => {
   viewMode.value = viewMode.value === 'character' ? 'hp' : 'character'
 }
 
-// 资源名称美化（可保留在组件内）
+// 暴露方法供父组件调用
+const setViewMode = (mode: 'character' | 'hp') => {
+  viewMode.value = mode
+}
+
+defineExpose({
+  setViewMode,
+  toggleView,
+})
+
 const formatResourceName = (key: string): string => {
   return key
     .replace(/_/g, ' ')
@@ -214,7 +217,6 @@ const formatResourceName = (key: string): string => {
     .trim() || key
 }
 
-// HP 单位列表（用于 HP 视图）
 const hpUnits = computed(() => {
   const units: Array<{ id: string; name: string; hp: number; max_hp: number }> = []
 

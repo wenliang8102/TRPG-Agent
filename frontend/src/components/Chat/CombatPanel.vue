@@ -1,3 +1,5 @@
+<!--
+
 <template>
   <div class="combat-panel">
     <h3>角色栏</h3>
@@ -112,3 +114,4 @@ h3 {
 }
 </style>
 
+-->
