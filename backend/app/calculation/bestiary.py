@@ -47,6 +47,7 @@ def spawn_combatants(slug: str, count: int = 1, side: str = "enemy") -> list[Com
             side=side,
             hp=max_hp,
             max_hp=max_hp,
+            base_ac=template.armor_class,
             ac=template.armor_class,
             initiative=0,
             speed=template.speed_walk,

@@ -36,7 +36,8 @@ class PlayerState(BaseModel, extra="allow"):
     hp: int = 0
     max_hp: int = 0
     temp_hp: int = 0
-    ac: int = 10
+    base_ac: int = 10                     # 无 buff 裸 AC，最终 AC 由 compute_ac() 动态计算
+    ac: int = 10                          # 向后兼容别名，新代码应用 base_ac
     abilities: AbilityBlock = Field(default_factory=dict)
     modifiers: ModifierBlock = Field(default_factory=dict)
     conditions: list[ActiveCondition] = Field(default_factory=list)
@@ -44,6 +45,7 @@ class PlayerState(BaseModel, extra="allow"):
     weapons: list[WeaponData] = Field(default_factory=list)
     known_spells: list[str] = Field(default_factory=list)
     spellcasting_ability: str = ""
+    class_features: list[str] = Field(default_factory=list)
 
 
 class CheckState(BaseModel, extra="allow"):
@@ -79,7 +81,8 @@ class CombatantState(BaseModel, extra="allow"):
     side: Literal["player", "enemy", "ally"] = "enemy"
     hp: int = 0
     max_hp: int = 0
-    ac: int = 10
+    base_ac: int = 10                     # 无 buff 裸 AC
+    ac: int = 10                          # 向后兼容别名
     initiative: int = 0
     speed: int = 30
     conditions: list[ActiveCondition] = Field(default_factory=list)

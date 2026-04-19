@@ -148,6 +148,7 @@ def modify_character_state(
         hp_changes.append({"id": target.get("id", target_id), "name": target_name, "old_hp": old_hp, "new_hp": new_hp, "max_hp": max_hp})
         lines.append(f"  {target_name} HP 设为 {new_hp}")
     if "ac" in changes:
+        target["base_ac"] = int(changes["ac"])
         target["ac"] = int(changes["ac"])
         lines.append(f"  {target_name} AC → {target['ac']}")
     if "speed" in changes:

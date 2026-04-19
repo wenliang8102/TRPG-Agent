@@ -1,7 +1,7 @@
 from app.conditions._base import ConditionDef, CombatEffects
 
 # 魅惑的"不能攻击魅惑者"和"社交检定优势"依赖 source_id 追踪，
-# 由战斗解算层根据 ActiveCondition.source_id 判定，无法纯靠 CombatEffects 标志表达
+# 由 on_attack_eligibility 钩子在攻击解算时判定
 CONDITION_DEF = ConditionDef(
     id="charmed",
     name_cn="魅惑",
@@ -11,3 +11,10 @@ CONDITION_DEF = ConditionDef(
     ),
     effects=CombatEffects(),
 )
+
+
+def on_attack_eligibility(condition: dict, attacker: dict, target: dict) -> str | None:
+    """魅惑：不能攻击施加魅惑的来源单位"""
+    if condition.get("source_id") == target.get("id", ""):
+        return f"{attacker.get('name', '?')} 被魅惑，无法攻击 {target.get('name', '?')}！"
+    return None

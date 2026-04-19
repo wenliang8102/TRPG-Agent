@@ -1,5 +1,9 @@
-"""护盾术 (Shield) — 1环防护，反应动作 AC+5"""
+"""护盾术 (Shield) — 1环防护，反应动作 AC+5
 
+AC 提升效果由 conditions/shield_active.py 的 modify_ac 钩子在 compute_ac() 时动态计算，
+本法术只负责挂载 shield_active 条件（duration=1，回合结束自动过期）。"""
+
+from app.conditions._base import ActiveCondition, has_condition
 from app.spells._base import SpellDef, SpellResult
 
 SPELL_DEF: SpellDef = {
@@ -14,22 +18,28 @@ SPELL_DEF: SpellDef = {
 
 
 def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellResult:
-    """施法者 AC+5 直到下一回合开始，通过 shield_active 条件标记追踪"""
-    # targets[0] 就是施法者本体（"self" 解析结果）
+    """挂载 shield_active 条件（duration=1），AC+5 由 compute_ac() 动态处理"""
     target = targets[0]
     caster_name = caster.get("name", "?")
 
-    old_ac = target.get("ac", 10)
-    new_ac = old_ac + 5
-    target["ac"] = new_ac
-
     conditions = target.setdefault("conditions", [])
-    if "shield_active" not in conditions:
-        conditions.append("shield_active")
+
+    # 移除旧的字符串格式兼容标记（如有）
+    target["conditions"] = [c for c in conditions if c != "shield_active"]
+    conditions = target["conditions"]
+
+    if not has_condition(conditions, "shield_active"):
+        conditions.append(
+            ActiveCondition(
+                id="shield_active",
+                source_id=caster_name,
+                duration=1,
+            ).model_dump()
+        )
 
     lines = [
         f"{caster_name} 施放 护盾术!",
-        f"AC: {old_ac} → {new_ac}（持续到下一回合开始）",
+        f"AC +5（持续到下一回合开始）",
     ]
 
     return {"lines": lines}

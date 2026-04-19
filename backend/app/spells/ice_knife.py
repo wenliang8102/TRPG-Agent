@@ -37,7 +37,9 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
     primary = targets[0]
     p_id = primary.get("id", "target_0")
     p_name = primary.get("name", "?")
-    p_ac = primary.get("ac", 10)
+
+    from app.services.tools._helpers import compute_ac
+    p_ac = compute_ac(primary)
     
     atk_roll = d20.roll(f"1d20+{atk_bonus}")
     hit = atk_roll.total >= p_ac

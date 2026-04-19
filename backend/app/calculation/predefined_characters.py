@@ -12,6 +12,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 12,
         "max_hp": 12,
         "temp_hp": 0,
+        "base_ac": 16,
         "ac": 16,
         "abilities": {
             "str": 16,
@@ -32,6 +33,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {},
         "known_spells": [],
+        "class_features": [],
         "spellcasting_ability": "",
         "weapons": [
             {"name": "Longsword", "damage_dice": "1d8", "damage_type": "slashing", "weapon_type": "melee", "properties": ["versatile"]},
@@ -45,6 +47,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 8,
         "max_hp": 8,
         "temp_hp": 0,
+        "base_ac": 12,
         "ac": 12,
         "abilities": {
             "str": 8,
@@ -65,6 +68,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["magic_missile", "shield", "mage_armor", "burning_hands", "ice_knife", "guiding_bolt", "thunderwave"],
+        "class_features": [],
         "spellcasting_ability": "int",
         "weapons": [
             {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
@@ -77,6 +81,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 10,
         "max_hp": 10,
         "temp_hp": 0,
+        "base_ac": 14,
         "ac": 14,
         "abilities": {
             "str": 10,
@@ -97,6 +102,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {},
         "known_spells": [],
+        "class_features": [],
         "spellcasting_ability": "",
         "weapons": [
             {"name": "Shortsword", "damage_dice": "1d6", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light"]},
@@ -110,6 +116,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 10,
         "max_hp": 10,
         "temp_hp": 0,
+        "base_ac": 14,
         "ac": 14,
         "abilities": {
             "str": 12,
@@ -130,6 +137,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["cure_wounds"],
+        "class_features": [],
         "spellcasting_ability": "wis",
         "weapons": [
             {"name": "Mace", "damage_dice": "1d6", "damage_type": "bludgeoning", "weapon_type": "melee", "properties": []},
@@ -142,6 +150,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 8,
         "max_hp": 8,
         "temp_hp": 0,
+        "base_ac": 13,
         "ac": 13,
         "abilities": {
             "str": 8,
@@ -162,6 +171,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["magic_missile", "mage_armor", "burning_hands", "ice_knife"],
+        "class_features": [],
         "spellcasting_ability": "cha",
         "weapons": [
             {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
@@ -174,6 +184,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 12,
         "max_hp": 12,
         "temp_hp": 0,
+        "base_ac": 14,
         "ac": 14,
         "abilities": {
             "str": 14,
@@ -194,6 +205,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 1},
         "known_spells": ["cure_wounds"],
+        "class_features": [],
         "spellcasting_ability": "wis",
         "weapons": [
             {"name": "Shortsword", "damage_dice": "1d6", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light"]},
@@ -207,6 +219,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 10,
         "max_hp": 10,
         "temp_hp": 0,
+        "base_ac": 15,
         "ac": 15,
         "abilities": {
             "str": 14,
@@ -227,6 +240,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"ki_points": 2},
         "known_spells": [],
+        "class_features": [],
         "spellcasting_ability": "",
         "weapons": [
             {"name": "Shortsword", "damage_dice": "1d6", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light"]},
@@ -239,6 +253,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 12,
         "max_hp": 12,
         "temp_hp": 0,
+        "base_ac": 16,
         "ac": 16,
         "abilities": {
             "str": 16,
@@ -259,6 +274,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 0},
         "known_spells": [],
+        "class_features": [],
         "spellcasting_ability": "cha",
         "weapons": [
             {"name": "Longsword", "damage_dice": "1d8", "damage_type": "slashing", "weapon_type": "melee", "properties": ["versatile"]},
@@ -271,6 +287,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 9,
         "max_hp": 9,
         "temp_hp": 0,
+        "base_ac": 12,
         "ac": 12,
         "abilities": {
             "str": 8,
@@ -291,6 +308,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"pact_magic_lv1": 1},
         "known_spells": ["burning_hands"],
+        "class_features": [],
         "spellcasting_ability": "cha",
         "weapons": [
             {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
@@ -303,6 +321,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 10,
         "max_hp": 10,
         "temp_hp": 0,
+        "base_ac": 13,
         "ac": 13,
         "abilities": {
             "str": 10,
@@ -323,6 +342,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["cure_wounds", "burning_hands", "ice_knife"],
+        "class_features": [],
         "spellcasting_ability": "wis",
         "weapons": [
             {"name": "Scimitar", "damage_dice": "1d6", "damage_type": "slashing", "weapon_type": "melee", "properties": ["finesse", "light"]},
@@ -335,6 +355,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 9,
         "max_hp": 9,
         "temp_hp": 0,
+        "base_ac": 14,
         "ac": 14,
         "abilities": {
             "str": 8,
@@ -355,6 +376,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["cure_wounds"],
+        "class_features": [],
         "spellcasting_ability": "cha",
         "weapons": [
             {"name": "Rapier", "damage_dice": "1d8", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse"]},
@@ -367,6 +389,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "hp": 15,
         "max_hp": 15,
         "temp_hp": 0,
+        "base_ac": 14,
         "ac": 14,
         "abilities": {
             "str": 16,
@@ -387,6 +410,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"rage_uses": 2},
         "known_spells": [],
+        "class_features": [],
         "spellcasting_ability": "",
         "weapons": [
             {"name": "Greataxe", "damage_dice": "1d12", "damage_type": "slashing", "weapon_type": "melee", "properties": ["heavy", "two-handed"]},

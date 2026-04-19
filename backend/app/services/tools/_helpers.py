@@ -12,7 +12,7 @@ import re
 
 import d20
 
-from app.conditions import get_combat_effects, has_condition
+from app.conditions import get_combat_effects, get_condition_module, has_condition, tick_conditions
 from app.graph.state import AttackInfo
 
 
@@ -102,6 +102,20 @@ def get_all_combatants(
     return result
 
 
+# ── AC 动态计算 ─────────────────────────────────────────────────
+
+
+def compute_ac(unit: dict) -> int:
+    """从 base_ac + 条件模块的 modify_ac 钩子链式计算最终 AC。
+    法术（如 mage_armor / shield）不再直接修改 AC，而是通过条件注册的钩子在此动态叠加。"""
+    ac = unit.get("base_ac", unit.get("ac", 10))
+    for c in unit.get("conditions", []):
+        mod = get_condition_module(c.get("id", ""))
+        if mod and hasattr(mod, "modify_ac"):
+            ac = mod.modify_ac(unit, ac)
+    return ac
+
+
 # ── 攻击解算 ────────────────────────────────────────────────────
 
 
@@ -183,15 +197,14 @@ def resolve_single_attack(
     elif cond_advantage != "normal" and cond_advantage != advantage:
         advantage = "normal"  # 优势+劣势互相抵消
 
-    # 失能检查：失能单位无法执行动作
-    if has_condition(attacker.get("conditions", []), "incapacitated"):
-        attacker["action_available"] = False
-        return [f"{attacker.get('name', '?')} 处于失能状态，无法行动！"], 0, None, {"hit": False, "crit": False}
-
-    # 魅惑检查：不能攻击魅惑者
+    # 通过条件模块的 on_attack_eligibility 钩子判定攻击资格
     for c in attacker.get("conditions", []):
-        if c.get("id") == "charmed" and c.get("source_id") == target.get("id", ""):
-            return [f"{attacker.get('name', '?')} 被魅惑，无法攻击 {target.get('name', '?')}！"], 0, None, {"hit": False, "crit": False}
+        mod = get_condition_module(c.get("id", ""))
+        if mod and hasattr(mod, "on_attack_eligibility"):
+            reason = mod.on_attack_eligibility(c, attacker, target)
+            if reason:
+                attacker["action_available"] = False
+                return [reason], 0, None, {"hit": False, "crit": False}
 
     attacks = attacker.get("attacks", [])
     if attack_name:
@@ -213,7 +226,7 @@ def resolve_single_attack(
 
     hit_result = d20.roll(hit_expr)
     natural = _get_natural_d20(hit_result)
-    target_ac = target.get("ac", 10)
+    target_ac = compute_ac(target)
 
     if natural == 1:
         hit, crit = False, False
@@ -281,12 +294,25 @@ def resolve_single_attack(
 
 
 def advance_turn(combat_dict: dict, player_dict: dict | None = None) -> str:
-    """推进回合到下一个存活单位，返回描述文本。原地修改 combat_dict 和 player_dict（如有）。"""
+    """推进回合到下一个存活单位，返回描述文本。原地修改 combat_dict 和 player_dict（如有）。
+    在切换前对当前行动者执行 tick_conditions（递减持续时间、移除过期状态）。"""
     order = combat_dict.get("initiative_order", [])
     current_id = combat_dict.get("current_actor_id", "")
 
     if not order:
         return "先攻顺序为空。"
+
+    # 对当前行动者的条件执行持续时间递减
+    expire_text = ""
+    if current_id:
+        actor_leaving = get_combatant(combat_dict, player_dict, current_id)
+        if actor_leaving:
+            conds = actor_leaving.get("conditions", [])
+            if conds:
+                remaining, expired = tick_conditions(conds)
+                actor_leaving["conditions"] = remaining
+                if expired:
+                    expire_text = f"（{actor_leaving.get('name', '?')} 的状态已过期：{', '.join(expired)}）\n"
 
     current_idx = order.index(current_id) if current_id in order else -1
     total = len(order)
@@ -316,4 +342,4 @@ def advance_turn(combat_dict: dict, player_dict: dict | None = None) -> str:
 
     current_round = combat_dict.get("round", 1)
     actor_name = actor.get("name", next_actor_id)
-    return f"第 {current_round} 回合 — 当前行动者：{actor_name} [ID: {next_actor_id}] (HP: {actor.get('hp', '?')}/{actor.get('max_hp', '?')})"
+    return f"{expire_text}第 {current_round} 回合 — 当前行动者：{actor_name} [ID: {next_actor_id}] (HP: {actor.get('hp', '?')}/{actor.get('max_hp', '?')})"

@@ -9,3 +9,8 @@ CONDITION_DEF = ConditionDef(
         prevents_reactions=True,
     ),
 )
+
+
+def on_attack_eligibility(condition: dict, attacker: dict, target: dict) -> str | None:
+    """失能：无法执行任何动作"""
+    return f"{attacker.get('name', '?')} 处于失能状态，无法行动！"

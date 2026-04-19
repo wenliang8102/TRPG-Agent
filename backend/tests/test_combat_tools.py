@@ -377,6 +377,7 @@ class TestMageArmorSpell:
 
     def test_cast_mage_armor_sets_ac_and_condition(self):
         from app.services.tool_service import cast_spell
+        from app.services.tools._helpers import compute_ac
 
         player = dict(PREDEFINED_CHARACTERS["法师"])
         state = {"player": player}
@@ -393,7 +394,8 @@ class TestMageArmorSpell:
 
         assert isinstance(result, Command)
         updated_player = result.update["player"]
-        assert updated_player["ac"] == 15
+        # mage_armor 不再直接修改 ac，而是通过 compute_ac 动态计算
+        assert compute_ac(updated_player) == 15
         assert updated_player["resources"]["spell_slot_lv1"] == 1
         assert any(c.get("id") == "mage_armor" for c in updated_player["conditions"])
 

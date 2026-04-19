@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from app.conditions import blinded, charmed, incapacitated, invisible, guiding_bolt_mark, mage_armor
+from app.conditions import blinded, charmed, incapacitated, invisible, guiding_bolt_mark, mage_armor, shield_active
 from app.conditions._base import (  # noqa: F401 — re-export
     ActiveCondition,
     CombatEffects,
@@ -22,12 +22,18 @@ CONDITION_REGISTRY: dict[str, ModuleType] = {
     "invisible": invisible,
     "guiding_bolt_mark": guiding_bolt_mark,
     "mage_armor": mage_armor,
+    "shield_active": shield_active,
 }
 
 
 def get_condition_def(condition_id: str) -> ConditionDef | None:
     mod = CONDITION_REGISTRY.get(condition_id)
     return mod.CONDITION_DEF if mod else None
+
+
+def get_condition_module(condition_id: str) -> ModuleType | None:
+    """获取状态的完整模块引用，供查询钩子函数（modify_ac / on_attack_eligibility 等）"""
+    return CONDITION_REGISTRY.get(condition_id)
 
 
 def list_condition_defs() -> dict[str, ConditionDef]:
