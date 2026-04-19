@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps<{
   name: string
@@ -23,18 +23,32 @@ const props = defineProps<{
   maxHp: number
 }>()
 
-const isDead = computed(() => props.newHp <= 0)
-const oldPercent = computed(() => Math.max(0, Math.min(100, (props.oldHp / props.maxHp) * 100)))
-const newPercent = computed(() => Math.max(0, Math.min(100, (props.newHp / props.maxHp) * 100)))
+// 内部保存上一次渲染时的血量，用于计算动画起点
+const previousHp = ref(props.oldHp)
+const currentNewHp = ref(props.newHp)
+const currentMaxHp = ref(props.maxHp)
+
+// 监听 props 变化，更新内部状态并触发过渡
+watch(() => [props.oldHp, props.newHp, props.maxHp], ([newOld, newNew, newMax]) => {
+  // 只有当新旧血量确实不同时才更新 previousHp，保留动画起始点
+  if (newOld !== currentNewHp.value) {
+    previousHp.value = currentNewHp.value
+  }
+  currentNewHp.value = newNew
+  currentMaxHp.value = newMax
+}, { immediate: true })
+
+const isDead = computed(() => currentNewHp.value <= 0)
+const oldPercent = computed(() => Math.max(0, Math.min(100, (previousHp.value / currentMaxHp.value) * 100)))
+const newPercent = computed(() => Math.max(0, Math.min(100, (currentNewHp.value / currentMaxHp.value) * 100)))
 
 const hpColorClass = computed(() => {
-  const ratio = props.newHp / props.maxHp
+  const ratio = currentNewHp.value / currentMaxHp.value
   if (ratio > 0.5) return 'hp-green'
   if (ratio > 0.25) return 'hp-orange'
   return 'hp-red'
 })
 </script>
-
 <style scoped>
 .hp-bar-container {
   padding: 6px 10px;

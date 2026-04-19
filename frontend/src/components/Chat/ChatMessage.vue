@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, watch, onUnmounted } from 'vue'
+import { computed, inject, watch, onUnmounted ,reactive} from 'vue'
 import { marked } from 'marked'
 import type { ChatMessage } from '../../Services_/chatService'
 import HpBar from './HpBar.vue'
@@ -52,7 +52,30 @@ const props = defineProps<{
 
 const debugMode = inject<boolean>('debugMode', false)
 
-const hpChanges = computed(() => props.message.metadata?.hp_changes ?? [])
+  
+// 🔥 新增：全局血量历史缓存（按单位名称/ID）
+const globalHpCache = reactive<Record<string, number>>({})
+// 🔥 增强 hpChanges：如果 old_hp 不存在或与 new_hp 相同，尝试从缓存中获取旧值
+const hpChanges = computed(() => {
+  const rawChanges = props.message.metadata?.hp_changes ?? []
+  return rawChanges.map((change: any) => {
+    const key = change.id || change.name  // 确保有唯一标识
+    const cachedOld = globalHpCache[key]
+    const oldHp = change.old_hp !== undefined && change.old_hp !== change.new_hp
+      ? change.old_hp
+      : (cachedOld !== undefined ? cachedOld : change.new_hp)
+    
+    // 更新缓存
+    globalHpCache[key] = change.new_hp
+    
+    return {
+      ...change,
+      old_hp: oldHp,
+    }
+  })
+})
+
+
 const avatarUrl = computed(() => props.message.avatar ?? undefined)
 
 const displayName = computed(() => {
