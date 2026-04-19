@@ -79,7 +79,7 @@ const hpColorClass = computed(() => {
   height: 100%;
   background: rgba(239, 68, 68, 0.4);
   border-radius: 4px;
-  transition: width 1.2s ease-out 0.3s;
+   transition: width 1.8s ease-out 0.3s;  /* 可选，与主条同步 */
 }
 
 .hp-bar-fill {
@@ -88,7 +88,7 @@ const hpColorClass = computed(() => {
   left: 0;
   height: 100%;
   border-radius: 4px;
-  transition: width 0.8s ease;
+   transition: width 1.8s ease;  /* 🔥 修改为 1.8 秒 */
 }
 
 .hp-green { background: #42b883; }

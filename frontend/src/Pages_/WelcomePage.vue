@@ -1,445 +1,321 @@
-<!-- frontend/src/Pages_/WelcomePage.vue -->
 <template>
-  <div class="welcome-page">
-    <!-- 背景轮播层 - 改为 absolute 相对于父容器 -->
-    <div class="background-carousel">
-      <div 
-        v-for="(image, index) in backgroundImages" 
-        :key="index"
-        class="carousel-slide"
-        :class="{ active: currentIndex === index }"
-        :style="{ backgroundImage: `url(${image})` }"
-      />
-      <div class="carousel-overlay" />
+  <div class="welcome-page" ref="rootRef">
+    <!-- 极简右上角控制 -->
+    <div class="page-controls">
+      <button 
+        v-if="!isAllShown" 
+        class="skip-btn" 
+        @click="showAllContent"
+        title="跳过动画"
+      >
+        <span class="skip-text">跳过</span>
+        <ChevronRightIcon :size="16" />
+      </button>
     </div>
 
-    <!-- 切换按钮 -->
-    <button class="carousel-prev" @click="prevSlide">‹</button>
-    <button class="carousel-next" @click="nextSlide">›</button>
-    <div class="carousel-dots">
-      <span 
-        v-for="(_, index) in backgroundImages" 
-        :key="index"
-        class="dot"
-        :class="{ active: currentIndex === index }"
-        @click="currentIndex = index"
-      />
-    </div>
+    <!-- 标题：直接显示，大气 -->
+    <h1 class="welcome-title">龙与地下城</h1>
 
-    <!-- 前景悬浮内容 -->
-    <div class="foreground">
-      <div class="glass-card">
-        <!-- 内容保持不变 -->
-        <div class="card-header">
-          <h1 class="logo">TRPG<span class="accent">-AGENT</span></h1>
-          <div class="auth-links">
-            <a href="#" class="auth-link">登录</a>
-            <span class="divider">|</span>
-            <a href="#" class="auth-link">注册</a>
-          </div>
-        </div>
+    <!-- 正文内容将动态插入此处，无容器包裹 -->
+    <div class="welcome-body" ref="bodyRef"></div>
 
-        <div class="card-section">
-          <h2 class="section-title">关于我们 ABOUT US</h2>
-          <p class="section-text">
-            TRPG-AGENT 是一款ai对话游戏<br>
-            我们希望通过 AI 技术，让每一次冒险都更加精彩，<br>
-            致力于提供最流畅的游戏体验。
-          </p>
-        </div>
-
-        <div class="card-section">
-          <h2 class="section-title">作品 PROJECTS</h2>
-          <div class="projects-grid">
-            <div class="project-card">
-              <div class="project-icon">1</div>
-              <span>8</span>
-            </div>
-            <div class="project-card">
-              <div class="project-icon">2</div>
-              <span>/</span>
-            </div>
-            <div class="project-card">
-              <div class="project-icon">3</div>
-              <span>/</span>
-            </div>
-            <div class="project-card">
-              <div class="project-icon">4</div>
-              <span>/</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-section two-columns">
-          <div class="col">
-            <h2 class="section-title">加入我们 CAREER</h2>
-            <p class="section-text">
-              我们在寻找更多热爱跑团和创作的成员，<br>
-              请关注后续动态，或点击查看开放职位。
-            </p>
-            <a href="#" class="link-btn">查看热招职位 →</a>
-          </div>
-          <div class="col">
-            <h2 class="section-title">联系我们 CONTACT US</h2>
-            <p class="section-text">
-              请联系：www.wbzd.com<br>
-              或在 GitHub 上提交 Issue！
-            </p>
-            <a href="#" class="link-btn">GitHub →</a>
-          </div>
-        </div>
-
-        <div class="card-footer">
-          <div class="footer-logos">
-            <span class="footer-logo">TRPG</span>
-            <span class="footer-logo">AGENT</span>
-          </div>
-          <p class="copyright">
-            Copyright © 2024 TRPG-AGENT. All rights reserved.<br>
-            沪ICP备xxxxxx号-1 沪公网安备xxxxxxxx号
-          </p>
-        </div>
+    <!-- 游戏开始按钮（最后淡入） -->
+    <transition name="fade-scale">
+      <div v-if="showStartButton" class="game-start-wrapper">
+        <div class="game-start" @click="handleStartGame">游戏开始</div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { ChevronRight } from 'lucide-vue-next'
 
-// 背景图片列表（图片路径你填）
-const backgroundImages = ref([
-  'src/assets/textimage1.jpg',
-  'src/assets/textimage2.jpg',
-  'src/assets/textimage3.jpg',
-])
+const emit = defineEmits(['navigate'])
+const rootRef = ref(null)
+const bodyRef = ref(null)
+const isAllShown = ref(false)
+const showStartButton = ref(false)
+let timeouts = []
+let animationFrame = null
 
-const currentIndex = ref(0)
-let autoTimer: ReturnType<typeof setInterval> | null = null
+// 更具故事感的正文文案
+const bodyLines = [
+  "你翻开了一页泛黄的羊皮纸，尘埃在微光中浮沉",
+  "它记录了一段古老的传说",
+  "你即将踏入的大陆，没有统一的名字。精灵称它“歌唱之地”，矮人唤它“磐石之骨”，而人类，只是简单地叫它：世界。",
+  "这里有喧嚣的港口、寂静的森林，以及被藤蔓与遗忘吞没的废墟。每一座废墟下都埋着故事，每一个故事里都藏着一件宝物——而每一件宝物的背后，通常都守着一头饥饿的怪物。",
+  "你会遇见人类、精灵、矮人，还有龙裔与提夫林……每个种族都带着骄傲与伤痕，正如你一样。",
+  "神明并非传说。圣武士的剑因誓言燃烧，牧师的祈祷能撕裂天空。但神明从不亲自下场——他们看着，然后让你自己选择。",
+  "魔法源自一张看不见的网。你拨动它，现实便随之改变。但你的精神有限，魔网的琴弦每日只能弹响那么几次。",
+  "黑暗也从未远去。幽暗地域的凝视，巨龙金币堆上的梦，邪教徒低语的禁忌之名……文明的火光，其实一直摇摇欲坠。",
+  "而你，年轻的勇者",
+  "命运的齿轮已经转动",
+  "你的故事即将开始……"
+]
 
-const nextSlide = () => {
-  currentIndex.value = (currentIndex.value + 1) % backgroundImages.value.length
-}
+const LINE_DURATION = 1200        // 每行动画时长增加至1.2秒
+const CHAR_DELAY_FACTOR = 0.8     // 字符间延迟系数增大，使动画更慢
 
-const prevSlide = () => {
-  currentIndex.value = (currentIndex.value - 1 + backgroundImages.value.length) % backgroundImages.value.length
-}
-
-const startAutoPlay = () => {
-  autoTimer = setInterval(() => {
-    nextSlide()
-  }, 5000)
-}
-
-const stopAutoPlay = () => {
-  if (autoTimer) {
-    clearInterval(autoTimer)
-    autoTimer = null
+// 清理所有定时器
+const clearAllTimeouts = () => {
+  timeouts.forEach(t => clearTimeout(t))
+  timeouts = []
+  if (animationFrame) {
+    cancelAnimationFrame(animationFrame)
+    animationFrame = null
   }
+}
+
+// 直接显示全部内容（跳过动画）
+const showAllContent = () => {
+  if (isAllShown.value) return
+  
+  clearAllTimeouts()
+  const container = bodyRef.value
+  if (!container) return
+  
+  container.innerHTML = ''
+  
+  bodyLines.forEach(text => {
+    const lineDiv = document.createElement('div')
+    lineDiv.className = 'story-line'
+    const span = document.createElement('span')
+    span.className = 'story-char'
+    span.textContent = text
+    span.style.opacity = '1'
+    span.style.transform = 'translateY(0)'
+    span.style.filter = 'blur(0)'
+    lineDiv.appendChild(span)
+    container.appendChild(lineDiv)
+  })
+  
+  isAllShown.value = true
+  showStartButton.value = true
+}
+
+// 处理游戏开始点击
+const handleStartGame = () => {
+  emit('navigate', 'chat')
+}
+
+// 带有MG感的逐字动画
+const animateBodyLines = () => {
+  const container = bodyRef.value
+  if (!container) return
+  
+  let cumulativeDelay = 0
+  
+  bodyLines.forEach((text, lineIndex) => {
+    const lineDiv = document.createElement('div')
+    lineDiv.className = 'story-line'
+    container.appendChild(lineDiv)
+    
+    const chars = text.split('')
+    const charCount = chars.length
+    const charDuration = LINE_DURATION / charCount
+    
+    for (let i = 0; i < charCount; i++) {
+      const span = document.createElement('span')
+      span.textContent = chars[i]
+      span.className = 'story-char'
+      
+      // 初始状态：透明、轻微下移、略微模糊
+      span.style.opacity = '0'
+      span.style.transform = 'translateY(0.5em)'
+      span.style.filter = 'blur(2px)'
+      
+      lineDiv.appendChild(span)
+      
+      const charDelay = cumulativeDelay + i * charDuration * CHAR_DELAY_FACTOR
+      
+      const tid = setTimeout(() => {
+        span.style.transition = 'opacity 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), filter 0.25s ease'
+        span.style.opacity = '1'
+        span.style.transform = 'translateY(0)'
+        span.style.filter = 'blur(0)'
+      }, charDelay)
+      
+      timeouts.push(tid)
+    }
+    
+    cumulativeDelay += LINE_DURATION
+    
+    if (lineIndex === bodyLines.length - 1) {
+      const finishTid = setTimeout(() => {
+        showStartButton.value = true
+        isAllShown.value = true
+      }, cumulativeDelay + 200)
+      timeouts.push(finishTid)
+    }
+  })
 }
 
 onMounted(() => {
-  startAutoPlay()
+  animateBodyLines()
 })
 
 onUnmounted(() => {
-  stopAutoPlay()
+  clearAllTimeouts()
 })
 </script>
 
-<style scoped>
+<style>
+/* 页面整体：完全无容器，仅保留背景透出 */
 .welcome-page {
+  height: 100%;
+  overflow-y: auto;
+  padding: 3rem 2rem 2rem 2rem;
+  scroll-behavior: smooth;
   position: relative;
-  width: 100%;
-  min-height: 100%;
-  background: #0d0d0d;
+  font-family: 'Cinzel', 'Cormorant Garamond', 'Times New Roman', serif;
+  color: #f0f0f0;
+  background: transparent;
 }
 
-/* ========== 背景轮播层 ========== */
-.background-carousel {
+/* 右上角控制区域 */
+.page-controls {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  overflow: hidden;
-  border-radius: 0;
-}
-
-.carousel-slide {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  opacity: 0;
-  transition: opacity 0.8s ease-in-out;
-}
-
-.carousel-slide.active {
-  opacity: 1;
-}
-
-.carousel-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-}
-
-/* 轮播控制按钮 */
-.carousel-prev,
-.carousel-next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 20;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  border: 0.5px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  font-size: 32px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.carousel-prev {
-  left: 20px;
-}
-
-.carousel-next {
-  right: 20px;
-}
-
-.carousel-prev:hover,
-.carousel-next:hover {
-  background: rgba(66, 184, 131, 0.8);
-  transform: translateY(-50%) scale(1.05);
-}
-
-.carousel-dots {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  display: flex;
-  gap: 12px;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.dot.active {
-  width: 24px;
-  border-radius: 4px;
-  background: #42b883;
-}
-
-/* ========== 前景悬浮内容 ========== */
-.foreground {
-  position: relative;
+  top: 24px;
+  right: 32px;
   z-index: 10;
-  padding: 40px 80px;
-  min-height: 100vh;
+}
+
+.skip-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.glass-card {
-  background: rgba(20, 20, 25, 0.8);
-  backdrop-filter: blur(20px);
-  border-radius: 32px;
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
-  padding: 48px 56px;
-  max-width: 1000px;
-  width: 100%;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-}
-
-/* 头部 */
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 32px;
-  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 32px;
-}
-
-.logo {
-  font-size: 28px;
-  font-weight: 600;
-  color: white;
-  margin: 0;
-}
-
-.logo .accent {
-  color: #42b883;
-}
-
-.auth-links {
-  display: flex;
-  gap: 12px;
-  color: #8e8e93;
-}
-
-.auth-link {
-  color: #8e8e93;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.auth-link:hover {
-  color: #42b883;
-}
-
-.divider {
-  color: #3a3a40;
-}
-
-/* 区块 */
-.card-section {
-  margin-bottom: 48px;
-}
-
-.section-title {
-  font-size: 14px;
-  letter-spacing: 2px;
-  color: #42b883;
-  margin-bottom: 16px;
-  font-weight: 500;
-}
-
-.section-text {
-  color: #d1d1d6;
-  line-height: 1.6;
-  font-size: 15px;
-}
-
-/* 作品网格 */
-.projects-grid {
-  display: flex;
-  gap: 24px;
-  margin-top: 20px;
-}
-
-.project-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 20px 24px;
-  text-align: center;
-  transition: all 0.2s;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  color: rgba(220, 220, 240, 0.5);
+  font-size: 0.9rem;
+  font-family: inherit;
   cursor: pointer;
-  flex: 1;
+  transition: color 0.2s;
+  border-radius: 20px;
 }
 
-.project-card:hover {
-  background: rgba(66, 184, 131, 0.15);
-  transform: translateY(-4px);
+.skip-btn:hover {
+  color: rgba(230, 210, 170, 0.9);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.project-icon {
-  font-size: 32px;
-  margin-bottom: 12px;
+.skip-text {
+  letter-spacing: 1px;
 }
 
-.project-card span {
-  color: #e5e5ea;
-  font-size: 14px;
-}
-
-/* 两列布局 */
-.two-columns {
-  display: flex;
-  gap: 48px;
-}
-
-.two-columns .col {
-  flex: 1;
-}
-
-.link-btn {
-  display: inline-block;
-  margin-top: 16px;
-  color: #42b883;
-  text-decoration: none;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.link-btn:hover {
-  transform: translateX(4px);
-}
-
-/* 底部 */
-.card-footer {
-  margin-top: 48px;
-  padding-top: 32px;
-  border-top: 0.5px solid rgba(255, 255, 255, 0.1);
+/* 标题：大气、无容器感，金色渐变 */
+.welcome-title {
+  font-size: 9vh;
+  margin: 0 0 2.5rem 0;
+  font-family: 'Cinzel', 'UnifrakturMaguntia', serif;
+  background: linear-gradient(135deg, #e6d5a8 0%, #b88a44 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   text-align: center;
+  letter-spacing: 6px;
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(180, 130, 70, 0.3);
+  line-height: 1.2;
+  word-break: keep-all;
 }
 
-.footer-logos {
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-  margin-bottom: 20px;
+/* 正文容器：无背景、无边框、无阴影，仅用于布局，外边距缩小 */
+.welcome-body {
+  max-width: 800px;        /* 稍微缩小宽度，文字更集中 */
+  margin: 0 auto;
+  padding: 0 0.5rem;       /* 左右内边距减半，更贴近边缘 */
+  /* 完全透明，只负责排版 */
 }
 
-.footer-logo {
-  font-size: 12px;
-  color: #8e8e93;
-  letter-spacing: 2px;
+/* 每一行作为一个块，行间距缩小，更紧凑 */
+.story-line {
+  margin-bottom: 1.2rem;    /* 原为1.8rem */
+  line-height: 1.6;
+  text-align: left;
 }
 
-.copyright {
-  font-size: 11px;
-  color: #6c6c70;
-  line-height: 1.5;
+/* 每个字符的初始样式 */
+.story-char {
+  display: inline-block;
+  font-size: 3.5vh;         /* 维持原大小，保证可读性 */
+  color: #e8e6e0;
+  font-weight: 300;
+  letter-spacing: 0.01em;   /* 更紧凑的字间距 */
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  white-space: pre-wrap;
+  will-change: opacity, transform, filter;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .foreground {
-    padding: 20px;
+/* 针对不同屏幕微调 */
+@media (min-width: 1600px) {
+  .story-char {
+    font-size: 2.5vh;
   }
-  
-  .glass-card {
-    padding: 28px 20px;
-  }
-  
-  .projects-grid {
-    flex-wrap: wrap;
-  }
-  
-  .two-columns {
-    flex-direction: column;
-    gap: 32px;
-  }
-  
-  .card-header {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-  }
+}
+
+/* 游戏开始按钮包装 */
+.game-start-wrapper {
+  max-width: 800px;
+  margin: 2.5rem auto 0;    /* 略微减少上边距 */
+  text-align: center;
+  padding: 0 0.5rem;
+}
+
+/* 游戏开始标题：无容器，仅文字悬停效果 */
+.game-start {
+  display: inline-block;
+  font-size: 4vh;
+  font-weight: 700;
+  font-family: 'Cinzel', serif;
+  background: linear-gradient(135deg, #f2e5c0, #c9a87b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  cursor: pointer;
+  letter-spacing: 8px;
+  padding: 0.8rem 2.5rem;
+  transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1);
+  text-shadow: 0 0 15px rgba(200, 170, 120, 0.3);
+  border: 1px solid transparent;
+  border-radius: 40px;
+}
+
+.game-start:hover {
+  transform: scale(1.02);
+  text-shadow: 0 0 25px rgba(220, 190, 140, 0.6);
+  border-color: rgba(200, 170, 120, 0.3);
+  background-color: rgba(30, 30, 35, 0.2);
+  backdrop-filter: blur(4px);
+  padding: 0.8rem 3rem;
+}
+
+/* 过渡动画 */
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2, 0.9, 0.4, 1);
+}
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+/* 滚动条保持透明风格 */
+.welcome-page::-webkit-scrollbar {
+  width: 6px;
+}
+.welcome-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+.welcome-page::-webkit-scrollbar-thumb {
+  background: rgba(180, 160, 120, 0.25);
+  border-radius: 10px;
+}
+.welcome-page::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 180, 140, 0.4);
 }
 </style>

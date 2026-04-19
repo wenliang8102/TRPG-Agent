@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
   { id: 'page3', label: '历史', icon: BookOpen },
   { id: 'page4', label: '4', icon: Sword },
   { id: 'page5', label: '5', icon: Trophy },
-  { id: 'page6', label: '6', icon: BarChart3 },
+  { id: 'page6', label: '规则', icon: BookOpen },
   { id: 'page7', label: '设置', icon: Settings },
   { id: 'profile', label: '用户', icon: User },
 ]

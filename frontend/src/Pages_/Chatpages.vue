@@ -19,7 +19,7 @@
           </div>
         </header>
 
-        <div class="message-list" ref="messageListRef">
+        <div class="message-list" ref="messageListRef" @scroll="handleScroll">
           <ChatMessage
             v-for="(msg, index) in messages"
             :key="msg.id"
