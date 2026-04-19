@@ -282,7 +282,13 @@ def resolve_single_attack(
     # 移除被标记为受击即消耗的状态
     target_conditions = target.get("conditions", [])
     if target_conditions:
-        surviving_conditions = [c for c in target_conditions if not c.get("extra", {}).get("consume_on_attacked")]
+        surviving_conditions = []
+        for c in target_conditions:
+            eff = get_combat_effects(c.get("id", ""))
+            if c.get("extra", {}).get("consume_on_attacked") or (eff and eff.consume_on_attacked):
+                continue
+            surviving_conditions.append(c)
+            
         if len(surviving_conditions) != len(target_conditions):
             target["conditions"] = surviving_conditions
 

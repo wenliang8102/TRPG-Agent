@@ -23,6 +23,8 @@ class CombatEffects(BaseModel):
     save_disadvantage: list[str] = Field(default_factory=list)
     # 无法移动（如 Restrained / Grappled）
     prevents_movement: bool = False
+    # 受击即消耗（如 曳光弹造优标记 / 魅惑状态被攻击解除）
+    consume_on_attacked: bool = False
 
 
 class ConditionDef(BaseModel):

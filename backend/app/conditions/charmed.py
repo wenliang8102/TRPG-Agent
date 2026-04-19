@@ -10,7 +10,9 @@ CONDITION_DEF = ConditionDef(
         "魅惑者对被魅惑生物进行任何与社交相关的属性检定时具有优势。\n"
         "受击即解除：该生物受到攻击后魅惑状态自动解除。"
     ),
-    effects=CombatEffects(),
+    effects=CombatEffects(
+        consume_on_attacked=True,
+    ),
 )
 
 

@@ -139,7 +139,14 @@ def resolve_spell_attack(
     # 受击即消耗类状态处理
     target_conditions = target.get("conditions", [])
     if target_conditions:
-        surviving = [c for c in target_conditions if not c.get("extra", {}).get("consume_on_attacked")]
+        from app.conditions import get_combat_effects
+        surviving = []
+        for c in target_conditions:
+            eff = get_combat_effects(c.get("id", ""))
+            if c.get("extra", {}).get("consume_on_attacked") or (eff and eff.consume_on_attacked):
+                continue
+            surviving.append(c)
+            
         if len(surviving) != len(target_conditions):
             target["conditions"] = surviving
 
