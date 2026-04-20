@@ -1,5 +1,5 @@
 import { ChatApiError, chatService } from '../Services_/chatService'
-import type { HpChange } from '../Services_/chatService'
+import type { HpChange, ReactionResponse } from '../Services_/chatService'
 import type { Ref } from 'vue'
 
 const buildUserError = (error: unknown): string => {
@@ -34,6 +34,7 @@ export function useChatSender(
     session_id: string | null
     message?: string
     resume_action?: string
+    reaction_response?: ReactionResponse
   }) => {
     clearError()
     setSending(true)   // isStreaming = true
@@ -87,5 +88,11 @@ export function useChatSender(
     await streamRequest({ session_id: sessionId.value, resume_action: choice })
   }
 
-  return { sendTextMessage, confirmDiceRoll, respondToPlayerDeath }
+  const respondToReaction = async (choice: { spell_id: string; slot_level: number } | null) => {
+    // null / 无 spell_id 表示放弃反应
+    const payload = choice ?? { spell_id: null }
+    await streamRequest({ session_id: sessionId.value, reaction_response: payload })
+  }
+
+  return { sendTextMessage, confirmDiceRoll, respondToPlayerDeath, respondToReaction }
 }

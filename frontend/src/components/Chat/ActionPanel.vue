@@ -26,6 +26,40 @@
               </button>
             </div>
           </div>
+
+          <!-- 反应法术面板 -->
+          <div v-else-if="pendingAction.type === 'reaction_prompt'" class="action-panel reaction-panel">
+            <h2>⚡ 反应机会</h2>
+            <p class="reaction-trigger-info">
+              <strong>{{ pendingAction.attacker }}</strong> 的攻击命中了你！
+            </p>
+            <p class="reaction-detail">
+              <template v-if="pendingAction.attack_roll">
+                命中检定：d20 {{ pendingAction.attack_roll.raw_roll }}
+                + {{ pendingAction.attack_roll.attack_bonus }}
+                = {{ pendingAction.attack_roll.final_total }}
+                vs AC {{ pendingAction.attack_roll.target_ac }}
+              </template>
+              <template v-else>
+                命中骰: {{ pendingAction.hit_roll }} vs AC {{ pendingAction.current_ac }}
+              </template>
+            </p>
+            <div class="reaction-buttons">
+              <button
+                v-for="reaction in pendingAction.available_reactions"
+                :key="reaction.spell_id"
+                class="reaction-btn"
+                :disabled="disabled"
+                @click="$emit('react', { spell_id: reaction.spell_id, slot_level: reaction.min_slot })"
+              >
+                {{ reaction.name_cn }}
+                <span class="slot-cost">（{{ reaction.min_slot }}环位）</span>
+              </button>
+              <button class="skip-btn" :disabled="disabled" @click="$emit('skipReaction')">
+                放弃反应
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -44,6 +78,8 @@ defineEmits<{
   confirm: []
   revive: []
   endCombat: []
+  react: [choice: { spell_id: string; slot_level: number }]
+  skipReaction: []
 }>()
 </script>
 
@@ -160,6 +196,73 @@ defineEmits<{
   justify-content: center;
   flex-wrap: wrap;
 }
+
+/* 反应法术面板 */
+.reaction-panel h2 {
+  color: #f59e0b;
+}
+.reaction-trigger-info {
+  color: #e5e5ea;
+  font-size: 15px;
+  margin: 8px 0 4px;
+}
+.reaction-detail {
+  color: #a1a1aa;
+  font-size: 13px;
+  margin: 4px 0 16px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 2px solid #f59e0b;
+}
+.reaction-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.reaction-btn {
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 200px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 0.5px solid rgba(245, 158, 11, 0.3);
+}
+.reaction-btn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.3);
+  transform: translateY(-2px);
+}
+.reaction-btn:active { transform: translateY(0); }
+.reaction-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.reaction-btn .slot-cost {
+  font-weight: 400;
+  font-size: 13px;
+  opacity: 0.7;
+}
+.skip-btn {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 160px;
+  background: rgba(161, 161, 170, 0.1);
+  color: #a1a1aa;
+  border: 0.5px solid rgba(161, 161, 170, 0.2);
+  margin-top: 4px;
+}
+.skip-btn:hover:not(:disabled) {
+  background: rgba(161, 161, 170, 0.2);
+}
+.skip-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 640px) {
   .action-modal-container {

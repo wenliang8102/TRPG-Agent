@@ -49,6 +49,7 @@ async def chat(payload: ChatRequest) -> ChatResponse:
             message=payload.message,
             session_id=payload.session_id,
             resume_action=payload.resume_action,
+            reaction_response=payload.reaction_response,
         )
 
         return ChatResponse(
@@ -103,6 +104,7 @@ async def chat_stream(payload: ChatRequest) -> StreamingResponse:
                 message=payload.message,
                 session_id=payload.session_id,
                 resume_action=payload.resume_action,
+                reaction_response=payload.reaction_response,
             ):
                 yield event
         except Exception as exc:

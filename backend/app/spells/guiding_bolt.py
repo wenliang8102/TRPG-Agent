@@ -1,6 +1,6 @@
 """曳光弹 (Guiding Bolt) — 1环塑能，远程法术攻击，光耀伤害及单次造优"""
 
-from app.conditions._base import ActiveCondition
+from app.conditions._base import build_condition_extra, create_condition
 from app.spells._base import SpellDef, SpellResult
 from app.spells._resolvers import resolve_spell_attack
 
@@ -20,13 +20,14 @@ def _apply_mark(caster: dict, target: dict, lines: list[str]) -> None:
     target_name = target.get("name", "?")
     caster_name = caster.get("name", "?")
     target_conditions = target.setdefault("conditions", [])
-    mark_cond = ActiveCondition(
-        id="guiding_bolt_mark",
-        source_id=caster_name,
-        duration=1,
-        extra={"consume_on_attacked": True},
+    target_conditions.append(
+        create_condition(
+            "guiding_bolt_mark",
+            source_id=caster_name,
+            duration=1,
+            extra=build_condition_extra(consume_on_attacked=True),
+        )
     )
-    target_conditions.append(mark_cond.model_dump())
     lines.append(
         f"  [造优效果] 秘法的微光在 {target_name} 身上闪耀，"
         f"对它发动的下一次攻击检定具有优势！(持续至 {caster_name} 下回合结束)"

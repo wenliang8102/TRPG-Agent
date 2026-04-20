@@ -10,6 +10,7 @@ class ChatRequest(BaseModel):
     message: Optional[str] = Field(default=None, description="User input message")
     session_id: Optional[str] = Field(default=None, description="Conversation session id")
     resume_action: Optional[str] = Field(default=None, description="Resume action for interrupted graph (e.g. 'roll_dice')")
+    reaction_response: Optional[dict] = Field(default=None, description="Structured reaction choice payload for pending combat reactions")
 
 
 class ChatResponse(BaseModel):

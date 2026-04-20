@@ -14,6 +14,7 @@ from app.calculation.bestiary import spawn_combatants
 from app.services.tools._helpers import (
     advance_turn,
     apply_hp_change,
+    build_attack_roll_event_payload,
     clear_player_combat_fields,
     get_all_combatants,
     get_combatant,
@@ -208,8 +209,22 @@ def attack_action(
 
     lines, _, hp_change, extra_info = resolve_single_attack(attacker, target, attack_name, advantage)
 
-    tool_msg = ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)
-    tool_msg.artifact = {"raw_roll": extra_info.get("raw_roll")}
+    attack_roll_payload = build_attack_roll_event_payload({
+        "raw_roll": extra_info.get("raw_roll"),
+        "attack_bonus": extra_info.get("attack_bonus", 0),
+        "hit_total": extra_info.get("final_total", extra_info.get("raw_roll", 0)),
+        "emit_dice_roll": extra_info.get("raw_roll") is not None,
+    })
+
+    tool_message_kwargs = {}
+    if attack_roll_payload:
+        tool_message_kwargs["additional_kwargs"] = {"attack_roll": attack_roll_payload}
+
+    tool_msg = ToolMessage(
+        content="\n".join(lines),
+        tool_call_id=tool_call_id,
+        **tool_message_kwargs,
+    )
 
     # 玩家数据已在 player_dict 上原地修改，无需手动同步
     update: dict = {

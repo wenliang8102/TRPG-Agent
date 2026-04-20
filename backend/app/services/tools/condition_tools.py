@@ -9,8 +9,9 @@ from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
-from app.conditions import get_condition_def, has_condition, list_condition_defs
-from app.services.tools._helpers import get_combatant
+from app.conditions import get_condition_def, has_condition, list_condition_defs, remove_condition_by_id, upsert_condition
+from app.conditions._base import create_condition
+from app.services.tools._helpers import get_combatant, sync_movement_state
 
 
 def _locate_target(state: dict, target_id: str) -> tuple[dict | None, dict, str]:
@@ -112,12 +113,11 @@ def apply_condition(
             ToolMessage(content=f"{target.get('name', resolved_id)} 已处于 {condition_id} 状态。", tool_call_id=tool_call_id)
         ]})
 
-    new_cond: dict = {"id": condition_id}
-    if source_id:
-        new_cond["source_id"] = source_id
-    if duration is not None:
-        new_cond["duration"] = duration
-    conds.append(new_cond)
+    upsert_condition(
+        target,
+        create_condition(condition_id, source_id=source_id, duration=duration),
+    )
+    sync_movement_state(target)
 
     # 状态元数据用于日志
     cdef = get_condition_def(condition_id)
@@ -163,7 +163,8 @@ def remove_condition(
             ToolMessage(content=f"{target.get('name', resolved_id)} 当前没有 {condition_id} 状态。", tool_call_id=tool_call_id)
         ]})
 
-    target["conditions"] = [c for c in conds if c.get("id") != condition_id]
+    remove_condition_by_id(target, condition_id)
+    sync_movement_state(target)
 
     cdef = get_condition_def(condition_id)
     cond_label = cdef.name_cn if cdef else condition_id

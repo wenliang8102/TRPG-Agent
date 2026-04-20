@@ -44,8 +44,12 @@ class PlayerState(BaseModel, extra="allow"):
     resources: dict[str, int] = Field(default_factory=dict)
     weapons: list[WeaponData] = Field(default_factory=list)
     known_spells: list[str] = Field(default_factory=list)
+    known_cantrips: list[str] = Field(default_factory=list)
     spellcasting_ability: str = ""
     class_features: list[str] = Field(default_factory=list)
+    concentrating_on: str | None = None  # 当前专注的法术 ID
+    xp: int = 0
+    arcane_tradition: str = ""  # 奥术传承（如 "evocation", "abjuration"）
 
 
 class CheckState(BaseModel, extra="allow"):
@@ -64,6 +68,50 @@ class RollResultState(BaseModel, extra="allow"):
     modifier: int = 0
     total: int = 0
     success: bool = False
+
+
+class AttackRollState(BaseModel, extra="allow"):
+    """一次攻击命中判定的完整快照，作为反应与前端展示的唯一事实源"""
+    blocked: bool = False
+    hit: bool = False
+    crit: bool = False
+    natural: int = 0
+    raw_roll: int = 0
+    attack_bonus: int = 0
+    hit_total: int = 0
+    target_ac: int = 10
+    dmg_dice: str = "1d4"
+    dmg_type: str = "bludgeoning"
+    atk_name_display: str = ""
+    advantage_used: Literal["normal", "advantage", "disadvantage"] = "normal"
+    lines: list[str] = Field(default_factory=list)
+    deflected: bool = False
+
+
+class ReactionOptionState(BaseModel, extra="allow"):
+    """一次反应提示里可选择的单个反应选项"""
+    spell_id: str
+    name_cn: str = ""
+    min_slot: int = 1
+    description: str = ""
+
+
+class ReactionChoiceState(BaseModel, extra="allow"):
+    """用户提交的反应选择"""
+    spell_id: str | None = None
+    slot_level: int | None = None
+
+
+class PendingReactionState(BaseModel, extra="allow"):
+    """等待玩家决定是否反应的攻击上下文"""
+    type: Literal["reaction_prompt"] = "reaction_prompt"
+    trigger: str = "on_hit"
+    attacker_id: str = ""
+    attacker_name: str = ""
+    target_id: str = ""
+    target_name: str = ""
+    attack_roll: AttackRollState = Field(default_factory=AttackRollState)
+    available_reactions: list[ReactionOptionState] = Field(default_factory=list)
 
 
 class AttackInfo(BaseModel):
@@ -131,6 +179,8 @@ class GraphState(TypedDict, total=False):
 
     pending_check: Optional[CheckState]
     last_roll: Optional[RollResultState]
+    pending_reaction: Optional[PendingReactionState]
+    reaction_choice: Optional[ReactionChoiceState]
 
     # 场景单位池 — spawn 产出放这里，start_combat 从中挑选参战者
     scene_units: dict[str, CombatantState]

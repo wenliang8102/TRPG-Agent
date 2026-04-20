@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TypedDict
 
 
-class SpellDef(TypedDict):
+class SpellDef(TypedDict, total=False):
     """法术静态元数据 — 注册表中每个法术的描述信息"""
     name: str
     name_cn: str
@@ -14,6 +14,8 @@ class SpellDef(TypedDict):
     casting_time: str   # "action" | "bonus_action" | "reaction"
     range: str
     description: str
+    concentration: bool  # 是否需要专注维持，默认 False
+    reaction_trigger: str  # 反应法术触发时机: "on_hit" | "on_enemy_cast" | "on_leave_reach"
 
 
 class SpellResult(TypedDict, total=False):

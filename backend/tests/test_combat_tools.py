@@ -2,6 +2,7 @@
 
 import sys
 import re
+import copy
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,6 +16,7 @@ if str(backend_dir) not in sys.path:
 
 from app.graph.state import AttackInfo, CombatantState, CombatState, WeaponData
 from app.calculation.predefined_characters import PREDEFINED_CHARACTERS
+from app.conditions._base import build_condition_extra, create_condition
 from app.services.tool_service import _build_player_combatant, prepare_player_for_combat
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
@@ -365,7 +367,8 @@ class TestMageArmorSpell:
     """验证法师护甲已注册、已装载到预设施法者，并能通过状态系统生效"""
 
     def test_mage_armor_loaded_on_wizard_and_sorcerer(self):
-        assert "mage_armor" in PREDEFINED_CHARACTERS["法师"]["known_spells"]
+        # 法师 1 级默认仅有 magic_missile + shield；术士仍默认带 mage_armor
+        assert "mage_armor" not in PREDEFINED_CHARACTERS["法师"]["known_spells"]
         assert "mage_armor" in PREDEFINED_CHARACTERS["术士"]["known_spells"]
 
     def test_mage_armor_condition_is_registered(self):
@@ -380,6 +383,7 @@ class TestMageArmorSpell:
         from app.services.tools._helpers import compute_ac
 
         player = dict(PREDEFINED_CHARACTERS["法师"])
+        player["known_spells"] = list(player["known_spells"]) + ["mage_armor"]
         state = {"player": player}
 
         result = _invoke_tool(
@@ -398,4 +402,266 @@ class TestMageArmorSpell:
         assert compute_ac(updated_player) == 15
         assert updated_player["resources"]["spell_slot_lv1"] == 1
         assert any(c.get("id") == "mage_armor" for c in updated_player["conditions"])
+
+
+class TestReactionFlow:
+    """验证怪物命中后的显式待决反应链路与护盾术改判。"""
+
+    _real_roll = d20.roll
+
+    @staticmethod
+    def _fixed_roll(expr: str):
+        normalized = expr.replace(" ", "")
+        mapping = {
+            "1d20+4": "16",
+            "1d6+2": "5",
+        }
+        return TestReactionFlow._real_roll(mapping.get(normalized, expr))
+
+    def _build_reaction_state(self) -> dict:
+        player = copy.deepcopy(PREDEFINED_CHARACTERS["法师"])
+        prepare_player_for_combat(player)
+        goblin = _make_goblin()
+        combat = _make_combat_state(
+            {player["id"]: player, "goblin_1": goblin},
+            current_actor_id="goblin_1",
+            player_dict=player,
+        )
+        return {"combat": combat, "player": player}
+
+    def test_monster_hit_creates_pending_reaction(self):
+        from app.graph import nodes
+
+        state = self._build_reaction_state()
+        with patch("app.services.tools._helpers.d20.roll", side_effect=self._fixed_roll), patch(
+            "app.services.tools._helpers._get_natural_d20", return_value=12
+        ):
+            result = nodes.monster_combat_node(state)
+
+        pending = result["pending_reaction"]
+        assert pending["type"] == "reaction_prompt"
+        assert pending["attacker_id"] == "goblin_1"
+        assert pending["attack_roll"]["raw_roll"] == 12
+        assert pending["attack_roll"]["attack_bonus"] == 4
+        assert pending["attack_roll"]["hit_total"] == 16
+        assert pending["available_reactions"][0]["spell_id"] == "shield"
+        assert "messages" not in result
+
+    def test_shield_reaction_uses_saved_attack_snapshot_and_prevents_damage(self):
+        from app.graph import nodes
+
+        state = self._build_reaction_state()
+        with patch("app.services.tools._helpers.d20.roll", side_effect=self._fixed_roll), patch(
+            "app.services.tools._helpers._get_natural_d20", return_value=12
+        ):
+            pending_state = nodes.monster_combat_node(state)
+            initial_slots = pending_state["player"]["resources"]["spell_slot_lv1"]
+            resolved = nodes.resolve_reaction_node({
+                "combat": pending_state["combat"],
+                "player": pending_state["player"],
+                "pending_reaction": pending_state["pending_reaction"],
+                "reaction_choice": {"spell_id": "shield", "slot_level": 1},
+            })
+
+        assert resolved["pending_reaction"] is None
+        assert resolved["reaction_choice"] is None
+        assert resolved["hp_changes"] == []
+        assert resolved["player"]["hp"] == PREDEFINED_CHARACTERS["法师"]["hp"]
+        assert resolved["player"]["resources"]["spell_slot_lv1"] == initial_slots - 1
+        assert all(c.get("id") != "shield_active" for c in resolved["player"].get("conditions", []))
+
+        message = resolved["messages"][0]
+        assert "护盾术" in message.content
+        assert "未命中" in message.content
+        assert message.additional_kwargs["attack_roll"]["raw_roll"] == 12
+        assert message.additional_kwargs["attack_roll"]["final_total"] == 16
+
+    def test_skip_reaction_keeps_original_damage_roll(self):
+        from app.graph import nodes
+
+        state = self._build_reaction_state()
+        with patch("app.services.tools._helpers.d20.roll", side_effect=self._fixed_roll), patch(
+            "app.services.tools._helpers._get_natural_d20", return_value=12
+        ):
+            pending_state = nodes.monster_combat_node(state)
+            resolved = nodes.resolve_reaction_node({
+                "combat": pending_state["combat"],
+                "player": pending_state["player"],
+                "pending_reaction": pending_state["pending_reaction"],
+                "reaction_choice": {"spell_id": None},
+            })
+
+        assert len(resolved["hp_changes"]) == 1
+        hp_change = resolved["hp_changes"][0]
+        assert hp_change["old_hp"] == PREDEFINED_CHARACTERS["法师"]["hp"]
+        assert hp_change["new_hp"] == PREDEFINED_CHARACTERS["法师"]["hp"] - 5
+        assert resolved["messages"][0].additional_kwargs["attack_roll"]["final_total"] == 16
+
+
+class TestConditionLifecycleHooks:
+    """验证条件生命周期已从主流程特判收敛到统一 hook。"""
+
+    _real_roll = d20.roll
+
+    @staticmethod
+    def _mirror_image_roll(expr: str):
+        normalized = expr.replace(" ", "")
+        mapping = {
+            "1d20+4": "16",
+            "1d20": "18",
+        }
+        return TestConditionLifecycleHooks._real_roll(mapping.get(normalized, expr))
+
+    def test_paralyzed_monster_turn_does_not_attach_attack_roll_payload(self):
+        from app.graph import nodes
+
+        player = _make_player_combatant("战士")
+        goblin = _make_goblin()
+        goblin["conditions"] = [create_condition("paralyzed", source_id="concentration:hold_person", duration=3)]
+        combat = _make_combat_state(
+            {player["id"]: player, "goblin_1": goblin},
+            current_actor_id="goblin_1",
+            player_dict=player,
+        )
+
+        result = nodes.monster_combat_node({"combat": combat, "player": player})
+
+        message = result["messages"][0]
+        assert "无法行动" in message.content
+        assert not message.additional_kwargs.get("attack_roll")
+
+    def test_mirror_image_deflection_runs_via_condition_hook(self):
+        from app.services.tools._helpers import roll_attack_hit
+
+        attacker = _make_goblin()
+        target = copy.deepcopy(PREDEFINED_CHARACTERS["法师"])
+        prepare_player_for_combat(target)
+        target["conditions"] = [
+            create_condition(
+                "mirror_image",
+                source_id=target["name"],
+                duration=10,
+                extra=build_condition_extra(images=3),
+            )
+        ]
+
+        with patch("app.services.tools._helpers.d20.roll", side_effect=self._mirror_image_roll), patch(
+            "app.services.tools._helpers._get_natural_d20", return_value=12
+        ), patch("app.conditions.mirror_image.d20.roll", side_effect=self._mirror_image_roll):
+            roll_info = roll_attack_hit(attacker, target)
+
+        assert roll_info["deflected"] is True
+        assert roll_info["hit"] is False
+        assert roll_info["crit"] is False
+        assert any("攻击转向镜像" in line for line in roll_info["lines"])
+        assert target["conditions"][0]["extra"]["images"] == 2
+
+
+class TestSecondRoundConditionCleanup:
+    """验证第二轮收口后的 save、damage 与移动 condition 逻辑。"""
+
+    _real_roll = d20.roll
+
+    @staticmethod
+    def _ray_of_frost_roll(expr: str):
+        normalized = expr.replace(" ", "")
+        mapping = {
+            "1d20+5": "17",
+            "1d8": "4",
+        }
+        return TestSecondRoundConditionCleanup._real_roll(mapping.get(normalized, expr))
+
+    @staticmethod
+    def _toll_the_dead_roll(expr: str):
+        normalized = expr.replace(" ", "")
+        mapping = {
+            "1d20+0": "5",
+            "1d8": "4",
+        }
+        return TestSecondRoundConditionCleanup._real_roll(mapping.get(normalized, expr))
+
+    @staticmethod
+    def _ice_knife_roll(expr: str):
+        normalized = expr.replace(" ", "")
+        mapping = {
+            "1d20+5": "15",
+            "1d10": "4",
+            "2d6": "6",
+        }
+        return TestSecondRoundConditionCleanup._real_roll(mapping.get(normalized, expr))
+
+    def test_ray_of_frost_applies_condition_and_expires_on_caster_turn_start(self):
+        from app.conditions import has_condition
+        from app.services.tools._helpers import advance_turn, compute_current_speed
+        from app.spells import ray_of_frost
+
+        caster = _make_player_combatant("法师")
+        goblin = _make_goblin()
+        combat = _make_combat_state(
+            {caster["id"]: caster, "goblin_1": goblin},
+            current_actor_id=caster["id"],
+            player_dict=caster,
+        ).model_dump()
+        target = combat["participants"]["goblin_1"]
+
+        with patch("app.spells._resolvers.d20.roll", side_effect=self._ray_of_frost_roll):
+            ray_of_frost.execute(caster, [target], 0, cantrip_scale=1)
+
+        assert has_condition(target.get("conditions", []), "ray_of_frost_slow")
+        assert target["speed"] == 30
+        assert compute_current_speed(target) == 20
+
+        advance_turn(combat, caster)
+        assert combat["current_actor_id"] == "goblin_1"
+        assert has_condition(target.get("conditions", []), "ray_of_frost_slow")
+        assert target["movement_left"] == 20
+
+        advance_turn(combat, caster)
+        assert combat["current_actor_id"] == caster["id"]
+        assert not has_condition(target.get("conditions", []), "ray_of_frost_slow")
+
+    def test_toll_the_dead_damage_respects_arcane_ward(self):
+        from app.spells import toll_the_dead
+
+        caster = _make_player_combatant("法师")
+        target = {
+            "id": "warded_target",
+            "name": "Ward Target",
+            "hp": 10,
+            "max_hp": 10,
+            "modifiers": {"wis": 0, "con": 0},
+            "conditions": [
+                create_condition(
+                    "arcane_ward",
+                    extra=build_condition_extra(ward_hp=5),
+                )
+            ],
+        }
+
+        with patch("app.services.tools._helpers.d20.roll", side_effect=self._toll_the_dead_roll), patch(
+            "app.spells.toll_the_dead.d20.roll", side_effect=self._toll_the_dead_roll
+        ):
+            result = toll_the_dead.execute(caster, [target], 0, cantrip_scale=1)
+
+        assert result["hp_changes"][0]["old_hp"] == 10
+        assert result["hp_changes"][0]["new_hp"] == 10
+        assert target["conditions"][0]["extra"]["ward_hp"] == 1
+        assert any("奥术结界" in line for line in result["lines"])
+
+    def test_ice_knife_dex_save_uses_condition_auto_fail(self):
+        from app.spells import ice_knife
+
+        caster = _make_player_combatant("法师")
+        target = _make_goblin()
+        target["hp"] = 20
+        target["max_hp"] = 20
+        target["conditions"] = [
+            create_condition("paralyzed", source_id="concentration:hold_person", duration=3)
+        ]
+
+        with patch("app.spells.ice_knife.d20.roll", side_effect=self._ice_knife_roll):
+            result = ice_knife.execute(caster, [target], 1)
+
+        assert target["hp"] == 10
+        assert any("自动失败" in line for line in result["lines"])
 

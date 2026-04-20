@@ -5,7 +5,14 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 
 from app.graph import edges, nodes
-from app.graph.constants import ASSISTANT_NODE, ROUTER_NODE, TOOL_NODE, SUMMARIZE_NODE, MONSTER_COMBAT_NODE
+from app.graph.constants import (
+    ASSISTANT_NODE,
+    ROUTER_NODE,
+    TOOL_NODE,
+    SUMMARIZE_NODE,
+    MONSTER_COMBAT_NODE,
+    REACTION_RESOLUTION_NODE,
+)
 from app.graph.state import GraphState
 from app.services.tool_service import get_tools
 
@@ -18,6 +25,7 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None):
     graph.add_node(TOOL_NODE, ToolNode(get_tools()))
     graph.add_node(SUMMARIZE_NODE, nodes.summarize_conversation_node)
     graph.add_node(MONSTER_COMBAT_NODE, nodes.monster_combat_node)
+    graph.add_node(REACTION_RESOLUTION_NODE, nodes.resolve_reaction_node)
 
     graph.add_edge(START, ROUTER_NODE)
 
@@ -27,6 +35,7 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None):
         {
             ASSISTANT_NODE: ASSISTANT_NODE,
             TOOL_NODE: TOOL_NODE,
+            REACTION_RESOLUTION_NODE: REACTION_RESOLUTION_NODE,
             "end": END,
         },
     )
@@ -57,6 +66,17 @@ def build_graph(checkpointer: BaseCheckpointSaver | None = None):
         {
             MONSTER_COMBAT_NODE: MONSTER_COMBAT_NODE,
             ASSISTANT_NODE: ASSISTANT_NODE,
+            "end": END,
+        },
+    )
+
+    graph.add_conditional_edges(
+        REACTION_RESOLUTION_NODE,
+        edges.route_from_reaction_resolution,
+        {
+            MONSTER_COMBAT_NODE: MONSTER_COMBAT_NODE,
+            ASSISTANT_NODE: ASSISTANT_NODE,
+            "end": END,
         },
     )
 

@@ -2,11 +2,24 @@
 
 from langchain_core.messages import AIMessage
 
-from app.graph.constants import ASSISTANT_NODE, END_NODE, ROUTER_NODE, TOOL_NODE, SUMMARIZE_NODE, MONSTER_COMBAT_NODE
+from app.graph.constants import (
+    ASSISTANT_NODE,
+    END_NODE,
+    ROUTER_NODE,
+    TOOL_NODE,
+    SUMMARIZE_NODE,
+    MONSTER_COMBAT_NODE,
+    REACTION_RESOLUTION_NODE,
+)
 from app.graph.state import GraphState
 
 
 def route_from_router(state: GraphState) -> str:
+    if state.get("pending_reaction"):
+        if state.get("reaction_choice") is not None:
+            return REACTION_RESOLUTION_NODE
+        return END_NODE
+
     messages = state.get("messages", [])
     if not messages:
         return END_NODE
@@ -61,6 +74,17 @@ def route_from_tool(state: GraphState) -> str:
 
 def route_from_monster_combat(state: GraphState) -> str:
     """怪物单步执行后：下一个仍是怪物 → 继续循环；轮到玩家 → 回 LLM 叙述"""
+    if state.get("pending_reaction"):
+        return END_NODE
+    if _is_monster_turn(state):
+        return MONSTER_COMBAT_NODE
+    return ASSISTANT_NODE
+
+
+def route_from_reaction_resolution(state: GraphState) -> str:
+    """反应解析后：若仍存在待决反应则暂停，否则按当前行动者继续路由"""
+    if state.get("pending_reaction"):
+        return END_NODE
     if _is_monster_turn(state):
         return MONSTER_COMBAT_NODE
     return ASSISTANT_NODE
@@ -70,6 +94,7 @@ ROUTE_OPTIONS = {
     ASSISTANT_NODE: ASSISTANT_NODE,
     TOOL_NODE: TOOL_NODE,
     MONSTER_COMBAT_NODE: MONSTER_COMBAT_NODE,
+    REACTION_RESOLUTION_NODE: REACTION_RESOLUTION_NODE,
     END_NODE: END_NODE,
 }
 

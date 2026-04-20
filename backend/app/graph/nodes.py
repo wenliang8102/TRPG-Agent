@@ -216,40 +216,135 @@ def summarize_conversation_node(state: GraphState) -> dict:
     }
 
 
+def _state_value_to_dict(value):
+    """将图状态中的 Pydantic/映射对象统一转成 dict。"""
+    if value is None:
+        return None
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    return dict(value)
+
+
+def _build_pending_reaction(actor: dict, target: dict, roll_info: dict, available: list[dict]) -> dict:
+    """把一次待决反应所需的全部事实快照固化进状态。"""
+    return {
+        "type": "reaction_prompt",
+        "trigger": "on_hit",
+        "attacker_id": actor.get("id", ""),
+        "attacker_name": actor.get("name", ""),
+        "target_id": target.get("id", ""),
+        "target_name": target.get("name", ""),
+        "attack_roll": dict(roll_info),
+        "available_reactions": list(available),
+    }
+
+
+def _all_players_down(combat_dict: dict, player_dict: dict | None) -> bool:
+    """检查战场上是否已不存在存活的玩家单位。"""
+    from app.services.tools._helpers import get_all_combatants
+
+    all_combatants = get_all_combatants(combat_dict, player_dict)
+    player_units = [unit for unit in all_combatants.values() if unit.get("side") == "player"]
+    if not player_units:
+        return False
+    return all(unit.get("hp", 0) <= 0 for unit in player_units)
+
+
+def _finalize_monster_combat_state(
+    combat_dict: dict,
+    player_dict: dict | None,
+    log_lines: list[str],
+    hp_changes: list[dict],
+    attack_roll: dict | None = None,
+) -> dict:
+    """统一封装怪物战斗结算输出，兼顾玩家倒地中断与命中骰展示。"""
+    from langgraph.types import interrupt
+    from app.services.tools._helpers import build_attack_roll_event_payload
+
+    if _all_players_down(combat_dict, player_dict):
+        combat_report = "[系统:怪物行动]\n" + "\n".join(log_lines)
+        user_choice = interrupt({
+            "type": "player_death",
+            "summary": combat_report,
+            "hp_changes": hp_changes,
+        })
+
+        if player_dict:
+            if user_choice == "revive":
+                player_dict["hp"] = max(1, player_dict.get("max_hp", 1) // 2)
+            else:
+                player_dict["hp"] = 0
+
+        return {
+            "combat": None,
+            "player": player_dict,
+            "phase": "exploration",
+            "messages": [HumanMessage(content="[系统] 玩家角色倒下，战斗结束。")],
+            "hp_changes": [],
+            "pending_reaction": None,
+            "reaction_choice": None,
+        }
+
+    combat_report = "[系统:怪物行动]\n" + "\n".join(log_lines)
+    message_kwargs = {}
+    if attack_roll is not None:
+        attack_roll_payload = build_attack_roll_event_payload(attack_roll)
+        if attack_roll_payload:
+            message_kwargs["additional_kwargs"] = {
+                "attack_roll": attack_roll_payload,
+            }
+    msg = HumanMessage(content=combat_report, **message_kwargs)
+
+    result_state: dict = {
+        "combat": combat_dict,
+        "messages": [msg],
+        "hp_changes": hp_changes,
+        "pending_reaction": None,
+        "reaction_choice": None,
+    }
+    if player_dict:
+        result_state["player"] = player_dict
+
+    return result_state
+
+
 def monster_combat_node(state: GraphState) -> dict:
     """怪物/NPC 自动战斗节点：只处理当前一个非玩家单位的攻击 + 推进回合。
+    命中玩家后若存在可用反应，则只写入待决反应状态，由后续节点解析。
     graph 条件边控制循环：下一个仍是怪物则再次进入本节点。"""
-    from app.services.tool_service import resolve_single_attack, advance_turn
-    from app.services.tools._helpers import get_all_combatants, get_combatant
-    from langgraph.types import interrupt
+    from app.services.tools._helpers import (
+        advance_turn, get_all_combatants, get_combatant,
+        roll_attack_hit, apply_attack_damage,
+    )
+    from app.services.tools.reactions import get_available_reactions
 
     combat = state.get("combat")
     if not combat:
         return {}
 
-    combat_dict = combat.model_dump() if hasattr(combat, "model_dump") else dict(combat)
+    combat_dict = _state_value_to_dict(combat)
     participants = combat_dict.get("participants", {})
 
-    # 获取玩家字典
-    player_raw = state.get("player")
-    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+    player_dict = _state_value_to_dict(state.get("player"))
 
     current_id = combat_dict.get("current_actor_id", "")
     actor = participants.get(current_id)
 
-    # 当前行动者不存在或是玩家方，直接透传
     if not actor or actor.get("side") == "player":
-        return {"combat": combat_dict}
+        result = {"combat": combat_dict, "pending_reaction": None, "reaction_choice": None}
+        if player_dict:
+            result["player"] = player_dict
+        return result
 
     log_lines: list[str] = []
     hp_changes: list[dict] = []
+    attack_roll: dict | None = None
 
-    # 已死亡的怪物：跳过，直接推进回合
     if actor.get("hp", 0) <= 0:
         turn_text = advance_turn(combat_dict, player_dict)
         log_lines.append(turn_text)
     else:
-        # 选择第一个存活的玩家单位作为目标（通过统一接口获取）
+        # 选择第一个存活的玩家单位作为目标
         target = None
         all_combatants = get_all_combatants(combat_dict, player_dict)
         for uid, p in all_combatants.items():
@@ -260,69 +355,114 @@ def monster_combat_node(state: GraphState) -> dict:
         if not target:
             log_lines.append("所有玩家单位已倒下！")
         else:
-            atk_lines, _, hp_change, extra_info = resolve_single_attack(actor, target)
+            roll_info = roll_attack_hit(actor, target)
+            attack_roll = dict(roll_info)
+
+            if roll_info.get("hit") and not roll_info.get("blocked") and target is player_dict:
+                reaction_context = {
+                    "attacker": actor.get("name", current_id),
+                    "attack_roll": {
+                        "raw_roll": roll_info.get("raw_roll", roll_info.get("natural", 0)),
+                        "attack_bonus": roll_info.get("attack_bonus", 0),
+                        "final_total": roll_info["hit_total"],
+                        "hit_total": roll_info["hit_total"],
+                        "target_ac": roll_info["target_ac"],
+                    },
+                }
+                available = get_available_reactions(player_dict, "on_hit", reaction_context)
+                if available:
+                    result_state: dict = {
+                        "combat": combat_dict,
+                        "pending_reaction": _build_pending_reaction(actor, target, roll_info, available),
+                        "reaction_choice": None,
+                    }
+                    if player_dict:
+                        result_state["player"] = player_dict
+                    return result_state
+
+            atk_lines, _, hp_change, _ = apply_attack_damage(actor, target, roll_info)
             log_lines.extend(atk_lines)
             if hp_change:
                 hp_changes.append(hp_change)
-                
-            actor["_last_raw_roll"] = extra_info.get("raw_roll")
 
-            # 推进回合
             turn_text = advance_turn(combat_dict, player_dict)
             log_lines.append(turn_text)
 
-    # 检测玩家全灭 → 中断，等待前端选择复活/结束
-    all_combatants = get_all_combatants(combat_dict, player_dict)
-    all_players_down = all(
-        p.get("hp", 0) <= 0
-        for p in all_combatants.values()
-        if p.get("side") == "player"
-    )
-    if all_players_down and any(p.get("side") == "player" for p in all_combatants.values()):
-        combat_report = "[系统:怪物行动]\n" + "\n".join(log_lines)
-        user_choice = interrupt({
-            "type": "player_death",
-            "summary": combat_report,
-            "hp_changes": hp_changes,
-        })
-        if user_choice == "revive":
-            if player_dict:
-                player_dict["hp"] = max(1, player_dict.get("max_hp", 1) // 2)
-            
-            return {
-                "combat": None,
-                "player": player_dict,
-                "phase": "exploration",
-                "messages": [HumanMessage(content="[系统] 玩家角色倒下，战斗结束。")],
-                "hp_changes": [],
-            }
-        else:
-            if player_dict:
-                player_dict["hp"] = 0
+    return _finalize_monster_combat_state(combat_dict, player_dict, log_lines, hp_changes, attack_roll=attack_roll)
 
-            return {
-                "combat": None,
-                "player": player_dict,
-                "phase": "exploration",
-                "messages": [HumanMessage(content="[系统] 玩家角色倒下，战斗结束。")],
-                "hp_changes": [],
-            }
 
-    combat_report = "[系统:怪物行动]\n" + "\n".join(log_lines)
-    msg = HumanMessage(content=combat_report)
-    
-    raw_roll = actor.pop("_last_raw_roll", None)
-    if raw_roll is not None:
-        setattr(msg, "artifact", {"raw_roll": raw_roll})
+def resolve_reaction_node(state: GraphState) -> dict:
+    """继续结算一条已暂停的怪物攻击，并应用玩家的反应选择。"""
+    from app.services.tools._helpers import advance_turn, get_combatant, apply_attack_damage, compute_ac
+    from app.services.tools.reactions import execute_player_reaction
 
-    result_state: dict = {
-        "combat": combat_dict,
-        "messages": [msg],
-        "hp_changes": hp_changes,
+    combat = state.get("combat")
+    pending_reaction = state.get("pending_reaction")
+    if not combat or not pending_reaction:
+        return {"pending_reaction": None, "reaction_choice": None}
+
+    combat_dict = _state_value_to_dict(combat)
+    player_dict = _state_value_to_dict(state.get("player"))
+    pending_dict = _state_value_to_dict(pending_reaction)
+    reaction_choice = _state_value_to_dict(state.get("reaction_choice")) or {"spell_id": None}
+
+    attacker_id = pending_dict.get("attacker_id", "")
+    target_id = pending_dict.get("target_id", "")
+    actor = get_combatant(combat_dict, player_dict, attacker_id)
+    target = get_combatant(combat_dict, player_dict, target_id)
+    if not actor or not target:
+        result = {
+            "combat": combat_dict,
+            "pending_reaction": None,
+            "reaction_choice": None,
+        }
+        if player_dict:
+            result["player"] = player_dict
+        return result
+
+    roll_info = dict(pending_dict.get("attack_roll", {}))
+    log_lines: list[str] = []
+    hp_changes: list[dict] = []
+
+    reaction_context = {
+        "attacker": pending_dict.get("attacker_name", actor.get("name", attacker_id)),
+        "attack_roll": {
+            "raw_roll": roll_info.get("raw_roll", roll_info.get("natural", 0)),
+            "attack_bonus": roll_info.get("attack_bonus", 0),
+            "final_total": roll_info.get("hit_total", 0),
+            "hit_total": roll_info.get("hit_total", 0),
+            "target_ac": roll_info.get("target_ac", 10),
+        },
     }
-    
-    # 玩家 HP 变化已在 player_dict 上原地修改，直接回写
-    if player_dict:
-        result_state["player"] = player_dict
 
-    return result_state
+    chosen_spell_id = reaction_choice.get("spell_id")
+    if chosen_spell_id and player_dict:
+        reaction_result = execute_player_reaction(player_dict, reaction_choice, reaction_context)
+        log_lines.extend(reaction_result.lines)
+
+        if reaction_result.modifies_ac:
+            new_ac = compute_ac(player_dict)
+            roll_info["target_ac"] = new_ac
+            if roll_info.get("natural") != 20 and roll_info.get("hit_total", 0) < new_ac:
+                roll_info["hit"] = False
+                roll_info["crit"] = False
+                if roll_info.get("lines"):
+                    roll_info["lines"][-1] = f"命中骰总值: {roll_info['hit_total']} vs AC {new_ac}（反应法术生效，未命中！）"
+            elif roll_info.get("lines"):
+                if roll_info.get("natural") == 20:
+                    detail = "天然 20，反应法术无法改判！"
+                else:
+                    detail = "反应法术生效，但仍然命中！"
+                roll_info["lines"][-1] = f"命中骰总值: {roll_info['hit_total']} vs AC {new_ac}（{detail}）"
+    else:
+        log_lines.append("你放弃了反应。")
+
+    atk_lines, _, hp_change, _ = apply_attack_damage(actor, target, roll_info)
+    log_lines.extend(atk_lines)
+    if hp_change:
+        hp_changes.append(hp_change)
+
+    turn_text = advance_turn(combat_dict, player_dict)
+    log_lines.append(turn_text)
+
+    return _finalize_monster_combat_state(combat_dict, player_dict, log_lines, hp_changes, attack_roll=roll_info)

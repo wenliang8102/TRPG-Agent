@@ -17,6 +17,8 @@ SPELL_DEF: SpellDef = {
 
 def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellResult:
     """结合远程攻击与范围豁免"""
+    from app.services.tools._helpers import apply_damage_to_target, compute_ac, remove_consume_on_attacked_conditions, roll_actor_save
+
     if not targets:
         return {"lines": ["没有指定任何目标！"], "hp_changes": []}
 
@@ -38,11 +40,11 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
     p_id = primary.get("id", "target_0")
     p_name = primary.get("name", "?")
 
-    from app.services.tools._helpers import compute_ac
     p_ac = compute_ac(primary)
     
     atk_roll = d20.roll(f"1d20+{atk_bonus}")
     hit = atk_roll.total >= p_ac
+    remove_consume_on_attacked_conditions(primary)
     
     lines.append(f"  → 远程法术攻击 {p_name}: {atk_roll} vs AC {p_ac}")
     if hit:
@@ -65,13 +67,15 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
     for i, target in enumerate(targets):
         t_id = target.get("id", f"target_{i}")
         t_name = target.get("name", "?")
-        dex_mod = target.get("modifiers", {}).get("dex", 0)
-        
-        save_roll = d20.roll(f"1d20+{dex_mod}")
-        saved = save_roll.total >= spell_dc
+        save_roll, auto_fail_reason, disadvantaged = roll_actor_save(target, "dex")
+        saved = False if auto_fail_reason else save_roll.total >= spell_dc
         
         actual_cold = half_cold if saved else full_cold
-        save_text = f"成功({save_roll})" if saved else f"失败({save_roll})"
+        if auto_fail_reason:
+            roll_text = f"自动失败（{auto_fail_reason}）"
+        else:
+            roll_text = f"{save_roll}（劣势）" if disadvantaged else str(save_roll)
+        save_text = f"成功({roll_text})" if saved else f"失败({roll_text})"
         
         lines.append(f"    → {t_name}: 豁免{save_text} — 受 {actual_cold} 冷冻伤害")
         damage_by_target[t_id] += actual_cold
@@ -85,20 +89,9 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
         
         if total_dmg == 0:
             continue
-            
-        old_hp = target.get("hp", 0)
-        new_hp = max(0, old_hp - total_dmg)
-        target["hp"] = new_hp
-        
-        hp_changes.append({
-            "id": target.get("id", ""),
-            "name": t_name,
-            "old_hp": old_hp,
-            "new_hp": new_hp,
-            "max_hp": target.get("max_hp", old_hp),
-        })
-        lines.append(f"    {t_name} HP: {old_hp} → {new_hp} (特计 -{total_dmg})")
-        if new_hp == 0 and old_hp > 0:
-            lines.append(f"    {t_name} 倒下了!")
+
+        _, hp_change, damage_lines = apply_damage_to_target(target, total_dmg)
+        hp_changes.append(hp_change)
+        lines.extend(f"    {line}" for line in damage_lines)
             
     return {"lines": lines, "hp_changes": hp_changes}

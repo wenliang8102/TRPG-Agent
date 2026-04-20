@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from app.conditions import blinded, charmed, incapacitated, invisible, guiding_bolt_mark, mage_armor, shield_active
+from app.conditions import blinded, charmed, incapacitated, invisible, guiding_bolt_mark, mage_armor, shield_active, mirror_image, paralyzed, arcane_ward, ray_of_frost_slow
 from app.conditions._base import (  # noqa: F401 — re-export
     ActiveCondition,
     CombatEffects,
     ConditionDef,
+    coerce_condition_input,
     find_condition,
     has_condition,
+    remove_condition_by_id,
     tick_conditions,
+    upsert_condition,
 )
 
 # 状态 ID → 模块；新增状态只需在此注册并创建同名模块
@@ -23,6 +26,10 @@ CONDITION_REGISTRY: dict[str, ModuleType] = {
     "guiding_bolt_mark": guiding_bolt_mark,
     "mage_armor": mage_armor,
     "shield_active": shield_active,
+    "mirror_image": mirror_image,
+    "paralyzed": paralyzed,
+    "arcane_ward": arcane_ward,
+    "ray_of_frost_slow": ray_of_frost_slow,
 }
 
 

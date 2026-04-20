@@ -8,7 +8,10 @@ from langchain_core.tools import BaseTool
 
 from app.services.tools.dice_tools import request_dice_roll, weather
 from app.services.tools.character_tools import (
+    choose_arcane_tradition,
+    grant_xp,
     inspect_unit,
+    level_up,
     load_character_profile,
     modify_character_state,
 )
@@ -26,8 +29,18 @@ from app.services.tools.condition_tools import apply_condition, remove_condition
 # 供外部模块直接引用的战斗计算函数
 from app.services.tools._helpers import (
     advance_turn,
+    apply_attack_damage,
     prepare_player_for_combat,
     resolve_single_attack,
+    roll_attack_hit,
+)
+
+# 反应调度器
+from app.services.tools.reactions import (
+    get_available_reactions,
+    build_interrupt_payload,
+    execute_player_reaction,
+    resolve_npc_reaction,
 )
 
 # 向后兼容旧名称
@@ -51,4 +64,7 @@ def get_tools() -> list[BaseTool]:
         inspect_unit,
         apply_condition,
         remove_condition,
+        grant_xp,
+        level_up,
+        choose_arcane_tradition,
     ]

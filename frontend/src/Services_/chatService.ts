@@ -20,12 +20,28 @@ export interface HpChange {
   max_hp: number
 }
 
+export interface AttackRoll {
+  raw_roll: number
+  attack_bonus: number
+  final_total: number
+  hit_total?: number
+  target_ac: number
+  attack_name?: string
+}
+
+export interface ReactionResponse {
+  spell_id: string | null
+  slot_level?: number | null
+}
+
 export type PendingAction = {
   type: string
   reason?: string
   formula?: string
   summary?: string
   hp_changes?: HpChange[]
+  attack_roll?: AttackRoll
+  [key: string]: any // allow arbitrary additional fields like available_reactions, attacker, etc.
 }
 
 export type ChatResponsePayload = {
@@ -43,7 +59,7 @@ export interface SSECallbacks {
   onCombatAction?: (content: string, hpChanges: HpChange[]) => void
   onToolMessage?: (content: string) => void
   onStateUpdate?: (player: any, combat: any) => void
-  onPendingAction?: (action: PendingAction) => void
+  onPendingAction?: (action: PendingAction | null) => void
   onDiceRoll?: (rawRoll: number, finalTotal: number) => void | Promise<void>
   onDone?: (sessionId: string) => void
   onError?: (message: string) => void
@@ -110,10 +126,12 @@ export const chatService = {
     session_id: string | null
     message?: string
     resume_action?: string
+    reaction_response?: ReactionResponse
   }): Promise<ChatResponsePayload> {
     const payload: any = { session_id: params.session_id }
     if (params.message !== undefined) payload.message = params.message
     if (params.resume_action !== undefined) payload.resume_action = params.resume_action
+    if (params.reaction_response !== undefined) payload.reaction_response = params.reaction_response
 
     const response = await fetch('/api/chat', {
       method: 'POST',
@@ -148,12 +166,14 @@ export const chatService = {
       session_id: string | null
       message?: string
       resume_action?: string
+      reaction_response?: ReactionResponse
     },
     callbacks: SSECallbacks
   ): Promise<void> {
     const payload: any = { session_id: params.session_id }
     if (params.message !== undefined) payload.message = params.message
     if (params.resume_action !== undefined) payload.resume_action = params.resume_action
+    if (params.reaction_response !== undefined) payload.reaction_response = params.reaction_response
 
     const response = await fetch('/api/chat/stream', {
       method: 'POST',
@@ -180,6 +200,7 @@ export const chatService = {
     const reader = response.body!.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let diceAnimationQueue: Promise<void> = Promise.resolve()
 
     while (true) {
       const { done, value } = await reader.read()
@@ -207,14 +228,19 @@ export const chatService = {
               break
             case 'dice_roll':
               if (callbacks.onDiceRoll) {
-                await callbacks.onDiceRoll(parsed.raw_roll, parsed.final_total)
+                diceAnimationQueue = diceAnimationQueue
+                  .catch(() => undefined)
+                  .then(() => Promise.resolve(callbacks.onDiceRoll?.(parsed.raw_roll, parsed.final_total)))
+                  .catch((error) => {
+                    console.error('Dice animation failed:', error)
+                  })
               }
               break
             case 'state_update':
               callbacks.onStateUpdate?.(parsed.player, parsed.combat)
               break
             case 'pending_action':
-              callbacks.onPendingAction?.(parsed)
+              callbacks.onPendingAction?.(parsed ?? null)
               break
             case 'done':
               callbacks.onDone?.(parsed.session_id)

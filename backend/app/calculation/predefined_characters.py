@@ -49,6 +49,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "temp_hp": 0,
         "base_ac": 12,
         "ac": 12,
+        "xp": 0,
         "abilities": {
             "str": 8,
             "dex": 14,
@@ -67,9 +68,12 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         },
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
-        "known_spells": ["magic_missile", "shield", "mage_armor", "burning_hands", "ice_knife", "guiding_bolt", "thunderwave"],
+        "resource_caps": {"spell_slot_lv1": 2},
+        "known_spells": ["magic_missile", "shield"],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
         "class_features": [],
         "spellcasting_ability": "int",
+        "arcane_tradition": "",
         "weapons": [
             {"name": "Dagger", "damage_dice": "1d4", "damage_type": "piercing", "weapon_type": "melee", "properties": ["finesse", "light", "thrown"]},
         ],
@@ -137,6 +141,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["cure_wounds"],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
         "class_features": [],
         "spellcasting_ability": "wis",
         "weapons": [
@@ -171,6 +176,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["magic_missile", "mage_armor", "burning_hands", "ice_knife"],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
         "class_features": [],
         "spellcasting_ability": "cha",
         "weapons": [
@@ -205,6 +211,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 1},
         "known_spells": ["cure_wounds"],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
         "class_features": [],
         "spellcasting_ability": "wis",
         "weapons": [
@@ -274,6 +281,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 0},
         "known_spells": [],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
         "class_features": [],
         "spellcasting_ability": "cha",
         "weapons": [
@@ -308,6 +316,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"pact_magic_lv1": 1},
         "known_spells": ["burning_hands"],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
         "class_features": [],
         "spellcasting_ability": "cha",
         "weapons": [
@@ -342,6 +351,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["cure_wounds", "burning_hands", "ice_knife"],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
         "class_features": [],
         "spellcasting_ability": "wis",
         "weapons": [
@@ -376,6 +386,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "conditions": [],
         "resources": {"spell_slot_lv1": 2},
         "known_spells": ["cure_wounds"],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
         "class_features": [],
         "spellcasting_ability": "cha",
         "weapons": [

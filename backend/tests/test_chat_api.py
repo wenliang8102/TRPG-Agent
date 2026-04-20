@@ -15,15 +15,17 @@ class _FakeSessionService:
         message: str | None = None,
         session_id: str | None = None,
         resume_action: str | None = None,
+        reaction_response: dict | None = None,
     ) -> dict:
         self.calls.append(
             {
                 "message": message,
                 "session_id": session_id,
                 "resume_action": resume_action,
+                "reaction_response": reaction_response,
             }
         )
-        response_text = f"echo:{message}" if message else "resumed"
+        response_text = f"echo:{message}" if message else f"resumed:{reaction_response or resume_action}"
         return {
             "reply": response_text,
             "plan": None,
@@ -38,6 +40,7 @@ class _RuntimeFailSessionService:
         message: str | None = None,
         session_id: str | None = None,
         resume_action: str | None = None,
+        reaction_response: dict | None = None,
     ) -> dict:
         raise RuntimeError("LLM upstream timeout")
 
@@ -83,8 +86,26 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(200, resp.status_code)
         data = resp.json()
         self.assertEqual("demo-2", data["session_id"])
-        self.assertEqual("resumed", data["reply"])
+        self.assertEqual("resumed:confirmed", data["reply"])
         self.assertEqual("confirmed", fake.calls[0]["resume_action"])
+
+    def test_chat_endpoint_accepts_reaction_response(self):
+        fake = _FakeSessionService()
+        with patch("app.api.chat.CHAT_SESSION_SERVICE", fake):
+            client = TestClient(app)
+            resp = client.post(
+                "/api/chat",
+                json={
+                    "session_id": "demo-3",
+                    "reaction_response": {"spell_id": "shield", "slot_level": 1},
+                },
+            )
+
+        self.assertEqual(200, resp.status_code)
+        data = resp.json()
+        self.assertEqual("demo-3", data["session_id"])
+        self.assertEqual("resumed:{'spell_id': 'shield', 'slot_level': 1}", data["reply"])
+        self.assertEqual({"spell_id": "shield", "slot_level": 1}, fake.calls[0]["reaction_response"])
 
     def test_chat_endpoint_returns_structured_error_detail(self):
         with patch("app.api.chat.CHAT_SESSION_SERVICE", _RuntimeFailSessionService()):

@@ -6,7 +6,18 @@ from __future__ import annotations
 import d20
 
 from app.spells._base import SpellResult, get_spell_dc, get_spellcasting_mod
-from app.services.tools._helpers import apply_hp_change, compute_ac
+
+
+def _lazy_helpers():
+    """延迟导入 _helpers 避免 spells → tools → spell_tools → spells 循环引用"""
+    from app.services.tools._helpers import (
+        apply_damage_to_target,
+        apply_hp_change,
+        compute_ac,
+        remove_consume_on_attacked_conditions,
+        roll_actor_save,
+    )
+    return apply_damage_to_target, apply_hp_change, compute_ac, remove_consume_on_attacked_conditions, roll_actor_save
 
 # 回调类型提示
 from typing import Callable
@@ -38,6 +49,7 @@ def resolve_aoe_save(
     caster_name = caster.get("name", "?")
     caster_features = caster.get("class_features", [])
     save_label = _ability_label(save_ability)
+    apply_damage_to_target, apply_hp_change, _, _, roll_actor_save = _lazy_helpers()
 
     dmg_roll = d20.roll(damage_formula)
     full_damage = max(1, dmg_roll.total)
@@ -52,7 +64,6 @@ def resolve_aoe_save(
 
     for target in targets:
         target_name = target.get("name", "?")
-        save_mod = target.get("modifiers", {}).get(save_ability, 0)
         target_side = target.get("side", "enemy")
 
         # 塑能塑法：塑能学派法术中，施法者指定的友方自动豁免成功
@@ -66,20 +77,23 @@ def resolve_aoe_save(
             actual_damage = 0
             lines.append(f"  → {target_name}: [塑能塑法] 自动豁免，免受伤害！")
         else:
-            save_roll = d20.roll(f"1d20+{save_mod}")
-            saved = save_roll.total >= spell_dc
+            save_roll, auto_fail_reason, disadvantaged = roll_actor_save(target, save_ability)
+            if auto_fail_reason:
+                saved = False
+                roll_text = f"自动失败（{auto_fail_reason}）"
+            else:
+                saved = save_roll.total >= spell_dc
+                roll_text = f"{save_roll}（劣势）" if disadvantaged else str(save_roll)
             actual_damage = half_damage if saved else full_damage
-            save_text = f"豁免成功({save_roll})" if saved else f"豁免失败({save_roll})"
+            save_text = f"豁免成功({roll_text})" if saved else f"豁免失败({roll_text})"
             lines.append(f"  → {target_name}: {save_text} — {actual_damage} {damage_type}伤害")
 
         if actual_damage > 0:
-            old_hp = target.get("hp", 0)
-            hc = apply_hp_change(target, -actual_damage)
+            dealt_damage, hc, damage_lines = apply_damage_to_target(target, actual_damage)
             hp_changes.append(hc)
-            lines.append(f"  {target_name} HP: {hc['old_hp']} → {hc['new_hp']}")
+            lines.extend(f"  {line}" for line in damage_lines)
             if hc["new_hp"] == 0:
-                lines.append(f"  {target_name} 倒下了!")
-                total_kill_damage += actual_damage
+                total_kill_damage += dealt_damage
 
         # 附加每目标效果描述（如雷鸣波的推离）
         if extra_per_target and actual_damage > 0:
@@ -113,6 +127,7 @@ def resolve_spell_attack(
     on_hit_extra: 命中后的额外效果回调 (caster, target, lines) -> None
     """
     from app.services.tools._helpers import _determine_advantage_from_conditions
+    apply_damage_to_target, _, compute_ac, remove_consume_on_attacked_conditions, _ = _lazy_helpers()
 
     caster_name = caster.get("name", "?")
     target_name = target.get("name", "?")
@@ -136,19 +151,7 @@ def resolve_spell_attack(
     attack_roll = d20.roll(hit_expr)
     is_hit = attack_roll.total >= target_ac
 
-    # 受击即消耗类状态处理
-    target_conditions = target.get("conditions", [])
-    if target_conditions:
-        from app.conditions import get_combat_effects
-        surviving = []
-        for c in target_conditions:
-            eff = get_combat_effects(c.get("id", ""))
-            if c.get("extra", {}).get("consume_on_attacked") or (eff and eff.consume_on_attacked):
-                continue
-            surviving.append(c)
-            
-        if len(surviving) != len(target_conditions):
-            target["conditions"] = surviving
+    remove_consume_on_attacked_conditions(target)
 
     lines = [f"{caster_name} 施放 {spell_name_cn}（{slot_level}环） 发起远程法术攻击！"]
     hp_changes: list[dict] = []
@@ -160,11 +163,9 @@ def resolve_spell_attack(
         lines.append(f"  → 攻击检定: {attack_roll} >= AC {target_ac} (命中！)")
         lines.append(f"  伤害骰: {dmg_roll} = {actual_damage} {damage_type}伤害")
 
-        hc = apply_hp_change(target, -actual_damage)
+        _, hc, damage_lines = apply_damage_to_target(target, actual_damage)
         hp_changes.append(hc)
-        lines.append(f"  {target_name} HP: {hc['old_hp']} → {hc['new_hp']}")
-        if hc["new_hp"] == 0:
-            lines.append(f"  {target_name} 倒下了!")
+        lines.extend(f"  {line}" for line in damage_lines)
 
         if on_hit_extra:
             on_hit_extra(caster, target, lines)

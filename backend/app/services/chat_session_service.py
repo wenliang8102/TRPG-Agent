@@ -32,9 +32,11 @@ class ChatSessionService:
         message: Optional[str] = None,
         session_id: Optional[str] = None,
         resume_action: Optional[str] = None,
+        reaction_response: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         current_session_id = session_id or str(uuid4())
         config = {"configurable": {"thread_id": current_session_id}}
+        old_state = None
 
         # 在图运行前，记录当前最后一条消息的 ID 作为界标（baseline）。
         # 该界标是最安全的锚点，因为后续即使发生了压缩，也只会清除更古老的历史，不会清除本界标。
@@ -47,12 +49,18 @@ class ChatSessionService:
         except Exception:
             pass
 
-        if resume_action:
+        pending_before_run = self._get_pending_action(old_state) if old_state else None
+        if message and pending_before_run and not resume_action and reaction_response is None:
+            raise ValueError("Must resolve the pending action before sending a new message.")
+
+        if reaction_response is not None:
+            await self._graph.ainvoke({"reaction_choice": reaction_response}, config=config)
+        elif resume_action:
             await self._graph.ainvoke(Command(resume=resume_action), config=config)
         elif message:
             await self._graph.ainvoke({"messages": [HumanMessage(content=message)]}, config=config)
         else:
-            raise ValueError("Must provide either message or resume_action.")
+            raise ValueError("Must provide either message, resume_action, or reaction_response.")
 
         state = await self._graph.aget_state(config)
         
@@ -77,9 +85,41 @@ class ChatSessionService:
 
     def _get_pending_action(self, state: Any) -> Optional[dict]:
         """抓取由于交互工具而被主流程暂挂（Interrupt）的行为等待标记"""
-        if state.tasks and state.tasks[0].interrupts:
+        if state and hasattr(state, "values"):
+            pending_action = self._pending_action_from_reaction(state.values.get("pending_reaction"))
+            if pending_action is not None:
+                return pending_action
+        tasks = getattr(state, "tasks", None)
+        if tasks and tasks[0].interrupts:
             return state.tasks[0].interrupts[0].value
         return None
+
+    def _pending_action_from_reaction(self, pending_reaction: Any) -> Optional[dict]:
+        """把 pending_reaction 统一投影成前端消费的 pending_action 结构。"""
+        if not pending_reaction:
+            return None
+
+        pending = pending_reaction.model_dump() if hasattr(pending_reaction, "model_dump") else dict(pending_reaction)
+        attack_roll = dict(pending.get("attack_roll", {}))
+        return {
+            "type": "reaction_prompt",
+            "trigger": pending.get("trigger", "on_hit"),
+            "attacker": pending.get("attacker_name", ""),
+            "attacker_id": pending.get("attacker_id", ""),
+            "target": pending.get("target_name", ""),
+            "target_id": pending.get("target_id", ""),
+            "available_reactions": pending.get("available_reactions", []),
+            "attack_roll": {
+                "raw_roll": attack_roll.get("raw_roll", attack_roll.get("natural", 0)),
+                "attack_bonus": attack_roll.get("attack_bonus", 0),
+                "final_total": attack_roll.get("hit_total", 0),
+                "hit_total": attack_roll.get("hit_total", 0),
+                "target_ac": attack_roll.get("target_ac", 10),
+                "attack_name": attack_roll.get("atk_name_display", ""),
+            },
+            "hit_roll": attack_roll.get("hit_total", 0),
+            "current_ac": attack_roll.get("target_ac", 10),
+        }
 
     def _extract_new_reply(self, state: Any, baseline_msg_id: str | None) -> str:
         """根据 invoke 开始前预存的界标 ID（baseline_msg_id），提取本回合产生的新 AI 回复。
@@ -116,7 +156,26 @@ class ChatSessionService:
 
     # ── SSE 流式推送 ───────────────────────────────────────────
 
-    def _sse_event(self, event_type: str, data: dict) -> str:
+    def _extract_attack_roll_payload(self, msg: Any) -> Optional[dict[str, Any]]:
+        """从消息标准字段中提取攻击命中检定载荷，兼容旧 artifact 写法。"""
+        if hasattr(msg, "additional_kwargs") and isinstance(msg.additional_kwargs, dict):
+            attack_roll = msg.additional_kwargs.get("attack_roll")
+            if isinstance(attack_roll, dict) and attack_roll.get("emit_dice_roll") is False:
+                return None
+            if isinstance(attack_roll, dict) and "raw_roll" in attack_roll:
+                return attack_roll
+
+        if hasattr(msg, "artifact") and isinstance(msg.artifact, dict) and "raw_roll" in msg.artifact:
+            raw_roll = msg.artifact["raw_roll"]
+            return {
+                "raw_roll": raw_roll,
+                "final_total": msg.artifact.get("final_total", raw_roll),
+                "attack_bonus": msg.artifact.get("attack_bonus", 0),
+            }
+
+        return None
+
+    def _sse_event(self, event_type: str, data: Any) -> str:
         """格式化单条 SSE 事件"""
         return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
@@ -125,17 +184,26 @@ class ChatSessionService:
         message: Optional[str] = None,
         session_id: Optional[str] = None,
         resume_action: Optional[str] = None,
+        reaction_response: Optional[dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
         """以 SSE 事件流的方式推送图执行过程中的每一步结果。"""
         current_session_id = session_id or str(uuid4())
         config = {"configurable": {"thread_id": current_session_id}}
 
-        if resume_action:
+        old_state = await self._graph.aget_state(config)
+        pending_before_run = self._get_pending_action(old_state)
+        if message and pending_before_run and not resume_action and reaction_response is None:
+            yield self._sse_event("error", {"message": "Must resolve the pending action before sending a new message."})
+            return
+
+        if reaction_response is not None:
+            graph_input = {"reaction_choice": reaction_response}
+        elif resume_action:
             graph_input = Command(resume=resume_action)
         elif message:
             graph_input = {"messages": [HumanMessage(content=message)]}
         else:
-            yield self._sse_event("error", {"message": "Must provide either message or resume_action."})
+            yield self._sse_event("error", {"message": "Must provide either message, resume_action, or reaction_response."})
             return
 
         # 使用 astream(stream_mode="updates") 逐节点获取 state 增量
@@ -143,6 +211,10 @@ class ChatSessionService:
             for node_name, node_output in chunk.items():
                 if not isinstance(node_output, dict):
                     continue
+
+                # reaction 解析后尽早推送 pending_action 变化，避免前端必须等整条流结束才关弹框。
+                if "pending_reaction" in node_output:
+                    yield self._sse_event("pending_action", self._pending_action_from_reaction(node_output.get("pending_reaction")))
 
                 # 提取消息增量
                 new_messages = node_output.get("messages", [])
@@ -168,11 +240,12 @@ class ChatSessionService:
                             except Exception:
                                 pass
 
-                        # 拦截携带 raw_roll artifact 的 ToolMessage (通常是攻击行动)
-                        if hasattr(msg, "artifact") and isinstance(msg.artifact, dict) and "raw_roll" in msg.artifact:
+                        attack_roll = self._extract_attack_roll_payload(msg)
+                        if attack_roll:
                             yield self._sse_event("dice_roll", {
-                                "raw_roll": msg.artifact["raw_roll"],
-                                "final_total": msg.artifact["raw_roll"]
+                                "raw_roll": attack_roll["raw_roll"],
+                                "final_total": attack_roll.get("final_total", attack_roll["raw_roll"]),
+                                "attack_bonus": attack_roll.get("attack_bonus", 0),
                             })
 
                         # 怪物战斗或攻击动作产生的 ToolMessage 携带 hp_changes
@@ -186,11 +259,12 @@ class ChatSessionService:
                             yield self._sse_event("tool_message", payload)
 
                     elif isinstance(msg, HumanMessage) and isinstance(msg.content, str) and msg.content.startswith("[系统:"):
-                        # 拦截怪物系统消息中的掷骰
-                        if hasattr(msg, "artifact") and isinstance(msg.artifact, dict) and "raw_roll" in msg.artifact:
+                        attack_roll = self._extract_attack_roll_payload(msg)
+                        if attack_roll:
                             yield self._sse_event("dice_roll", {
-                                "raw_roll": msg.artifact["raw_roll"],
-                                "final_total": msg.artifact["raw_roll"]
+                                "raw_roll": attack_roll["raw_roll"],
+                                "final_total": attack_roll.get("final_total", attack_roll["raw_roll"]),
+                                "attack_bonus": attack_roll.get("attack_bonus", 0),
                             })
                             
                         # 怪物行动的系统消息
@@ -236,8 +310,7 @@ class ChatSessionService:
         })
 
         pending = self._get_pending_action(state)
-        if pending:
-            yield self._sse_event("pending_action", pending)
+        yield self._sse_event("pending_action", pending)
 
         yield self._sse_event("done", {"session_id": current_session_id})
 

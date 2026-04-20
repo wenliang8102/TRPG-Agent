@@ -12,7 +12,8 @@ from langgraph.types import Command
 
 from app.calculation.abilities import ability_to_modifier
 from app.calculation.predefined_characters import PREDEFINED_CHARACTERS
-from app.services.tools._helpers import apply_hp_change, get_combatant
+from app.conditions import remove_condition_by_id, upsert_condition
+from app.services.tools._helpers import apply_hp_change, get_combatant, sync_movement_state
 
 
 
@@ -153,7 +154,8 @@ def modify_character_state(
         lines.append(f"  {target_name} AC → {target['ac']}")
     if "speed" in changes:
         target["speed"] = int(changes["speed"])
-        lines.append(f"  {target_name} 速度 → {target['speed']}")
+        current_speed = sync_movement_state(target)
+        lines.append(f"  {target_name} 速度 → {target['speed']}（当前可用 {current_speed}）")
     if "abilities" in changes:
         for k, v in changes["abilities"].items():
             target.setdefault("abilities", {})[k] = int(v)
@@ -162,18 +164,15 @@ def modify_character_state(
 
     # 状态效果管理 — 兼容字符串和 ActiveCondition 字典
     if "add_condition" in changes:
-        conds: list[dict] = target.setdefault("conditions", [])
         raw = changes["add_condition"]
-        new_cond = {"id": raw} if isinstance(raw, str) else dict(raw)
+        new_cond, _ = upsert_condition(target, raw)
         cond_id = new_cond["id"]
-            
-        if not any(c.get("id") == cond_id for c in conds):
-            conds.append(new_cond)
+        sync_movement_state(target)
         lines.append(f"  {target_name} +状态: {cond_id}")
     if "remove_condition" in changes:
-        conds = target.get("conditions", [])
         cond_id = changes["remove_condition"]
-        target["conditions"] = [c for c in conds if c.get("id") != cond_id]
+        remove_condition_by_id(target, cond_id)
+        sync_movement_state(target)
         lines.append(f"  {target_name} -状态: {cond_id}")
 
     if "resource_delta" in changes:
@@ -283,3 +282,241 @@ def inspect_unit(
 
     content = f"[{source}] {target_id} 完整信息:\n{json.dumps(result, ensure_ascii=False, indent=2)}"
     return Command(update={"messages": [ToolMessage(content=content, tool_call_id=tool_call_id)]})
+
+
+# ── 经验值 & 升级 ───────────────────────────────────────────────
+
+from app.services.tools._helpers import XP_THRESHOLDS
+
+# 法师升级表：等级 → (hp_die, spell_slots, new_spells, cantrips, class_features, arcane_tradition_prompt)
+_WIZARD_LEVEL_TABLE: dict[int, dict] = {
+    1: {
+        "spell_slots": {"spell_slot_lv1": 2},
+        "known_spells": ["magic_missile", "shield"],
+        "known_cantrips": ["fire_bolt", "toll_the_dead", "ray_of_frost"],
+        "class_features": [],
+    },
+    2: {
+        "spell_slots": {"spell_slot_lv1": 3},
+        "new_spells": ["ice_knife"],
+        "class_features": ["arcane_recovery"],
+        "choose_tradition": True,  # 升到 2 级时选择奥术传承
+    },
+    3: {
+        "spell_slots": {"spell_slot_lv1": 4, "spell_slot_lv2": 2},
+        "new_spells": ["guiding_bolt", "mirror_image", "hold_person"],
+    },
+}
+
+
+def _apply_wizard_level_up(player_dict: dict, new_level: int) -> list[str]:
+    """将法师升级到 new_level，修改 player_dict 并返回日志行。"""
+    import d20
+
+    lines: list[str] = []
+    table = _WIZARD_LEVEL_TABLE.get(new_level)
+    if not table:
+        lines.append(f"法师暂不支持 {new_level} 级升级表。")
+        return lines
+
+    # HP 增长：1d6 + CON mod (最低 1)
+    con_mod = player_dict.get("modifiers", {}).get("con", 0)
+    hp_roll = d20.roll("1d6")
+    hp_gain = max(1, hp_roll.total + con_mod)
+    player_dict["max_hp"] = player_dict.get("max_hp", 0) + hp_gain
+    player_dict["hp"] = player_dict.get("hp", 0) + hp_gain
+    lines.append(f"  HP: +{hp_gain}（{hp_roll} + CON {con_mod}），最大 HP → {player_dict['max_hp']}")
+
+    # 法术位更新
+    if "spell_slots" in table:
+        resources = player_dict.setdefault("resources", {})
+        resource_caps = player_dict.setdefault("resource_caps", {})
+        for slot_key, count in table["spell_slots"].items():
+            old = resources.get(slot_key, 0)
+            resources[slot_key] = count
+            resource_caps[slot_key] = count
+            if count > old:
+                lines.append(f"  {slot_key}: {old} → {count}")
+
+    # 新增法术
+    known = player_dict.setdefault("known_spells", [])
+    for spell_id in table.get("new_spells", []):
+        if spell_id not in known:
+            known.append(spell_id)
+            lines.append(f"  学会新法术: {spell_id}")
+
+    # 职业特性
+    features = player_dict.setdefault("class_features", [])
+    for feat in table.get("class_features", []):
+        if feat not in features:
+            features.append(feat)
+            lines.append(f"  获得职业特性: {feat}")
+
+    # 奥术传承选择提示
+    if table.get("choose_tradition") and not player_dict.get("arcane_tradition"):
+        lines.append("  [可选择奥术传承：塑能学派(evocation) / 防护学派(abjuration)]")
+        lines.append("  使用 choose_arcane_tradition 工具进行选择")
+
+    # 熟练加值
+    from app.calculation.proficiency import calculate_proficiency_bonus
+    new_prof = calculate_proficiency_bonus(new_level)
+    old_prof = calculate_proficiency_bonus(new_level - 1)
+    if new_prof != old_prof:
+        lines.append(f"  熟练加值: +{old_prof} → +{new_prof}")
+
+    return lines
+
+
+@tool
+def grant_xp(
+    amount: int,
+    reason: str = "",
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """为玩家角色增加经验值 (XP)。支持战斗奖励、任务奖励等任何来源。
+    若 XP 达到升级门槛，会提示可以使用 level_up 工具升级。
+
+    Args:
+        amount: 要增加的经验值数量（正整数）。
+        reason: 获得经验的原因描述。
+    """
+    player_raw = state.get("player")
+    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+
+    if not player_dict:
+        return Command(update={"messages": [
+            ToolMessage(content="玩家尚未加载角色卡。", tool_call_id=tool_call_id)
+        ]})
+
+    old_xp = player_dict.get("xp", 0)
+    new_xp = old_xp + amount
+    player_dict["xp"] = new_xp
+
+    current_level = player_dict.get("level", 1)
+    next_threshold = XP_THRESHOLDS.get(current_level + 1)
+
+    lines = [f"[经验值] {reason}" if reason else "[经验值]"]
+    lines.append(f"  {player_dict.get('name', '?')}: XP {old_xp} → {new_xp}")
+
+    if next_threshold and new_xp >= next_threshold:
+        lines.append(f"  ★ XP 已达到 {current_level + 1} 级门槛（{next_threshold}）！可以使用 level_up 工具升级。")
+
+    return Command(update={
+        "player": player_dict,
+        "messages": [ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)],
+    })
+
+
+@tool
+def level_up(
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """将玩家角色升级到下一等级。需要足够的经验值。
+    当前仅支持法师 1-3 级升级。升级会自动增加 HP、法术位和学习新法术。
+    """
+    player_raw = state.get("player")
+    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+
+    if not player_dict:
+        return Command(update={"messages": [
+            ToolMessage(content="玩家尚未加载角色卡。", tool_call_id=tool_call_id)
+        ]})
+
+    current_level = player_dict.get("level", 1)
+    new_level = current_level + 1
+    xp = player_dict.get("xp", 0)
+    threshold = XP_THRESHOLDS.get(new_level)
+
+    if not threshold:
+        return Command(update={"messages": [
+            ToolMessage(content=f"当前等级 {current_level}，暂不支持升到 {new_level} 级。", tool_call_id=tool_call_id)
+        ]})
+
+    if xp < threshold:
+        return Command(update={"messages": [
+            ToolMessage(content=f"XP 不足：当前 {xp}，升到 {new_level} 级需要 {threshold}。", tool_call_id=tool_call_id)
+        ]})
+
+    role_class = player_dict.get("role_class", "")
+    lines = [f"[升级] {player_dict.get('name', '?')}: {current_level} → {new_level} 级"]
+
+    if role_class == "法师":
+        level_lines = _apply_wizard_level_up(player_dict, new_level)
+        lines.extend(level_lines)
+    else:
+        lines.append(f"  当前仅支持法师升级，{role_class} 的升级表尚未实现。")
+        return Command(update={"messages": [
+            ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)
+        ]})
+
+    player_dict["level"] = new_level
+
+    return Command(update={
+        "player": player_dict,
+        "messages": [ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)],
+    })
+
+
+@tool
+def choose_arcane_tradition(
+    tradition: str,
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """为法师选择奥术传承（2 级特性）。
+
+    Args:
+        tradition: 奥术传承名称。当前支持: "evocation"（塑能学派）或 "abjuration"（防护学派）。
+    """
+    player_raw = state.get("player")
+    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+
+    if not player_dict:
+        return Command(update={"messages": [
+            ToolMessage(content="玩家尚未加载角色卡。", tool_call_id=tool_call_id)
+        ]})
+
+    if player_dict.get("role_class") != "法师":
+        return Command(update={"messages": [
+            ToolMessage(content="仅法师可选择奥术传承。", tool_call_id=tool_call_id)
+        ]})
+
+    tradition = tradition.strip().lower()
+    valid = {"evocation", "abjuration"}
+    if tradition not in valid:
+        return Command(update={"messages": [
+            ToolMessage(content=f"不支持的传承: {tradition}。可选: {', '.join(valid)}", tool_call_id=tool_call_id)
+        ]})
+
+    player_dict["arcane_tradition"] = tradition
+    features = player_dict.setdefault("class_features", [])
+    lines = [f"[奥术传承] 选择了 {tradition}"]
+
+    if tradition == "evocation":
+        if "sculpt_spells" not in features:
+            features.append("sculpt_spells")
+            lines.append("  获得特性: 塑造法术 (Sculpt Spells) — 塑能系 AoE 法术可保护友方单位")
+    elif tradition == "abjuration":
+        if "arcane_ward" not in features:
+            features.append("arcane_ward")
+            # 创建初始结界
+            from app.conditions._base import build_condition_extra, create_condition
+            int_mod = player_dict.get("modifiers", {}).get("int", 0)
+            level = player_dict.get("level", 2)
+            ward_hp = level * 2 + int_mod
+            conditions = player_dict.setdefault("conditions", [])
+            # 移除旧结界
+            player_dict["conditions"] = [c for c in conditions if c.get("id") != "arcane_ward"]
+            player_dict["conditions"].append(create_condition(
+                "arcane_ward",
+                source_id="arcane_tradition",
+                extra=build_condition_extra(ward_hp=ward_hp, ward_max_hp=ward_hp),
+            ))
+            lines.append(f"  获得特性: 奥术结界 (Arcane Ward) — 结界 HP: {ward_hp}")
+
+    return Command(update={
+        "player": player_dict,
+        "messages": [ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)],
+    })
