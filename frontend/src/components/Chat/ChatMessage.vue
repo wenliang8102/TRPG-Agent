@@ -1,5 +1,22 @@
 <!-- frontend/src/components/Chat/ChatMessage.vue -->
 <template>
+<!-- 加载状态消息（中世纪旋转符文版） -->
+<div v-if="message.type === 'loading'" class="message-wrapper assistant loading">
+  <div class="avatar">
+    <div class="avatar-placeholder">{{ avatarIcon }}</div>
+  </div>
+  <div class="message-content-wrapper">
+    <div class="message-header">
+      <span class="display-name">{{ displayName }}</span>
+    </div>
+    <div class="message-bubble loading-bubble medieval">
+      <div class="rune-spinner">◈</div>
+      <span class="loading-text">预言正在编织...</span>
+    </div>
+  </div>
+</div>
+
+
   <!-- 调试消息 -->
   <div v-if="message.type === 'tool'" v-show="debugMode" class="tool-message-wrapper">
     <div class="tool-badge">TOOL</div>
@@ -414,4 +431,42 @@ onUnmounted(() => {
   text-shadow: 0 0 5px rgba(184, 138, 68, 0.5);
   letter-spacing: 1px;
 }
+
+
+/* ========== 中世纪加载动画（方案B：旋转符文） ========== */
+.loading-bubble.medieval {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent !important;          /* 完全透明背景 */
+  border: none !important;                     /* 移除边框 */
+  box-shadow: none !important;                 /* 移除阴影 */
+  min-width: auto;
+  padding: 8px 0;
+}
+
+/* 旋转的符文 */
+.rune-spinner {
+  font-size: 24px;
+  line-height: 1;
+  color: #c9a87b;                              /* 古铜金色 */
+  text-shadow: 0 0 10px #b88a44, 0 0 20px rgba(184, 138, 68, 0.5);
+  animation: rune-spin 2.5s linear infinite;   /* 慢速旋转，更有仪式感 */
+}
+
+@keyframes rune-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 中世纪风格文字 */
+.loading-text {
+  font-family: 'Cinzel', 'MedievalSharp', 'UnifrakturMaguntia', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: #d4c5a9;                              /* 羊皮纸浅金色 */
+  letter-spacing: 2px;
+  text-shadow: 0 0 6px rgba(184, 138, 68, 0.6);
+}
+
 </style>

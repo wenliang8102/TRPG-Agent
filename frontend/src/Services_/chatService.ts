@@ -7,7 +7,7 @@ export interface ChatMessage {
   avatar?: string
   displayName?: string
   // 扩展字段：消息子类型 + 元数据
-  type?: 'text' | 'combat_action' | 'tool'
+  type?: 'text' | 'combat_action' | 'tool' | 'loading' 
   metadata?: { hp_changes?: HpChange[] }
  isHistory?: boolean   // 新增：标记是否为历史消息
 }

@@ -37,9 +37,11 @@
     <DiceAnimationPage v-if="diceAnimationVisible" @close="diceAnimationVisible = false" />
 
     <!-- 全局骰子按钮（右下角悬浮，样式改为导航栏风格） -->
+       <!--
     <button class="dice-fab" @click="openDiceAnimation">
       🎲
     </button>
+         -->
   </div>
 </template>
 
