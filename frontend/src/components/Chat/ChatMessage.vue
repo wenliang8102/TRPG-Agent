@@ -1,6 +1,6 @@
 <!-- frontend/src/components/Chat/ChatMessage.vue -->
 <template>
-  <!-- 1. loading 消息：无头像，只显示动画 -->
+  <!-- loading 简化版（无头像） -->
   <div v-if="message.type === 'loading'" class="message-wrapper assistant loading no-avatar">
     <div class="message-bubble loading-bubble medieval">
       <div class="rune-spinner">◈</div>
@@ -8,16 +8,15 @@
     </div>
   </div>
 
-  <!-- 2. tool 消息：仅调试模式显示，且不会落入普通分支 -->
+  <!-- tool 消息（仅调试模式显示） -->
   <div v-else-if="message.type === 'tool'">
     <div v-if="debugMode" class="tool-message-wrapper">
       <div class="tool-badge">TOOL</div>
       <pre class="tool-content">{{ message.content }}</pre>
     </div>
-    <!-- debugMode=false 时，什么都不渲染 -->
   </div>
 
-  <!-- 3. 普通消息（包括 text、combat_action 等） -->
+  <!-- 普通消息 -->
   <div v-else :class="['message-wrapper', message.role]">
     <div class="avatar">
       <img v-if="avatarUrl" :src="avatarUrl" :alt="displayName" />
@@ -42,8 +41,9 @@
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
-import { computed, inject, watch, onUnmounted ,reactive} from 'vue'
+import { computed, inject, watch, onUnmounted, reactive, ref } from 'vue'
 import { marked } from 'marked'
 import type { ChatMessage } from '../../Services_/chatService'
 import HpBar from './HpBar.vue'
@@ -57,42 +57,35 @@ marked.setOptions({
 
 const props = defineProps<{
   message: ChatMessage
-  scrollToBottom?: () => void   // 🔥 新增：父组件传入的滚动函数
+  scrollToBottom?: () => void
+}>()
+
+const emit = defineEmits<{
+  (e: 'firstChar'): void
 }>()
 
 const debugMode = inject<boolean>('debugMode', false)
 
-  
-// 🔥 新增：全局血量历史缓存（按单位名称/ID）
 const globalHpCache = reactive<Record<string, number>>({})
-// 🔥 增强 hpChanges：如果 old_hp 不存在或与 new_hp 相同，尝试从缓存中获取旧值
+
 const hpChanges = computed(() => {
   const rawChanges = props.message.metadata?.hp_changes ?? []
   return rawChanges.map((change: any) => {
-    const key = change.id || change.name  // 确保有唯一标识
+    const key = change.id || change.name
     const cachedOld = globalHpCache[key]
     const oldHp = change.old_hp !== undefined && change.old_hp !== change.new_hp
       ? change.old_hp
       : (cachedOld !== undefined ? cachedOld : change.new_hp)
-    
-    // 更新缓存
     globalHpCache[key] = change.new_hp
-    
-    return {
-      ...change,
-      old_hp: oldHp,
-    }
+    return { ...change, old_hp: oldHp }
   })
 })
 
-
 const avatarUrl = computed(() => props.message.avatar ?? undefined)
-
 const displayName = computed(() => {
   if (props.message.displayName) return props.message.displayName
   return props.message.role === 'user' ? '我' : 'TRPG 助手'
 })
-
 const avatarIcon = computed(() => props.message.role === 'user' ? '👤' : '🤖')
 
 const formatTime = (timestamp?: string | number) => {
@@ -101,43 +94,47 @@ const formatTime = (timestamp?: string | number) => {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 }
 
-// 预处理内容（列表适配 + 关键词高亮）
 const rawProcessedContent = computed(() => {
   if (!props.message.content) return ''
   return adaptLLMOutput(props.message.content)
 })
 
 const isUser = props.message.role === 'user'
-const isHistory = props.message.isHistory === true   // 判断是否为历史消息
-
-// 只有用户消息或历史消息才跳过动画
+const isHistory = props.message.isHistory === true
 const skipAnimation = computed(() => isUser || isHistory)
 
-// 打字机效果，传入 scrollToBottom 回调 🔥
+// 用于确保 firstChar 只触发一次
+const hasEmittedFirstChar = ref(false)
+
+const onTypewriterChar = () => {
+  props.scrollToBottom?.()
+  if (!hasEmittedFirstChar.value) {
+    hasEmittedFirstChar.value = true
+    emit('firstChar')
+  }
+}
+
 const { displayText, skip, cleanup, reset, flush } = useTypewriter(
   rawProcessedContent,
-  35,        // 毫秒/字符，可调整速度
+  35,
   undefined,
   skipAnimation,
-  props.scrollToBottom   // 🔥 每输出一个字符触发滚动
+  onTypewriterChar
 )
 
-// 监听消息内容变化，检测新消息开始（可选，用于重置状态）
 watch(() => props.message.content, (newContent, oldContent) => {
-  // 如果内容长度突然变短（新消息覆盖），重置打字机
   if (oldContent && newContent.length < oldContent.length) {
     reset()
+    hasEmittedFirstChar.value = false // 重置标志，新消息重新触发
   }
 }, { immediate: false })
 
-// 渲染内容：历史消息或用户消息直接显示完整内容，否则显示打字机效果
 const renderedContent = computed(() => {
   const content = skipAnimation.value ? rawProcessedContent.value : displayText.value
   if (!content) return ''
   return marked.parse(content, { async: false }) as string
 })
 
-// 点击消息跳过动画（仅当动画播放时有效）
 const handleMessageClick = () => {
   if (!skipAnimation.value) {
     skip()
@@ -148,6 +145,7 @@ onUnmounted(() => {
   cleanup()
 })
 </script>
+
 
 <style scoped>
 /* 保持原有样式不变，只添加淡入动画 */

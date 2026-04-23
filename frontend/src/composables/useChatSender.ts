@@ -42,7 +42,6 @@ export function useChatSender(
     clearError()
     setSending(true)
 
-    // 开始显示 loading 动画
     if (startLoading) startLoading()
 
     let loadingStopped = false
@@ -56,15 +55,15 @@ export function useChatSender(
     try {
       await chatService.sendMessageStream(params, {
         onAssistantMessage: (content) => {
-          stopLoadingOnce()
+          // 注意：这里不再立即停止 loading，等待打字机输出第一个字符
           addAssistantMessage(content, true)
         },
         onCombatAction: (content, hpChanges) => {
-          stopLoadingOnce()
+          stopLoadingOnce() // 战斗消息立即停止 loading
           addCombatMessage(content, hpChanges)
         },
         onToolMessage: (content) => {
-          stopLoadingOnce()
+          stopLoadingOnce() // 工具消息立即停止 loading
           addToolMessage(content)
         },
         onDiceRoll: async (rawRoll, finalTotal) => {
@@ -81,7 +80,7 @@ export function useChatSender(
           setPendingAction(action)
         },
         onDone: (sid) => {
-          stopLoadingOnce()
+          stopLoadingOnce() // 兜底：防止 loading 一直显示（如空消息时）
           if (sid) updateSessionId(sid)
           setSending(false)
         },
