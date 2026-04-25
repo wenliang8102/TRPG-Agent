@@ -1,5 +1,5 @@
 // frontend/src/Services_/characterStateService.ts
-import { reactive, computed, watch, ref, type Ref } from 'vue'
+import { reactive, computed, ref } from 'vue'
 
 // 类型定义（与后端保持一致）
 export interface ActiveCondition {
@@ -18,20 +18,39 @@ export interface WeaponData {
 }
 
 export interface PlayerState {
+  // 基础信息
   name: string
   role_class: string
   level: number
+
+  // 生命值与防护
   hp: number
   max_hp: number
   temp_hp: number
-  ac: number
-  abilities: Record<string, number>
-  modifiers: Record<string, number>
+  ac: number               // 当前总AC（含buff）
+  base_ac?: number         // 无buff裸AC
+
+  // 属性与修正
+  abilities: Record<string, number>   // 原始属性值
+  modifiers: Record<string, number>   // 属性修正值（可直接使用）
+
+  // 状态与资源
   conditions: ActiveCondition[]
-  resources: Record<string, number>
+  resources: Record<string, number>   // 资源（如法术位、职业特性次数等）
+
+  // 战斗相关
   weapons: WeaponData[]
-  known_spells: string[]
-  spellcasting_ability: string
+
+  // 法术相关
+  known_spells: string[]              // 已知法术（1环及以上）
+  known_cantrips?: string[]           // 已知戏法
+  spellcasting_ability: string        // 施法关键属性（str/dex/con/int/wis/cha）
+  concentrating_on?: string | null    // 当前专注的法术名称
+
+  // 经验与职业特性
+  xp?: number                         // 经验值
+  class_features?: Record<string, any> // 职业特性（字典，具体结构取决于职业）
+  arcane_tradition?: string           // 奥术传统（法师学派等）
 }
 
 // 六维属性列表

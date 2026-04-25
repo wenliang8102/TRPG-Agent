@@ -45,6 +45,7 @@ export function useChatSender(
     if (startLoading) startLoading()
 
     let loadingStopped = false
+    let assistantLoadingStopped = false   // 新增：标记文本消息是否已停止 loading
     const stopLoadingOnce = () => {
       if (!loadingStopped && stopLoading) {
         loadingStopped = true
@@ -55,7 +56,11 @@ export function useChatSender(
     try {
       await chatService.sendMessageStream(params, {
         onAssistantMessage: (content) => {
-          // 注意：这里不再立即停止 loading，等待打字机输出第一个字符
+          // 第一次收到文本内容时立即停止 loading
+          if (!assistantLoadingStopped) {
+            assistantLoadingStopped = true
+            stopLoadingOnce()
+          }
           addAssistantMessage(content, true)
         },
         onCombatAction: (content, hpChanges) => {
