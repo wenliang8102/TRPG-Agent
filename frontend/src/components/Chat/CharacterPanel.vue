@@ -96,19 +96,19 @@
             <div class="section-title">资源</div>
             <div class="resources-grid">
               <div v-for="(value, key) in player.resources" :key="key" class="resource-item">
-                <span class="resource-name">{{ formatResourceName(key) }}</span>
+                <span class="resource-name">{{ translateResourceName(key) }}</span>
                 <span class="resource-value">{{ value }}</span>
               </div>
             </div>
           </div>
 
           <!-- 道具栏 -->
-          <details class="inventory-section">
-            <summary class="section-title">道具</summary>
-            <div class="inventory-list">
-              <div class="empty-state" style="padding: 8px 0;">暂无道具数据</div>
-            </div>
-          </details>
+               <details class="inventory-section">
+                  <summary class="section-title">道具</summary>
+                    <div class="inventory-list">
+                     <div class="empty-state" style="padding: 8px 0;">暂无道具数据</div>
+                    </div>
+                </details>
 
           <!-- 法术栏 -->
           <details v-if="player.known_spells?.length" class="spells-section">
@@ -119,7 +119,9 @@
               </span>
             </summary>
             <div class="spells-list">
-              <span v-for="spell in player.known_spells" :key="spell" class="spell-badge">{{ spell }}</span>
+              <span v-for="spell in player.known_spells" :key="spell" class="spell-badge">
+                {{ translateSpellName(spell) }}
+              </span>
             </div>
           </details>
           <div v-else class="spells-section">
@@ -132,7 +134,7 @@
             <summary class="section-title">武器</summary>
             <div class="weapons-list">
               <div v-for="(w, idx) in player.weapons" :key="idx" class="weapon-item">
-                <span class="weapon-name">{{ w.name }}</span>
+                <span class="weapon-name">{{ translateWeaponName(w.name) }}</span>
                 <span class="weapon-detail">{{ w.damage_dice }} {{ w.damage_type }}</span>
               </div>
             </div>
@@ -167,6 +169,7 @@ import { ref, watch, computed } from 'vue'
 import HpBar from './HpBar.vue'
 import { ArrowLeftRight } from 'lucide-vue-next'
 import { useCharacterState, type PlayerState, ABILITY_LIST, formatConditionName } from '../../Services_/characterStateService'
+import { translateWeaponName, translateSpellName, translateItemName, translateResourceName } from '../../Services_/nameTranslator'
 
 const props = defineProps<{
   externalPlayer: PlayerState | null
@@ -208,14 +211,6 @@ defineExpose({
   setViewMode,
   toggleView,
 })
-
-const formatResourceName = (key: string): string => {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/lvl|lv|level/gi, '')
-    .replace(/\b\w/g, c => c.toUpperCase())
-    .trim() || key
-}
 
 const hpUnits = computed(() => {
   const units: Array<{ id: string; name: string; hp: number; max_hp: number }> = []
@@ -471,12 +466,32 @@ details summary::-webkit-details-marker {
 .resource-name {
   font-size: 13px;
   color: #a1a1aa;
-  text-transform: capitalize;
 }
 .resource-value {
   font-size: 16px;
   font-weight: 600;
   color: #e6d5b8;
+}
+.inventory-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inventory-item {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.item-name {
+  font-size: 13px;
+  color: #e5e5ea;
+}
+.item-quantity {
+  font-size: 12px;
+  color: #a1a1aa;
 }
 .spells-list {
   display: flex;
