@@ -169,6 +169,7 @@ class GraphState(TypedDict, total=False):
     output: str
 
     conversation_summary: str
+    episodic_context: list[str]
     session_id: str
 
     # --- 扩展领域字段 ---

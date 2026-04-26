@@ -9,7 +9,6 @@ from app.graph.constants import (
     END_NODE,
     ROUTER_NODE,
     TOOL_NODE,
-    SUMMARIZE_NODE,
     REACTION_RESOLUTION_NODE,
 )
 from app.graph.state import GraphState
@@ -54,12 +53,6 @@ def _route_after_assistant_message(state: GraphState) -> str:
     last_message = messages[-1]
     if isinstance(last_message, AIMessage) and last_message.tool_calls:
         return TOOL_NODE
-
-    # 长期记忆管理：消息超过 60 条时触发摘要压缩。
-    # 短期窗口（_trim_model_messages）已确保 LLM 每次只看最近 50/32 条。
-    # 此处设定阈值高于窗口大小，避免频繁打断。只在真正"过多"时压缩。
-    if len(messages) > 60:
-        return SUMMARIZE_NODE
 
     return END_NODE
 

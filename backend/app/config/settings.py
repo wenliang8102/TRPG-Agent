@@ -9,6 +9,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "TRPG Agent Backend"
     debug: bool = True
+    agent_trace_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("TRPG_AGENT_TRACE_ENABLED"),
+    )
+    agent_trace_dir: str = Field(
+        default="logs/agent_traces",
+        validation_alias=AliasChoices("TRPG_AGENT_TRACE_DIR"),
+    )
     llm_provider: str = "openai"
     llm_model: str = Field(
         default="gpt-4o-mini",

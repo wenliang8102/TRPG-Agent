@@ -14,6 +14,10 @@ from langgraph.types import Command
 from app.config.settings import settings
 from app.graph.builder import build_graph
 from app.memory.checkpointer import close_checkpointer, get_checkpointer
+from app.memory.episodic_store import EpisodicStore
+from app.memory.ingestion import MemoryIngestionPipeline
+from app.utils.agent_trace import trace_chat_error, trace_chat_request, trace_chat_result
+from app.utils.logger import logger
 
 
 _CHAT_SESSION_SERVICE: ChatSessionService | None = None
@@ -23,8 +27,16 @@ _CHAT_SESSION_SERVICE_LOCK = asyncio.Lock()
 class ChatSessionService:
     """借助原生 Thread-based Checkpointer 负责包装、路由以及发起 Graph 推理调用。"""
 
-    def __init__(self, graph: Any) -> None:
+    def __init__(
+        self,
+        graph: Any,
+        memory_pipeline: MemoryIngestionPipeline | None = None,
+        episodic_store: EpisodicStore | None = None,
+    ) -> None:
         self._graph = graph
+        self._memory_pipeline = memory_pipeline
+        self._episodic_store = episodic_store
+        self._memory_tasks: dict[str, asyncio.Task[None]] = {}
 
     async def process_turn(
         self,
@@ -36,12 +48,14 @@ class ChatSessionService:
         current_session_id = session_id or str(uuid4())
         config = {"configurable": {"thread_id": current_session_id}}
         old_state = None
+        old_snapshot: dict[str, Any] = {}
 
         # 在图运行前，记录当前最后一条消息的 ID 作为界标（baseline）。
         # 该界标是最安全的锚点，因为后续即使发生了压缩，也只会清除更古老的历史，不会清除本界标。
         baseline_msg_id = None
         try:
             old_state = await self._graph.aget_state(config)
+            old_snapshot = self._snapshot_state(old_state)
             old_msgs = old_state.values.get("messages", []) if old_state and hasattr(old_state, "values") else []
             if old_msgs and hasattr(old_msgs[-1], "id"):
                 baseline_msg_id = old_msgs[-1].id
@@ -49,8 +63,23 @@ class ChatSessionService:
             pass
 
         pending_before_run = self._get_pending_action(old_state) if old_state else None
+        trace_chat_request(
+            current_session_id,
+            entrypoint="sync",
+            message=message,
+            resume_action=resume_action,
+            reaction_response=reaction_response,
+            pending_before_run=pending_before_run,
+        )
         if message and pending_before_run and not resume_action and reaction_response is None:
+            trace_chat_error(
+                current_session_id,
+                entrypoint="sync",
+                error="Must resolve the pending action before sending a new message.",
+            )
             raise ValueError("Must resolve the pending action before sending a new message.")
+
+        await self._apply_runtime_context(config, current_session_id)
 
         if reaction_response is not None:
             await self._graph.ainvoke({"reaction_choice": reaction_response}, config=config)
@@ -59,9 +88,16 @@ class ChatSessionService:
         elif message:
             await self._graph.ainvoke({"messages": [HumanMessage(content=message)]}, config=config)
         else:
+            trace_chat_error(
+                current_session_id,
+                entrypoint="sync",
+                error="Must provide either message, resume_action, or reaction_response.",
+            )
             raise ValueError("Must provide either message, resume_action, or reaction_response.")
 
         state = await self._graph.aget_state(config)
+        new_messages = self._extract_new_messages(state, baseline_msg_id)
+        new_snapshot = self._snapshot_state(state)
         
         player_data = None
         combat_data = None
@@ -73,11 +109,28 @@ class ChatSessionService:
             if combat:
                 combat_data = combat.model_dump() if hasattr(combat, "model_dump") else dict(combat)
 
+        reply = self._extract_reply_from_messages(new_messages)
+        pending_action = self._get_pending_action(state)
+        trace_chat_result(
+            current_session_id,
+            entrypoint="sync",
+            reply=reply,
+            pending_action=pending_action,
+            new_message_count=len(new_messages),
+        )
+        self._schedule_memory_ingestion(
+            session_id=current_session_id,
+            old_snapshot=old_snapshot,
+            new_snapshot=new_snapshot,
+            new_messages=new_messages,
+            reply=reply,
+        )
+
         return {
-            "reply": self._extract_new_reply(state, baseline_msg_id),
+            "reply": reply,
             "plan": None,
             "session_id": current_session_id,
-            "pending_action": self._get_pending_action(state),
+            "pending_action": pending_action,
             "player": player_data,
             "combat": combat_data,
         }
@@ -120,11 +173,8 @@ class ChatSessionService:
             "current_ac": attack_roll.get("target_ac", 10),
         }
 
-    def _extract_new_reply(self, state: Any, baseline_msg_id: str | None) -> str:
-        """根据 invoke 开始前预存的界标 ID（baseline_msg_id），提取本回合产生的新 AI 回复。
-        因为即使对话产生压缩，旧消息的切除也不会波及到前一回合的结尾，这样就能避免：
-        1. 由于压缩导致使用 index 下标定位截断数组出错的情况。
-        2. 工具调用时生成的空 AI 消息因纯倒序查询而被跳过、导致复读老旧历史的问题。"""
+    def _extract_new_messages(self, state: Any, baseline_msg_id: str | None) -> list[Any]:
+        """根据 invoke 前的界标抽取本轮新增消息，供回复提取和后台记忆复用。"""
         all_messages = state.values.get("messages", [])
 
         # 定位图结构运行前的那条界线：
@@ -136,9 +186,10 @@ class ChatSessionService:
                     start_idx = i + 1
                     break
 
-        new_messages = all_messages[start_idx:]
+        return list(all_messages[start_idx:])
 
-        # 遍历所有的新的 AI Message，组装内容：
+    def _extract_reply_from_messages(self, new_messages: list[Any]) -> str:
+        """只拼接本轮真正对用户可见的 AI 文本回复。"""
         reply_parts: list[str] = []
         for msg in new_messages:
             if isinstance(msg, AIMessage) and msg.content:
@@ -152,6 +203,118 @@ class ChatSessionService:
                             reply_parts.append(part["text"])
 
         return "\n\n".join(reply_parts).strip()
+
+    def _snapshot_state(self, state: Any) -> dict[str, Any]:
+        """将关键状态投影成纯 Python 结构，避免后台任务持有可变对象引用。"""
+        values = state.values if state and hasattr(state, "values") else {}
+        return {
+            "phase": values.get("phase"),
+            "conversation_summary": values.get("conversation_summary", ""),
+            "player": self._state_value_to_dict(values.get("player")),
+            "combat": self._state_value_to_dict(values.get("combat")),
+            "scene_units": self._mapping_state_to_dict(values.get("scene_units")),
+            "dead_units": self._mapping_state_to_dict(values.get("dead_units")),
+            "pending_reaction": self._state_value_to_dict(values.get("pending_reaction")),
+        }
+
+    def _mapping_state_to_dict(self, value: Any) -> dict[str, Any]:
+        if not value or not hasattr(value, "items"):
+            return {}
+        return {
+            key: self._state_value_to_dict(item)
+            for key, item in value.items()
+        }
+
+    def _state_value_to_dict(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if hasattr(value, "model_dump"):
+            return value.model_dump()
+        if hasattr(value, "items"):
+            return {key: self._state_value_to_dict(item) for key, item in value.items()}
+        return value
+
+    def _schedule_memory_ingestion(
+        self,
+        *,
+        session_id: str,
+        old_snapshot: dict[str, Any],
+        new_snapshot: dict[str, Any],
+        new_messages: list[Any],
+        reply: str,
+    ) -> None:
+        """把记忆摄取移到后台串行执行，避免阻塞当前回合响应。"""
+        if self._memory_pipeline is None:
+            return
+
+        turn_id = getattr(new_messages[-1], "id", None) or f"turn:{uuid4()}"
+        previous_task = self._memory_tasks.get(session_id)
+
+        async def _run_ingestion() -> None:
+            if previous_task is not None:
+                try:
+                    await previous_task
+                except Exception:
+                    logger.exception(f"Previous memory ingestion failed for session {session_id}")
+
+            await self._memory_pipeline.ingest(
+                session_id=session_id,
+                turn_id=str(turn_id),
+                old_state=old_snapshot,
+                new_state=new_snapshot,
+                new_messages=list(new_messages),
+                reply=reply,
+            )
+
+        task = asyncio.create_task(_run_ingestion(), name=f"memory-ingest:{session_id}")
+        self._memory_tasks[session_id] = task
+
+        def _cleanup(done_task: asyncio.Task[None]) -> None:
+            try:
+                done_task.result()
+            except Exception:
+                logger.exception(f"Memory ingestion failed for session {session_id}")
+
+            if self._memory_tasks.get(session_id) is done_task:
+                self._memory_tasks.pop(session_id, None)
+
+        task.add_done_callback(_cleanup)
+
+    async def _apply_runtime_context(self, config: dict[str, Any], session_id: str) -> None:
+        """在图执行前注入派生上下文，统一覆盖普通消息、resume 与 reaction 三种入口。"""
+        if not hasattr(self._graph, "aupdate_state"):
+            return
+
+        episodic_context = await self._load_episodic_context(session_id)
+        await self._graph.aupdate_state(
+            config,
+            {
+                "session_id": session_id,
+                "episodic_context": episodic_context,
+            },
+        )
+
+    async def _load_episodic_context(self, session_id: str) -> list[str]:
+        """读取最近的回合摘要，作为热路径的长期情节记忆输入。"""
+        if self._episodic_store is None:
+            return []
+
+        if hasattr(self._episodic_store, "fetch_recent_context_blocks"):
+            context_blocks = await self._episodic_store.fetch_recent_context_blocks(session_id)
+            return [block[:300] for block in context_blocks if block]
+
+        summaries = await self._episodic_store.fetch_recent_summaries(session_id, limit=4)
+        return [summary[:300] for summary in summaries if summary]
+
+    async def aclose(self) -> None:
+        """关闭后台记忆资源，避免测试或热重载遗留挂起任务。"""
+        tasks = list(self._memory_tasks.values())
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+            self._memory_tasks.clear()
+
+        if self._memory_pipeline is not None:
+            await self._memory_pipeline.close()
 
     # ── SSE 流式推送 ───────────────────────────────────────────
 
@@ -198,10 +361,28 @@ class ChatSessionService:
         config = {"configurable": {"thread_id": current_session_id}}
 
         old_state = await self._graph.aget_state(config)
+        old_snapshot = self._snapshot_state(old_state)
+        old_messages = old_state.values.get("messages", []) if hasattr(old_state, "values") else []
+        baseline_msg_id = getattr(old_messages[-1], "id", None) if old_messages else None
         pending_before_run = self._get_pending_action(old_state)
+        trace_chat_request(
+            current_session_id,
+            entrypoint="stream",
+            message=message,
+            resume_action=resume_action,
+            reaction_response=reaction_response,
+            pending_before_run=pending_before_run,
+        )
         if message and pending_before_run and not resume_action and reaction_response is None:
+            trace_chat_error(
+                current_session_id,
+                entrypoint="stream",
+                error="Must resolve the pending action before sending a new message.",
+            )
             yield self._sse_event("error", {"message": "Must resolve the pending action before sending a new message."})
             return
+
+        await self._apply_runtime_context(config, current_session_id)
 
         if reaction_response is not None:
             graph_input = {"reaction_choice": reaction_response}
@@ -210,6 +391,11 @@ class ChatSessionService:
         elif message:
             graph_input = {"messages": [HumanMessage(content=message)]}
         else:
+            trace_chat_error(
+                current_session_id,
+                entrypoint="stream",
+                error="Must provide either message, resume_action, or reaction_response.",
+            )
             yield self._sse_event("error", {"message": "Must provide either message, resume_action, or reaction_response."})
             return
 
@@ -228,7 +414,8 @@ class ChatSessionService:
                 hp_changes = node_output.get("hp_changes", [])
 
                 for msg in new_messages:
-                    if isinstance(msg, AIMessage) and msg.content and not msg.tool_calls:
+                    if isinstance(msg, AIMessage) and msg.content:
+                        # 战斗流里很多给玩家看的旁白和工具调用会落在同一条 AIMessage 上，不能因为带 tool_calls 就吞掉文本。
                         content = msg.content if isinstance(msg.content, str) else str(msg.content)
                         yield self._sse_event("assistant_message", {"content": content})
 
@@ -320,7 +507,24 @@ class ChatSessionService:
         })
 
         pending = self._get_pending_action(state)
+        new_messages = self._extract_new_messages(state, baseline_msg_id)
+        reply = self._extract_reply_from_messages(new_messages)
+        trace_chat_result(
+            current_session_id,
+            entrypoint="stream",
+            reply=reply,
+            pending_action=pending,
+            new_message_count=len(new_messages),
+        )
         yield self._sse_event("pending_action", pending)
+
+        self._schedule_memory_ingestion(
+            session_id=current_session_id,
+            old_snapshot=old_snapshot,
+            new_snapshot=self._snapshot_state(state),
+            new_messages=new_messages,
+            reply=reply,
+        )
 
         yield self._sse_event("done", {"session_id": current_session_id})
 
@@ -341,7 +545,7 @@ class ChatSessionService:
         for msg in reversed(all_messages):
             if len(history) >= limit:
                 break
-            if isinstance(msg, AIMessage) and msg.content and not msg.tool_calls:
+            if isinstance(msg, AIMessage) and msg.content:
                 content = msg.content if isinstance(msg.content, str) else str(msg.content)
                 history.append({"role": "assistant", "content": content})
             elif isinstance(msg, HumanMessage) and not str(msg.content).startswith("[系统"):
@@ -374,13 +578,22 @@ async def get_chat_session_service() -> ChatSessionService:
             return _CHAT_SESSION_SERVICE
 
         graph = build_graph(checkpointer=await get_checkpointer(settings.memory_db_path))
-        _CHAT_SESSION_SERVICE = ChatSessionService(graph=graph)
+        episodic_store = EpisodicStore(settings.memory_db_path)
+        memory_pipeline = MemoryIngestionPipeline(episodic_store)
+        _CHAT_SESSION_SERVICE = ChatSessionService(
+            graph=graph,
+            memory_pipeline=memory_pipeline,
+            episodic_store=episodic_store,
+        )
         return _CHAT_SESSION_SERVICE
 
 
 async def close_chat_session_service() -> None:
     """关闭持久化资源并清理 service 单例。"""
     global _CHAT_SESSION_SERVICE
+
+    if _CHAT_SESSION_SERVICE is not None:
+        await _CHAT_SESSION_SERVICE.aclose()
 
     _CHAT_SESSION_SERVICE = None
     await close_checkpointer()

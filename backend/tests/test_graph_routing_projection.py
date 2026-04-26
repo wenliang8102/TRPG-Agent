@@ -2,10 +2,34 @@ from unittest.mock import patch
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from app.graph.constants import ASSISTANT_NODE, COMBAT_AGENT_MODE, COMBAT_ASSISTANT_NODE, COMBAT_RESOLUTION_NODE, END_NODE
-from app.graph.edges import route_from_combat_resolution, route_from_reaction_resolution, route_from_router, route_from_tool
-from app.graph.nodes import _build_combat_brief, _build_combat_turn_directive, _build_model_input_messages, _trim_model_messages, combat_assistant_node, combat_resolution_node
+from app.graph.constants import ASSISTANT_NODE, COMBAT_AGENT_MODE, COMBAT_ASSISTANT_NODE, COMBAT_RESOLUTION_NODE, END_NODE, NARRATIVE_AGENT_MODE
+from app.graph.edges import route_from_assistant, route_from_combat_resolution, route_from_reaction_resolution, route_from_router, route_from_tool
+from app.graph.nodes import combat_assistant_node, combat_resolution_node
+from app.memory.context_assembler import ContextAssembler, trim_model_messages
+from app.prompts import get_assistant_system_prompt
 from app.services.tools import get_tool_profile
+
+
+def _context_assembler() -> ContextAssembler:
+    return ContextAssembler()
+
+
+def _build_system_prompt(state: dict, mode: str) -> str:
+    return _context_assembler().build_system_prompt(state, mode, get_assistant_system_prompt(mode))
+
+
+def _build_model_input_messages(state: dict, mode: str):
+    assembler = _context_assembler()
+    hud_text = assembler.build_hud_text(state)
+    return assembler.build_model_input_messages(state, mode, hud_text)
+
+
+def _build_combat_brief(state: dict) -> str:
+    return _context_assembler()._build_combat_brief(state)
+
+
+def _build_combat_turn_directive(state: dict) -> str:
+    return _context_assembler()._build_combat_turn_directive(state)
 
 
 def _combat_state(current_actor_id: str) -> dict:
@@ -102,6 +126,14 @@ def test_tool_route_moves_combat_turn_into_resolution_node_before_assistant():
     assert route_from_tool(state) == COMBAT_RESOLUTION_NODE
 
 
+def test_assistant_route_no_longer_enters_summarize_on_long_history():
+    state = {
+        "messages": [HumanMessage(content=f"消息 {index}") for index in range(70)] + [AIMessage(content="收到。", tool_calls=[])],
+    }
+
+    assert route_from_assistant(state) == END_NODE
+
+
 def test_reaction_resolution_moves_into_resolution_node_when_combat_continues():
     state = {
         "phase": "combat",
@@ -140,7 +172,7 @@ def test_model_projection_summarizes_tool_messages_without_mutating_transcript()
 def test_combat_projection_trims_more_aggressively_than_full_history():
     messages = [HumanMessage(content=f"消息 {index}") for index in range(60)]
 
-    trimmed_messages = _trim_model_messages(messages, COMBAT_AGENT_MODE)
+    trimmed_messages = trim_model_messages(messages, COMBAT_AGENT_MODE)
 
     assert len(trimmed_messages) == 32
     assert messages[0].content == "消息 0"
@@ -193,6 +225,51 @@ def test_combat_turn_directive_switches_between_monster_and_player_turns():
     assert "合法目标" in monster_directive
     assert "玩家单位" in player_directive
     assert "玩家最新意图" in player_directive
+
+
+@patch("app.graph.nodes.finish_llm_trace")
+@patch("app.graph.nodes.start_llm_trace", return_value=("invoke-1", "2026-04-26T12:00:00+08:00"))
+@patch("app.graph.nodes._get_llm_service")
+def test_combat_assistant_records_full_prompt_trace(mock_get_llm_service, mock_start_trace, mock_finish_trace):
+    mock_get_llm_service.return_value.invoke_with_tools.return_value = AIMessage(content="哥布林向你逼近。", tool_calls=[])
+    state = {
+        "session_id": "trace-session",
+        "phase": "combat",
+        "combat": _combat_state("goblin_1"),
+        "player": _player_state(),
+        "messages": [HumanMessage(content="继续战斗")],
+    }
+
+    result = combat_assistant_node(state)
+
+    assert result["output"] == "哥布林向你逼近。"
+    assert mock_start_trace.called
+    assert mock_finish_trace.called
+    start_kwargs = mock_start_trace.call_args.kwargs
+    assert start_kwargs["system_prompt"]
+    assert "继续战斗" in str(start_kwargs["messages"][0].content)
+
+
+def test_narrative_system_prompt_excludes_combat_only_guidelines():
+    prompt = _build_system_prompt({"messages": []}, NARRATIVE_AGENT_MODE)
+
+    assert "探索代理补充准则" in prompt
+    assert "战斗代理补充准则" not in prompt
+    assert "禁止虚构战斗结果" not in prompt
+    assert "回合意识" not in prompt
+    assert "场景单位管理" in prompt
+    assert "避免使用图标、emoji" in prompt
+    assert "不要主动输出玩家角色卡面板" in prompt
+
+
+def test_combat_system_prompt_includes_combat_only_guidelines():
+    prompt = _build_system_prompt({"messages": []}, COMBAT_AGENT_MODE)
+
+    assert "战斗代理补充准则" in prompt
+    assert "禁止虚构战斗结果" in prompt
+    assert "回合意识" in prompt
+    assert "怪物回合结算" in prompt
+    assert "不要主动输出玩家角色卡面板" in prompt
 
 
 def test_combat_assistant_node_invokes_llm_with_monster_turn_directive_and_combat_tools():

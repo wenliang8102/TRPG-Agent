@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from app.services.chat_session_service import ChatSessionService
 
@@ -20,6 +20,7 @@ class _FakeGraph:
         self._states = [initial_state, final_state]
         self._chunks = chunks
         self._aget_state_calls = 0
+        self.state_updates = []
 
     async def aget_state(self, config):
         index = min(self._aget_state_calls, len(self._states) - 1)
@@ -30,6 +31,30 @@ class _FakeGraph:
         assert stream_mode == "updates"
         for chunk in self._chunks:
             yield chunk
+
+    async def aupdate_state(self, config, values):
+        self.state_updates.append(values)
+
+
+class _BlockingMemoryPipeline:
+    def __init__(self):
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def ingest(self, **kwargs):
+        self.started.set()
+        await self.release.wait()
+
+    async def close(self):
+        return None
+
+
+class _FakeEpisodicStore:
+    def __init__(self, summaries=None):
+        self.summaries = summaries or []
+
+    async def fetch_recent_summaries(self, session_id: str, limit: int = 4):
+        return list(self.summaries)
 
 
 def _parse_sse_event(raw_event: str) -> tuple[str, object]:
@@ -157,3 +182,105 @@ def test_stream_ignores_hidden_tool_message_but_keeps_pending_action():
     assert "pending_action" in event_names
     assert "tool_message" not in event_names
     assert "dice_roll" not in event_names
+
+
+def test_stream_emits_done_without_waiting_for_memory_ingestion():
+    initial_state = _FakeState({"messages": []})
+    final_state = _FakeState({"messages": [AIMessage(content="处理完毕。", tool_calls=[])]})
+    graph = _FakeGraph(
+        initial_state=initial_state,
+        final_state=final_state,
+        chunks=[{
+            "assistant": {
+                "messages": [AIMessage(content="处理完毕。", tool_calls=[])],
+            }
+        }],
+    )
+    memory_pipeline = _BlockingMemoryPipeline()
+    service = ChatSessionService(graph, memory_pipeline=memory_pipeline)
+
+    async def _collect_events():
+        raw_events = [event async for event in service.process_turn_stream(session_id="demo", message="继续")]
+        await asyncio.wait_for(memory_pipeline.started.wait(), timeout=1)
+        memory_pipeline.release.set()
+        await service.aclose()
+        return raw_events
+
+    raw_events = asyncio.run(_collect_events())
+    event_names = [_parse_sse_event(event)[0] for event in raw_events]
+
+    assert event_names[-1] == "done"
+
+
+def test_stream_keeps_ai_text_even_when_message_contains_tool_calls():
+    initial_state = _FakeState({"messages": []})
+    final_state = _FakeState({"messages": []})
+    graph = _FakeGraph(
+        initial_state=initial_state,
+        final_state=final_state,
+        chunks=[
+            {
+                "combat_assistant": {
+                    "messages": [
+                        AIMessage(
+                            content="战斗开始！让我先为哥布林1执行攻击。",
+                            tool_calls=[{"name": "attack_action", "args": {"attacker_id": "goblin_1"}, "id": "call_1"}],
+                        )
+                    ],
+                }
+            },
+            {
+                "tool": {
+                    "messages": [
+                        ToolMessage(
+                            content="Goblin 1 使用 [Scimitar] 攻击 预设-法师!\n未命中！",
+                            tool_call_id="call_1",
+                        )
+                    ],
+                }
+            },
+            {
+                "combat_assistant": {
+                    "messages": [
+                        AIMessage(
+                            content="哥布林1失手了，现在轮到哥布林2行动。",
+                            tool_calls=[{"name": "next_turn", "args": {}, "id": "call_2"}],
+                        )
+                    ],
+                }
+            },
+        ],
+    )
+    service = ChatSessionService(graph)
+
+    async def _collect_events():
+        return [event async for event in service.process_turn_stream(session_id="demo", message="继续战斗")]
+
+    raw_events = asyncio.run(_collect_events())
+    parsed_events = [_parse_sse_event(event) for event in raw_events]
+    assistant_messages = [payload["content"] for name, payload in parsed_events if name == "assistant_message"]
+
+    assert assistant_messages == [
+        "战斗开始！让我先为哥布林1执行攻击。",
+        "哥布林1失手了，现在轮到哥布林2行动。",
+    ]
+
+
+def test_stream_injects_recent_episodic_context_before_graph_stream():
+    initial_state = _FakeState({"messages": []})
+    final_state = _FakeState({"messages": []})
+    graph = _FakeGraph(
+        initial_state=initial_state,
+        final_state=final_state,
+        chunks=[],
+    )
+    service = ChatSessionService(graph, episodic_store=_FakeEpisodicStore(["上一轮已经确认地板有陷阱。"]))
+
+    async def _collect_events():
+        return [event async for event in service.process_turn_stream(session_id="stream-demo", message="继续")]
+
+    raw_events = asyncio.run(_collect_events())
+    event_names = [_parse_sse_event(event)[0] for event in raw_events]
+
+    assert graph.state_updates[0]["episodic_context"] == ["上一轮已经确认地板有陷阱。"]
+    assert event_names[-1] == "done"
