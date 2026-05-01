@@ -3,7 +3,7 @@
 from functools import lru_cache
 from time import perf_counter
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 
 from app.graph.constants import COMBAT_AGENT_MODE, NARRATIVE_AGENT_MODE
 from app.graph.state import GraphState
@@ -139,6 +139,7 @@ def _invoke_assistant(state: GraphState, mode: str) -> dict:
         "messages": [response],
         "output": output,
     }
+
 
 def _all_players_down(combat_dict: dict, player_dict: dict | None) -> bool:
     """检查战场上是否已不存在存活的玩家单位。"""

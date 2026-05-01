@@ -342,6 +342,13 @@ def summarize_tool_message(message: ToolMessage) -> str:
     tool_name = getattr(message, "name", "") or "tool"
     raw_text = message_content_to_text(message.content).strip()
 
+    if tool_name == "consult_rules_handbook":
+        # 规则检索结果若被过度压缩，会让下一轮模型看不到原文证据而回退到“记忆作答”。
+        compact = " ".join(raw_text.split())
+        if len(compact) > 800:
+            compact = compact[:797] + "..."
+        return f"[工具:{tool_name}] {compact}"
+
     if tool_name == "request_dice_roll":
         try:
             roll_data = json.loads(raw_text)

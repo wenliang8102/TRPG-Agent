@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
     llm_provider: str = "openai"
     llm_model: str = Field(
-        default="gpt-4o-mini",
+        default="qwen3.6-27b",
         validation_alias=AliasChoices("TRPG_LLM_MODEL", "OPENAI_MODEL"),
     )
     llm_api_key: str = Field(
@@ -55,6 +55,28 @@ class Settings(BaseSettings):
     memory_summary_max_retries: int = Field(
         default=1,
         validation_alias=AliasChoices("TRPG_MEMORY_SUMMARY_MAX_RETRIES"),
+    )
+    embedding_model: str = Field(
+        default="text-embedding-v3",
+        validation_alias=AliasChoices("TRPG_EMBEDDING_MODEL", "OPENAI_EMBEDDING_MODEL"),
+    )
+    embedding_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "TRPG_EMBEDDING_API_KEY",
+            "OPENAI_EMBEDDING_API_KEY",
+            "TRPG_LLM_API_KEY",
+            "OPENAI_API_KEY",
+        ),
+    )
+    embedding_base_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "TRPG_EMBEDDING_BASE_URL",
+            "OPENAI_EMBEDDING_BASE_URL",
+            "TRPG_LLM_BASE_URL",
+            "OPENAI_BASE_URL",
+        ),
     )
     memory_db_path: str = Field(
         default="data/context_memory.sqlite3",

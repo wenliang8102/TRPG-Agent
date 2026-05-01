@@ -26,6 +26,7 @@ from app.services.tools.combat_tools import (
 )
 from app.services.tools.spell_tools import cast_spell
 from app.services.tools.condition_tools import apply_condition, remove_condition
+from app.services.tools.rag_tools import consult_rules_handbook
 
 # 供外部模块直接引用的战斗计算函数
 from app.services.tools._helpers import (
@@ -65,6 +66,7 @@ _NARRATIVE_TOOLS: tuple[BaseTool, ...] = (
     grant_xp,
     level_up,
     choose_arcane_tradition,
+    consult_rules_handbook,
 )
 
 _COMBAT_TOOLS: tuple[BaseTool, ...] = (
@@ -77,6 +79,7 @@ _COMBAT_TOOLS: tuple[BaseTool, ...] = (
     inspect_unit,
     apply_condition,
     remove_condition,
+    consult_rules_handbook,
 )
 
 _ALL_TOOLS: tuple[BaseTool, ...] = _NARRATIVE_TOOLS + tuple(

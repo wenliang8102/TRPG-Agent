@@ -26,6 +26,7 @@ from app.services.tools.character_tools import (  # noqa: F401
 from app.services.tools.dice_tools import request_dice_roll, weather  # noqa: F401
 from app.services.tools.spell_tools import cast_spell  # noqa: F401
 from app.services.tools.condition_tools import apply_condition, remove_condition  # noqa: F401
+from app.services.tools.rag_tools import consult_rules_handbook  # noqa: F401
 
 # 旧名称兼容
 _build_player_combatant = prepare_player_for_combat
