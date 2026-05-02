@@ -417,6 +417,58 @@ class TestModifyCharacterStateResources:
         assert isinstance(result, Command)
         assert result.update["player"]["resources"]["spell_slot_lv1"] == 2
 
+    def test_grant_xp_action_uses_unified_state_tool(self):
+        from app.services.tool_service import modify_character_state
+
+        player = copy.deepcopy(PREDEFINED_CHARACTERS["法师"])
+        state = {"player": player}
+
+        result = _invoke_tool(
+            modify_character_state,
+            tool_input={
+                "action": "grant_xp",
+                "payload": {"amount": 300},
+                "reason": "击败地精巡逻队",
+                "state": state,
+            },
+        )
+
+        assert isinstance(result, Command)
+        assert result.update["player"]["xp"] == player.get("xp", 0) + 300
+        assert 'action="level_up"' in result.update["messages"][0].content
+
+    def test_level_up_and_arcane_tradition_actions_use_unified_state_tool(self):
+        from app.services.tool_service import modify_character_state
+
+        player = copy.deepcopy(PREDEFINED_CHARACTERS["法师"])
+        player["xp"] = 300
+        state = {"player": player}
+
+        level_result = _invoke_tool(
+            modify_character_state,
+            tool_input={
+                "action": "level_up",
+                "state": state,
+            },
+        )
+        updated_player = level_result.update["player"]
+
+        tradition_result = _invoke_tool(
+            modify_character_state,
+            tool_input={
+                "action": "choose_arcane_tradition",
+                "payload": {"tradition": "abjuration"},
+                "state": {"player": updated_player},
+            },
+        )
+
+        assert isinstance(level_result, Command)
+        assert updated_player["level"] == 2
+        assert isinstance(tradition_result, Command)
+        assert tradition_result.update["player"]["arcane_tradition"] == "abjuration"
+        assert "arcane_ward" in tradition_result.update["player"]["class_features"]
+        assert any(c.get("id") == "arcane_ward" for c in tradition_result.update["player"]["conditions"])
+
 
 # ── Phase 8: Mage Armor 法术回归测试 ───────────────────────────
 

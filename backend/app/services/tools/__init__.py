@@ -27,6 +27,7 @@ from app.services.tools.combat_tools import (
 from app.services.tools.spell_tools import cast_spell
 from app.services.tools.condition_tools import apply_condition, remove_condition
 from app.services.tools.rag_tools import consult_rules_handbook
+from app.services.tools.skill_tools import load_skill
 
 # 供外部模块直接引用的战斗计算函数
 from app.services.tools._helpers import (
@@ -52,6 +53,7 @@ ToolProfile = Literal["narrative", "combat"]
 
 _NARRATIVE_TOOLS: tuple[BaseTool, ...] = (
     weather,
+    load_skill,
     request_dice_roll,
     load_character_profile,
     modify_character_state,
@@ -61,15 +63,11 @@ _NARRATIVE_TOOLS: tuple[BaseTool, ...] = (
     clear_dead_units,
     cast_spell,
     inspect_unit,
-    apply_condition,
-    remove_condition,
-    grant_xp,
-    level_up,
-    choose_arcane_tradition,
     consult_rules_handbook,
 )
 
 _COMBAT_TOOLS: tuple[BaseTool, ...] = (
+    load_skill,
     request_dice_roll,
     modify_character_state,
     attack_action,
@@ -77,13 +75,21 @@ _COMBAT_TOOLS: tuple[BaseTool, ...] = (
     end_combat,
     cast_spell,
     inspect_unit,
+    consult_rules_handbook,
+)
+
+_COMPATIBILITY_TOOLS: tuple[BaseTool, ...] = (
     apply_condition,
     remove_condition,
-    consult_rules_handbook,
+    grant_xp,
+    level_up,
+    choose_arcane_tradition,
 )
 
 _ALL_TOOLS: tuple[BaseTool, ...] = _NARRATIVE_TOOLS + tuple(
     tool for tool in _COMBAT_TOOLS if tool not in _NARRATIVE_TOOLS
+) + tuple(
+    tool for tool in _COMPATIBILITY_TOOLS if tool not in _NARRATIVE_TOOLS and tool not in _COMBAT_TOOLS
 )
 
 

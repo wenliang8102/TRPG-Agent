@@ -8,6 +8,7 @@ from app.graph.nodes import combat_assistant_node, combat_resolution_node
 from app.memory.context_assembler import ContextAssembler, trim_model_messages
 from app.prompts import get_assistant_system_prompt
 from app.services.tools import get_tool_profile
+from app.services.tool_service import load_skill
 
 
 def _context_assembler() -> ContextAssembler:
@@ -214,11 +215,32 @@ def test_tool_profiles_split_exploration_and_combat_visibility():
     narrative_tools = {tool.name for tool in get_tool_profile("narrative")}
     combat_tools = {tool.name for tool in get_tool_profile("combat")}
 
+    assert "load_skill" in narrative_tools
+    assert "load_skill" in combat_tools
     assert "start_combat" in narrative_tools
     assert "start_combat" not in combat_tools
     assert "attack_action" in combat_tools
     assert "attack_action" not in narrative_tools
+    assert "grant_xp" not in narrative_tools
+    assert "level_up" not in narrative_tools
+    assert "choose_arcane_tradition" not in narrative_tools
+    assert "apply_condition" not in combat_tools
+    assert "remove_condition" not in combat_tools
     assert ASSISTANT_NODE == "assistant"
+
+
+def test_load_skill_returns_character_state_management_instructions():
+    result = load_skill.invoke({
+        "name": "load_skill",
+        "args": {"skill_id": "character_state_management"},
+        "id": "skill-call",
+        "type": "tool_call",
+    })
+
+    content = result.update["messages"][0].content
+    assert "角色状态调整技能" in content
+    assert "modify_character_state" in content
+    assert 'action="level_up"' in content
 
 
 def test_combat_brief_includes_conditions_attacks_and_scene_stakes():
@@ -292,6 +314,8 @@ def test_narrative_system_prompt_excludes_combat_only_guidelines():
     assert "场景单位管理" in prompt
     assert "避免使用图标、emoji" in prompt
     assert "不要主动输出玩家角色卡面板" in prompt
+    assert 'action="level_up"' not in prompt
+    assert "character_state_management" in prompt
 
 
 def test_combat_system_prompt_includes_combat_only_guidelines():

@@ -24,6 +24,8 @@ class ContextAssemblerTests(unittest.TestCase):
         assembled = assembler.assemble(state, NARRATIVE_AGENT_MODE, base_system_prompt="基础规则")
 
         self.assertIn("玩家刚踏入地牢入口。", assembled.system_prompt)
+        self.assertIn("[可按需加载的技能]", assembled.system_prompt)
+        self.assertIn("character_state_management", assembled.system_prompt)
         self.assertIn("[扩展上下文]", assembled.system_prompt)
         self.assertIn("外部上下文:narrative", assembled.system_prompt)
         self.assertIn("实时系统监控窗", assembled.hud_text)

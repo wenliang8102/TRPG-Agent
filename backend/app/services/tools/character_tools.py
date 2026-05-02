@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
@@ -66,13 +66,30 @@ def load_character_profile(
 
 @tool
 def modify_character_state(
-    target_id: str,
-    changes: dict,
+    target_id: str = "player",
+    changes: dict | None = None,
+    action: Literal[
+        "update",
+        "grant_xp",
+        "level_up",
+        "choose_arcane_tradition",
+        "apply_condition",
+        "remove_condition",
+    ] = "update",
+    payload: dict | None = None,
     reason: str = "",
     state: Annotated[dict, InjectedState] = None,
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
-    """调整任意角色/战斗单位的状态属性。所有涉及 HP、AC、能力值、资源等数值变化都应通过该工具执行。
+    """角色状态调整技能。所有涉及 HP、AC、能力值、资源、经验、升级、学派、状态效果的变化都应通过该工具执行。
+
+    使用方式：
+    - action="update"：通用状态变更，填写 target_id 与 changes。
+    - action="grant_xp"：增加经验，payload={"amount": 50}。
+    - action="level_up"：玩家升级，系统按职业升级表结算。
+    - action="choose_arcane_tradition"：法师选择学派，payload={"tradition": "abjuration"}。
+    - action="apply_condition"：施加状态，payload={"target_id": "goblin_1", "condition_id": "blinded", "duration": 2}。
+    - action="remove_condition"：移除状态，payload={"target_id": "goblin_1", "condition_id": "blinded"}。
 
     支持的 changes 键包括：hp_delta(增减HP)、set_hp(直接设置HP)、ac、speed、
     abilities(dict)、conditions(list)、add_condition(str 或 dict)、remove_condition(str)、
@@ -84,8 +101,41 @@ def modify_character_state(
     Args:
         target_id: 目标单位 ID（如 "player_预设-战士"、"goblin_1"）或 "player" 表示当前玩家。
         changes: 要修改的属性字典，如 {"hp_delta": -5} 或 {"ac": 18, "add_condition": "blinded"}。
+        action: 本次状态调整的技能动作，默认 update。
+        payload: action 专属参数；经验、升级、学派和状态效果优先放在这里。
         reason: 修改原因的简短描述，用于日志。
     """
+    payload = payload or {}
+
+    # 角色成长类动作收口在同一个工具里，减少模型可见工具数量。
+    if action == "grant_xp":
+        return _grant_xp_command(int(payload["amount"]), str(payload.get("reason", reason)), state, tool_call_id)
+    if action == "level_up":
+        return _level_up_command(state, tool_call_id)
+    if action == "choose_arcane_tradition":
+        return _choose_arcane_tradition_command(str(payload["tradition"]), state, tool_call_id)
+
+    # 状态效果通过 changes 复用既有状态写入路径，避免维护两套目标定位逻辑。
+    if action == "apply_condition":
+        target_id = str(payload.get("target_id", target_id))
+        raw_condition: dict = {"id": str(payload["condition_id"])}
+        if payload.get("source_id"):
+            raw_condition["source_id"] = str(payload["source_id"])
+        if payload.get("duration") is not None:
+            raw_condition["duration"] = int(payload["duration"])
+        changes = {"add_condition": raw_condition}
+        reason = str(payload.get("reason", reason))
+    elif action == "remove_condition":
+        target_id = str(payload.get("target_id", target_id))
+        changes = {"remove_condition": str(payload["condition_id"])}
+        reason = str(payload.get("reason", reason))
+
+    changes = changes or {}
+    if not changes:
+        return Command(update={"messages": [
+            ToolMessage(content="未提供状态变更内容。", tool_call_id=tool_call_id)
+        ]})
+
     update: dict = {}
     lines: list[str] = [f"[状态变更] {reason}" if reason else "[状态变更]"]
     hp_changes: list[dict] = []
@@ -355,7 +405,7 @@ def _apply_wizard_level_up(player_dict: dict, new_level: int) -> list[str]:
     # 奥术传承选择提示
     if table.get("choose_tradition") and not player_dict.get("arcane_tradition"):
         lines.append("  [可选择奥术传承：塑能学派(evocation) / 防护学派(abjuration)]")
-        lines.append("  使用 choose_arcane_tradition 工具进行选择")
+        lines.append('  使用 modify_character_state，action="choose_arcane_tradition" 进行选择')
 
     # 熟练加值
     from app.calculation.proficiency import calculate_proficiency_bonus
@@ -367,27 +417,29 @@ def _apply_wizard_level_up(player_dict: dict, new_level: int) -> list[str]:
     return lines
 
 
-@tool
-def grant_xp(
-    amount: int,
-    reason: str = "",
-    state: Annotated[dict, InjectedState] = None,
-    tool_call_id: Annotated[str, InjectedToolCallId] = None,
-) -> Command:
-    """为玩家角色增加经验值 (XP)。支持战斗奖励、任务奖励等任何来源。
-    若 XP 达到升级门槛，会提示可以使用 level_up 工具升级。
-
-    Args:
-        amount: 要增加的经验值数量（正整数）。
-        reason: 获得经验的原因描述。
-    """
+def _get_player_dict(state: dict) -> dict | None:
+    """统一读取玩家状态，兼容 Pydantic 与普通 dict。"""
     player_raw = state.get("player")
-    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
+    return player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
 
+
+def _missing_player_message(tool_call_id: str | None) -> Command:
+    """玩家未初始化时快速返回，保持成长工具行为一致。"""
+    return Command(update={"messages": [
+        ToolMessage(content="玩家尚未加载角色卡。", tool_call_id=tool_call_id)
+    ]})
+
+
+def _grant_xp_command(
+    amount: int,
+    reason: str,
+    state: dict,
+    tool_call_id: str | None,
+) -> Command:
+    """为玩家增加经验，达到门槛时提示继续调用统一状态调整工具升级。"""
+    player_dict = _get_player_dict(state)
     if not player_dict:
-        return Command(update={"messages": [
-            ToolMessage(content="玩家尚未加载角色卡。", tool_call_id=tool_call_id)
-        ]})
+        return _missing_player_message(tool_call_id)
 
     old_xp = player_dict.get("xp", 0)
     new_xp = old_xp + amount
@@ -400,7 +452,10 @@ def grant_xp(
     lines.append(f"  {player_dict.get('name', '?')}: XP {old_xp} → {new_xp}")
 
     if next_threshold and new_xp >= next_threshold:
-        lines.append(f"  ★ XP 已达到 {current_level + 1} 级门槛（{next_threshold}）！可以使用 level_up 工具升级。")
+        lines.append(
+            f'  ★ XP 已达到 {current_level + 1} 级门槛（{next_threshold}）！'
+            '可以使用 modify_character_state，action="level_up" 升级。'
+        )
 
     return Command(update={
         "player": player_dict,
@@ -408,21 +463,11 @@ def grant_xp(
     })
 
 
-@tool
-def level_up(
-    state: Annotated[dict, InjectedState] = None,
-    tool_call_id: Annotated[str, InjectedToolCallId] = None,
-) -> Command:
-    """将玩家角色升级到下一等级。需要足够的经验值。
-    当前仅支持法师 1-3 级升级。升级会自动增加 HP、法术位和学习新法术。
-    """
-    player_raw = state.get("player")
-    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
-
+def _level_up_command(state: dict, tool_call_id: str | None) -> Command:
+    """按当前职业升级表推进玩家等级。"""
+    player_dict = _get_player_dict(state)
     if not player_dict:
-        return Command(update={"messages": [
-            ToolMessage(content="玩家尚未加载角色卡。", tool_call_id=tool_call_id)
-        ]})
+        return _missing_player_message(tool_call_id)
 
     current_level = player_dict.get("level", 1)
     new_level = current_level + 1
@@ -459,24 +504,15 @@ def level_up(
     })
 
 
-@tool
-def choose_arcane_tradition(
+def _choose_arcane_tradition_command(
     tradition: str,
-    state: Annotated[dict, InjectedState] = None,
-    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+    state: dict,
+    tool_call_id: str | None,
 ) -> Command:
-    """为法师选择奥术传承（2 级特性）。
-
-    Args:
-        tradition: 奥术传承名称。当前支持: "evocation"（塑能学派）或 "abjuration"（防护学派）。
-    """
-    player_raw = state.get("player")
-    player_dict = player_raw.model_dump() if hasattr(player_raw, "model_dump") else dict(player_raw) if player_raw else None
-
+    """为法师写入奥术传承，并授予对应职业特性。"""
+    player_dict = _get_player_dict(state)
     if not player_dict:
-        return Command(update={"messages": [
-            ToolMessage(content="玩家尚未加载角色卡。", tool_call_id=tool_call_id)
-        ]})
+        return _missing_player_message(tool_call_id)
 
     if player_dict.get("role_class") != "法师":
         return Command(update={"messages": [
@@ -520,3 +556,33 @@ def choose_arcane_tradition(
         "player": player_dict,
         "messages": [ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)],
     })
+
+
+@tool
+def grant_xp(
+    amount: int,
+    reason: str = "",
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """兼容旧调用：为玩家角色增加经验值。新模型可见入口是 modify_character_state。"""
+    return _grant_xp_command(amount, reason, state, tool_call_id)
+
+
+@tool
+def level_up(
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """兼容旧调用：将玩家角色升级到下一等级。新模型可见入口是 modify_character_state。"""
+    return _level_up_command(state, tool_call_id)
+
+
+@tool
+def choose_arcane_tradition(
+    tradition: str,
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """兼容旧调用：为法师选择奥术传承。新模型可见入口是 modify_character_state。"""
+    return _choose_arcane_tradition_command(tradition, state, tool_call_id)

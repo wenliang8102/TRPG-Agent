@@ -11,6 +11,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 
 from app.graph.constants import COMBAT_AGENT_MODE, NARRATIVE_AGENT_MODE
 from app.graph.state import GraphState
+from app.services.skills import get_skill_index
 
 
 COMBAT_ARCHIVE_MESSAGE_PREFIX = "[系统:战斗归档]"
@@ -51,6 +52,9 @@ class ContextAssembler:
 
     def build_system_prompt(self, state: GraphState, mode: str, base_system_prompt: str) -> str:
         system_prompt = base_system_prompt
+        skill_index = self._build_skill_index()
+        if skill_index:
+            system_prompt += f"\n\n[可按需加载的技能]\n{skill_index}"
 
         episodic_context = [item.strip() for item in state.get("episodic_context", []) if isinstance(item, str) and item.strip()]
         if episodic_context:
@@ -72,6 +76,16 @@ class ContextAssembler:
             system_prompt += "\n\n[扩展上下文]\n" + "\n\n".join(block for block in external_blocks if block)
 
         return system_prompt
+
+    def _build_skill_index(self) -> str:
+        """只注入技能索引；完整说明由 load_skill 工具按需返回。"""
+        lines = [
+            f"- {skill.skill_id}: {skill.description}"
+            for skill in get_skill_index()
+        ]
+        if lines:
+            lines.append("遇到对应复杂工具前，先调用 load_skill(skill_id) 读取完整说明。")
+        return "\n".join(lines)
 
     def build_hud_text(self, state: GraphState) -> str:
         sections: list[str] = []
@@ -342,8 +356,8 @@ def summarize_tool_message(message: ToolMessage) -> str:
     tool_name = getattr(message, "name", "") or "tool"
     raw_text = message_content_to_text(message.content).strip()
 
-    if tool_name == "consult_rules_handbook":
-        # 规则检索结果若被过度压缩，会让下一轮模型看不到原文证据而回退到“记忆作答”。
+    if tool_name in {"consult_rules_handbook", "load_skill"}:
+        # 规则/技能结果若被过度压缩，会让下一轮模型看不到关键依据而回退到记忆作答。
         compact = " ".join(raw_text.split())
         if len(compact) > 800:
             compact = compact[:797] + "..."
