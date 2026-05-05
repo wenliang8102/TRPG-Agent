@@ -40,6 +40,13 @@ class ChatSessionService:
         self._episodic_store = episodic_store
         self._memory_tasks: dict[str, asyncio.Task[None]] = {}
 
+    def _graph_config(self, session_id: str) -> dict[str, Any]:
+        """统一声明 LangGraph 运行参数；工具串行化后复杂场景需要更多图步数。"""
+        return {
+            "configurable": {"thread_id": session_id},
+            "recursion_limit": settings.graph_recursion_limit,
+        }
+
     async def process_turn(
         self,
         message: Optional[str] = None,
@@ -48,7 +55,7 @@ class ChatSessionService:
         reaction_response: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         current_session_id = session_id or str(uuid4())
-        config = {"configurable": {"thread_id": current_session_id}}
+        config = self._graph_config(current_session_id)
         old_state = None
         old_snapshot: dict[str, Any] = {}
 
@@ -374,7 +381,7 @@ class ChatSessionService:
     ) -> AsyncGenerator[str, None]:
         """以 SSE 事件流的方式推送图执行过程中的每一步结果。"""
         current_session_id = session_id or str(uuid4())
-        config = {"configurable": {"thread_id": current_session_id}}
+        config = self._graph_config(current_session_id)
 
         old_state = await self._graph.aget_state(config)
         old_snapshot = self._snapshot_state(old_state)
@@ -556,7 +563,7 @@ class ChatSessionService:
 
     async def get_history(self, session_id: str, limit: int = 10) -> dict[str, Any]:
         """从 checkpointer 中恢复最近的对话消息，供前端初始化。"""
-        config = {"configurable": {"thread_id": session_id}}
+        config = self._graph_config(session_id)
         try:
             state = await self._graph.aget_state(config)
         except Exception:

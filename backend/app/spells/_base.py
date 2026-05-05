@@ -34,6 +34,8 @@ class SpellResult(TypedDict, total=False):
     """法术执行结果 — 各法术 execute() 的统一返回格式"""
     lines: list[str]
     hp_changes: list[dict]
+    space: dict
+    blocked_action: bool
 
 
 def get_spell_dc(caster: dict) -> int:

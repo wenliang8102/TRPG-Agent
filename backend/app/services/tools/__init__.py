@@ -38,6 +38,7 @@ from app.services.tools.space_tools import (
     query_units_in_radius,
     switch_plane_map,
 )
+from app.services.tools.monster_action_tools import use_monster_action
 
 # 供外部模块直接引用的战斗计算函数
 from app.services.tools._helpers import (
@@ -80,6 +81,7 @@ _COMBAT_TOOLS: tuple[BaseTool, ...] = (
     request_dice_roll,
     modify_character_state,
     attack_action,
+    use_monster_action,
     next_turn,
     end_combat,
     cast_spell,

@@ -26,6 +26,7 @@ from app.services.tools.character_tools import (  # noqa: F401
     load_character_profile,
     modify_character_state,
 )
+from app.services.tools.monster_action_tools import use_monster_action  # noqa: F401
 from app.services.tools.dice_tools import request_dice_roll  # noqa: F401
 from app.services.tools.spell_tools import cast_spell  # noqa: F401
 from app.services.tools.condition_tools import apply_condition, remove_condition  # noqa: F401

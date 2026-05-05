@@ -18,7 +18,7 @@ from app.graph.state import AttackInfo, CombatantState, CombatState, WeaponData
 from app.calculation.predefined_characters import PREDEFINED_CHARACTERS
 from app.conditions._base import build_condition_extra, create_condition
 from app.services.tool_service import _build_player_combatant, prepare_player_for_combat
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.types import Command
 
 
@@ -158,6 +158,27 @@ class TestStartCombatPlayerJoin:
         # 玩家战斗字段叠加在 player 上
         assert result.update["player"]["id"] == "player_预设-战士"
         assert result.update["player"]["side"] == "player"
+
+    def test_active_combat_archive_start_includes_start_tool_call(self):
+        """战斗归档起点必须包含 start_combat 的 AI tool_call，避免后续 prompt 残留悬空调用。"""
+        player = PREDEFINED_CHARACTERS["战士"]
+        goblin = _make_goblin()
+        state = {
+            "player": player,
+            "scene_units": {"goblin_1": goblin},
+            "space": _make_space_state(["player_预设-战士", "goblin_1"]),
+            "messages": [
+                HumanMessage(content="我靠近狼。"),
+                AIMessage(
+                    content="进入战斗。",
+                    tool_calls=[{"name": "start_combat", "args": {"combatant_ids": ["goblin_1"]}, "id": "call_start"}],
+                ),
+            ],
+        }
+
+        result = self._invoke_start_combat(state)
+
+        assert result.update["active_combat_message_start"] == 1
 
     def test_phase_set_to_combat(self):
         """start_combat 应将 phase 设为 'combat'"""
@@ -981,6 +1002,87 @@ class TestSpellRangeValidation:
         assert result.update["scene_units"]["far_goblin"]["hp"] == far["hp"]
 
 
+class TestLostMineSpellCoverage:
+    """验证《失落矿坑》施法怪需要的战斗法术已进入本地注册表。"""
+
+    def test_priority_spells_registered(self):
+        from app.spells import get_spell_def
+
+        for spell_id in [
+            "shocking_grasp",
+            "charm_person",
+            "misty_step",
+            "blur",
+            "flaming_sphere",
+            "darkness",
+            "faerie_fire",
+            "invisibility",
+            "suggestion",
+        ]:
+            assert get_spell_def(spell_id) is not None
+
+    def test_end_concentration_clears_conditions_on_targets(self):
+        from app.services.tool_service import cast_spell
+
+        player = copy.deepcopy(PREDEFINED_CHARACTERS["法师"])
+        player["known_spells"] = list(player["known_spells"]) + ["hold_person"]
+        player["resources"]["spell_slot_lv2"] = 1
+        goblin = _make_goblin()
+        goblin["conditions"] = [create_condition("paralyzed", source_id="concentration:hold_person", duration=10)]
+        player["concentrating_on"] = "hold_person"
+        state = {"player": player, "scene_units": {"goblin_1": goblin}}
+
+        result = _invoke_tool(
+            cast_spell,
+            tool_input={
+                "spell_id": "hold_person",
+                "target_ids": [],
+                "end_concentration": True,
+                "state": state,
+            },
+        )
+
+        assert result.update["player"]["concentrating_on"] is None
+        assert result.update["scene_units"]["goblin_1"]["conditions"] == []
+
+    def test_misty_step_updates_space_without_using_movement(self):
+        from app.services.tool_service import cast_spell
+
+        player = copy.deepcopy(PREDEFINED_CHARACTERS["法师"])
+        player["known_spells"] = list(player["known_spells"]) + ["misty_step"]
+        player["resources"]["spell_slot_lv2"] = 1
+        state = {
+            "player": player,
+            "space": {
+                "active_map_id": "map_1",
+                "maps": {"map_1": {"id": "map_1", "name": "矿道", "width": 80, "height": 80}},
+                "placements": {
+                    "player_预设-法师": {"unit_id": "player_预设-法师", "map_id": "map_1", "position": {"x": 0, "y": 0}},
+                },
+            },
+        }
+
+        result = _invoke_tool(
+            cast_spell,
+            tool_input={
+                "spell_id": "misty_step",
+                "target_ids": [],
+                "target_point": {"x": 20, "y": 0},
+                "slot_level": 2,
+                "state": state,
+            },
+        )
+
+        assert result.update["space"]["placements"]["player_预设-法师"]["position"] == {"x": 20.0, "y": 0.0}
+        assert result.update["player"]["resources"]["spell_slot_lv2"] == 0
+
+    def test_blur_condition_gives_attackers_disadvantage(self):
+        from app.conditions import get_combat_effects
+
+        effects = get_combat_effects("blurred")
+        assert effects.defend_advantage == "disadvantage"
+
+
 class TestReactionFlow:
     """验证怪物命中后的显式待决反应链路与护盾术改判。"""
 
@@ -1069,6 +1171,115 @@ class TestReactionFlow:
         assert "未命中" in message.content
         assert message.additional_kwargs["attack_roll"]["raw_roll"] == 12
         assert message.additional_kwargs["attack_roll"]["final_total"] == 16
+
+    def test_shield_reaction_refreshes_arcane_ward(self):
+        from app.graph import nodes
+        from app.services.tool_service import attack_action
+
+        state = self._build_reaction_state()
+        state["player"]["level"] = 2
+        state["player"]["class_features"] = [*state["player"].get("class_features", []), "arcane_ward"]
+        state["player"]["conditions"].append(
+            create_condition("arcane_ward", source_id=state["player"]["name"], extra=build_condition_extra(ward_hp=1, ward_max=7))
+        )
+
+        with patch("app.services.tools._helpers.d20.roll", side_effect=self._fixed_roll), patch(
+            "app.services.tools._helpers._get_natural_d20", return_value=12
+        ):
+            pending_state = _invoke_tool(
+                attack_action,
+                tool_input={
+                    "attacker_id": "goblin_1",
+                    "target_id": state["player"]["id"],
+                    "state": state,
+                },
+            ).update
+            resolved = nodes.resolve_reaction_node({
+                "combat": pending_state["combat"],
+                "player": pending_state["player"],
+                "pending_reaction": pending_state["pending_reaction"],
+                "reaction_choice": {"spell_id": "shield", "slot_level": 1},
+            })
+
+        ward = next(c for c in resolved["player"]["conditions"] if c.get("id") == "arcane_ward")
+        assert ward["extra"]["ward_hp"] == 3
+        assert "奥术结界" in resolved["messages"][0].content
+
+    def test_player_spell_can_be_counterspelled_by_monster_reaction(self):
+        from app.services.tool_service import cast_spell
+        from app.monsters.models import MonsterAction
+
+        state = self._build_reaction_state()
+        player = state["player"]
+        state["combat"].current_actor_id = player["id"]
+        player["known_spells"] = list(player["known_spells"]) + ["fireball"]
+        player["resources"]["spell_slot_lv3"] = 1
+        mage = {
+            "id": "mage_1",
+            "name": "Evil Mage",
+            "side": "enemy",
+            "hp": 20,
+            "max_hp": 20,
+            "ac": 12,
+            "base_ac": 12,
+            "modifiers": {"int": 3},
+            "reaction_available": True,
+            "actions": [
+                MonsterAction(
+                    id="counterspell",
+                    name="Counterspell",
+                    kind="spell",
+                    action_type="reaction",
+                    spell_id="counterspell",
+                    slot_level=3,
+                ).model_dump()
+            ],
+        }
+        state["combat"].participants = {
+            "goblin_1": state["combat"].participants["goblin_1"],
+            "mage_1": CombatantState(**mage),
+        }
+
+        result = _invoke_tool(
+            cast_spell,
+            tool_input={
+                "spell_id": "fireball",
+                "target_ids": ["goblin_1"],
+                "slot_level": 3,
+                "state": state,
+            },
+        ).update
+
+        assert result["player"]["resources"]["spell_slot_lv3"] == 0
+        assert result["combat"]["participants"]["mage_1"]["reaction_available"] is False
+        assert "法术反制" in result["messages"][0].content
+        assert "被法术反制打断" in result["messages"][0].content
+
+    def test_counterspell_reaction_refreshes_arcane_ward(self):
+        from app.services.tools.reactions import execute_player_reaction
+
+        player = copy.deepcopy(PREDEFINED_CHARACTERS["法师"])
+        player["known_spells"] = list(player["known_spells"]) + ["counterspell"]
+        player["resources"]["spell_slot_lv3"] = 1
+        player["class_features"] = [*player.get("class_features", []), "arcane_ward"]
+        player["level"] = 5
+        prepare_player_for_combat(player)
+
+        result = execute_player_reaction(
+            player,
+            {"spell_id": "counterspell", "slot_level": 3},
+            {
+                "trigger_caster_name": "Evil Mage",
+                "trigger_spell_name_cn": "火球术",
+                "trigger_spell_level": 3,
+                "targets": [{"id": "mage_1", "name": "Evil Mage"}],
+            },
+        )
+
+        ward = next(c for c in player["conditions"] if c.get("id") == "arcane_ward")
+        assert result.blocked_action is True
+        assert ward["extra"]["ward_hp"] == 13
+        assert "奥术结界" in "\n".join(result.lines)
 
     def test_skip_reaction_keeps_original_damage_roll(self):
         from app.graph import nodes
@@ -1274,4 +1485,147 @@ class TestSecondRoundConditionCleanup:
 
         assert target["hp"] == 10
         assert any("自动失败" in line for line in result["lines"])
+
+
+class TestDamageTypeAdjustments:
+    """验证抗性、免疫、易伤统一在伤害管线生效。"""
+
+    def test_damage_immunity_prevents_hp_loss(self):
+        from app.services.tools._helpers import apply_damage_to_target
+
+        target = {
+            "id": "flameskull_1",
+            "name": "Flameskull",
+            "hp": 20,
+            "max_hp": 20,
+            "damage_immunities": ["fire"],
+            "conditions": [],
+        }
+
+        damage, hp_change, lines = apply_damage_to_target(target, 10, damage_type="fire")
+
+        assert damage == 0
+        assert hp_change["new_hp"] == 20
+        assert any("免疫" in line for line in lines)
+
+    def test_damage_resistance_halves_hp_loss(self):
+        from app.services.tools._helpers import apply_damage_to_target
+
+        target = {
+            "id": "wraith_1",
+            "name": "Wraith",
+            "hp": 30,
+            "max_hp": 30,
+            "damage_resistances": ["fire"],
+            "conditions": [],
+        }
+
+        damage, hp_change, lines = apply_damage_to_target(target, 9, damage_type="火焰")
+
+        assert damage == 4
+        assert hp_change["new_hp"] == 26
+        assert any("抗性" in line for line in lines)
+
+    def test_damage_vulnerability_doubles_hp_loss(self):
+        from app.services.tools._helpers import apply_damage_to_target
+
+        target = {
+            "id": "web_1",
+            "name": "Web",
+            "hp": 10,
+            "max_hp": 10,
+            "damage_vulnerabilities": ["fire"],
+            "conditions": [],
+        }
+
+        damage, hp_change, lines = apply_damage_to_target(target, 4, damage_type="fire")
+
+        assert damage == 8
+        assert hp_change["new_hp"] == 2
+        assert any("易伤" in line for line in lines)
+
+    def test_damage_type_adjustment_happens_before_arcane_ward_absorption(self):
+        from app.services.tools._helpers import apply_damage_to_target
+
+        target = {
+            "id": "warded_fire_immune",
+            "name": "Warded Fire Immune",
+            "hp": 20,
+            "max_hp": 20,
+            "damage_immunities": ["fire"],
+            "conditions": [
+                create_condition(
+                    "arcane_ward",
+                    extra=build_condition_extra(ward_hp=5),
+                )
+            ],
+        }
+
+        damage, hp_change, lines = apply_damage_to_target(target, 10, damage_type="fire")
+
+        assert damage == 0
+        assert hp_change["new_hp"] == 20
+        assert target["conditions"][0]["extra"]["ward_hp"] == 5
+        assert any("免疫" in line for line in lines)
+
+    def test_spawned_monster_keeps_template_damage_defenses(self):
+        from app.calculation.bestiary import spawn_combatants
+        from app.services.open5e_client import MonsterTemplate
+
+        template = MonsterTemplate(
+            slug="resistant-test",
+            name="Resistant Test",
+            hit_dice="1d8",
+            damage_resistances=["fire"],
+            damage_immunities=["poison"],
+            damage_vulnerabilities=["cold"],
+        )
+
+        with patch("app.calculation.bestiary.get_monster_template", return_value=template), patch(
+            "app.calculation.bestiary.d20.roll",
+            return_value=d20.roll("8"),
+        ):
+            combatant = spawn_combatants("resistant-test", 1)[0]
+
+        assert combatant.damage_resistances == ["fire"]
+        assert combatant.damage_immunities == ["poison"]
+        assert combatant.damage_vulnerabilities == ["cold"]
+
+    def test_spell_resolver_passes_damage_type_to_damage_pipeline(self):
+        from app.spells import fire_bolt
+
+        caster = _make_player_combatant("法师")
+        target = _make_goblin()
+        target["hp"] = 20
+        target["max_hp"] = 20
+        target["damage_immunities"] = ["fire"]
+        real_roll = d20.roll
+
+        with patch("app.spells._resolvers.d20.roll", side_effect=lambda expr: real_roll({"1d20+5": "15", "1d10": "7"}.get(expr, expr))):
+            result = fire_bolt.execute(caster, [target], 0, cantrip_scale=1)
+
+        assert target["hp"] == 20
+        assert any("免疫" in line for line in result["lines"])
+
+    def test_ice_knife_keeps_piercing_and_cold_adjustments_separate(self):
+        from app.spells import ice_knife
+
+        caster = _make_player_combatant("法师")
+        target = _make_goblin()
+        target["hp"] = 30
+        target["max_hp"] = 30
+        target["damage_immunities"] = ["cold"]
+
+        mapping = {
+            "1d20+5": "15",
+            "1d10": "4",
+            "2d6": "8",
+            "1d20+2": "5",
+        }
+        real_roll = d20.roll
+        with patch("app.spells.ice_knife.d20.roll", side_effect=lambda expr: real_roll(mapping.get(expr, expr))):
+            result = ice_knife.execute(caster, [target], 1)
+
+        assert target["hp"] == 26
+        assert any("免疫" in line for line in result["lines"])
 

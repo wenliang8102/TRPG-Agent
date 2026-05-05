@@ -7,6 +7,8 @@ from app.graph.state import (
     AbilityBlock, ModifierBlock, CombatantState,
 )
 from app.calculation.abilities import ability_to_modifier
+from app.monsters.actions import action_to_attack_info
+from app.monsters.lost_mine import get_lost_mine_actions, get_lost_mine_traits
 from app.services.open5e_client import get_monster_template, MonsterTemplate
 
 
@@ -40,6 +42,13 @@ def spawn_combatants(slug: str, count: int = 1, side: str = "enemy") -> list[Com
             wis=ability_to_modifier(template.wisdom),
             cha=ability_to_modifier(template.charisma),
         )
+        local_actions = get_lost_mine_actions(slug)
+        attacks = [action_to_attack_info(action) for action in local_actions if action.kind == "attack"] or template.attacks
+        recharge_state = {
+            action.id: True
+            for action in local_actions
+            if action.recharge is not None
+        }
 
         combatant = CombatantState(
             id=f"{slug}_{uuid.uuid4().hex[:6]}",
@@ -52,15 +61,23 @@ def spawn_combatants(slug: str, count: int = 1, side: str = "enemy") -> list[Com
             initiative=0,
             speed=template.speed_walk,
             conditions=[],
+            damage_resistances=template.damage_resistances,
+            damage_immunities=template.damage_immunities,
+            damage_vulnerabilities=template.damage_vulnerabilities,
             abilities=abilities,
             modifiers=modifiers,
             proficiency_bonus=template.proficiency_bonus,
-            attacks=template.attacks,
+            attacks=attacks,
+            actions=local_actions,
+            traits=get_lost_mine_traits(slug),
+            action_recharges=recharge_state,
             action_available=True,
             bonus_action_available=True,
             reaction_available=True,
             movement_left=template.speed_walk,
         )
+        if "spell_reflection" in combatant.traits:
+            combatant.conditions.append({"id": "spell_reflection", "source_id": combatant.id, "duration": None, "extra": {}})
         combatants.append(combatant)
 
     return combatants

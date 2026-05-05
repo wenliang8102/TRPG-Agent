@@ -1,10 +1,13 @@
 from unittest.mock import patch
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langgraph.graph import END, START, StateGraph
 
+from app.graph.builder import build_graph
 from app.graph.constants import ASSISTANT_NODE, COMBAT_AGENT_MODE, COMBAT_ASSISTANT_NODE, COMBAT_RESOLUTION_NODE, END_NODE, NARRATIVE_AGENT_MODE
 from app.graph.edges import route_from_assistant, route_from_combat_resolution, route_from_reaction_resolution, route_from_router, route_from_tool
 from app.graph.nodes import combat_assistant_node, combat_resolution_node
+from app.graph.state import GraphState
 from app.memory.context_assembler import ContextAssembler, trim_model_messages
 from app.prompts import get_assistant_system_prompt
 from app.services.tools import get_tool_profile
@@ -127,6 +130,117 @@ def test_tool_route_moves_combat_turn_into_resolution_node_before_assistant():
     assert route_from_tool(state) == COMBAT_RESOLUTION_NODE
 
 
+def test_graph_continues_after_tool_message_until_llm_stops_calling_tools():
+    class _LoopingLLMService:
+        def __init__(self):
+            self.calls = []
+
+        def invoke_with_tools(self, messages, tools, system_prompt, mode):
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                return AIMessage(
+                    content="",
+                    tool_calls=[{"name": "request_dice_roll", "args": {"reason": "first", "formula": "1d1"}, "id": "call_1"}],
+                )
+            if len(self.calls) == 2:
+                assert isinstance(messages[-1], ToolMessage)
+                return AIMessage(
+                    content="",
+                    tool_calls=[{"name": "request_dice_roll", "args": {"reason": "second", "formula": "1d1"}, "id": "call_2"}],
+                )
+            assert isinstance(messages[-1], ToolMessage)
+            return AIMessage(content="done", tool_calls=[])
+
+    fake_service = _LoopingLLMService()
+    graph = build_graph()
+
+    with patch("app.graph.nodes._get_llm_service", return_value=fake_service):
+        result = graph.invoke({"messages": [HumanMessage(content="roll twice")]})
+
+    assert len(fake_service.calls) == 3
+    assert result["messages"][-1].content == "done"
+    assert sum(isinstance(message, ToolMessage) for message in result["messages"]) == 2
+
+
+def test_graph_merges_concurrent_space_tool_updates():
+    def place_player(state: GraphState) -> dict:
+        space = dict(state["space"])
+        space["placements"] = {
+            "player_hero": {"unit_id": "player_hero", "map_id": "map_existing", "position": {"x": 10, "y": 10}},
+        }
+        return {"space": space}
+
+    def place_goblin(state: GraphState) -> dict:
+        space = dict(state["space"])
+        space["placements"] = {
+            "goblin_1": {"unit_id": "goblin_1", "map_id": "map_existing", "position": {"x": 25, "y": 10}},
+        }
+        return {"space": space}
+
+    graph_builder = StateGraph(GraphState)
+    graph_builder.add_node("place_player", place_player)
+    graph_builder.add_node("place_goblin", place_goblin)
+    graph_builder.add_edge(START, "place_player")
+    graph_builder.add_edge(START, "place_goblin")
+    graph_builder.add_edge("place_player", END)
+    graph_builder.add_edge("place_goblin", END)
+    graph = graph_builder.compile()
+
+    result = graph.invoke({
+        "space": {
+            "active_map_id": "map_existing",
+            "maps": {"map_existing": {"id": "map_existing", "name": "旧地图", "width": 80, "height": 60}},
+            "placements": {},
+        },
+    })
+
+    assert "map_existing" in result["space"]["maps"]
+    assert result["space"]["placements"]["player_hero"]["position"] == {"x": 10.0, "y": 10.0}
+    assert result["space"]["placements"]["goblin_1"]["position"] == {"x": 25.0, "y": 10.0}
+
+
+def test_assistant_executes_only_first_tool_call_when_model_returns_parallel_calls():
+    class _ParallelSpaceLLMService:
+        def __init__(self):
+            self.calls = 0
+
+        def invoke_with_tools(self, messages, tools, system_prompt, mode):
+            self.calls += 1
+            if self.calls == 1:
+                return AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "manage_space",
+                            "args": {
+                                "action": "create_map",
+                                "payload": {"name": "伏击地点", "width": 80, "height": 60},
+                            },
+                            "id": "call_map",
+                        },
+                        {
+                            "name": "manage_space",
+                            "args": {
+                                "action": "place_unit",
+                                "payload": {"unit_id": "player_hero", "x": 10, "y": 10},
+                            },
+                            "id": "call_player",
+                        },
+                    ],
+                )
+            return AIMessage(content="地图已创建。", tool_calls=[])
+
+    fake_service = _ParallelSpaceLLMService()
+    graph = build_graph()
+
+    with patch("app.graph.nodes._get_llm_service", return_value=fake_service):
+        result = graph.invoke({"messages": [HumanMessage(content="创建地图并放置玩家")]})
+
+    assert len(result["space"]["maps"]) == 1
+    assert result["space"]["placements"] == {}
+    assert sum(isinstance(message, ToolMessage) for message in result["messages"]) == 1
+
+
 def test_assistant_route_no_longer_enters_summarize_on_long_history():
     state = {
         "messages": [HumanMessage(content=f"消息 {index}") for index in range(70)] + [AIMessage(content="收到。", tool_calls=[])],
@@ -165,11 +279,12 @@ def test_model_projection_summarizes_tool_messages_without_mutating_transcript()
     projected_messages = _build_model_input_messages(state, COMBAT_AGENT_MODE)
 
     assert tool_message.content.startswith("Goblin 使用 [Scimitar]")
-    assert projected_messages[-2].content.startswith("[工具:attack_action]")
-    assert isinstance(projected_messages[-1], SystemMessage)
-    assert "<runtime_state" in projected_messages[-1].content
-    assert 'source="hud"' in projected_messages[-1].content
-    assert "状态快照" in projected_messages[-1].content
+    assert isinstance(projected_messages[-3], SystemMessage)
+    assert "<runtime_state" in projected_messages[-3].content
+    assert 'source="hud"' in projected_messages[-3].content
+    assert "状态快照" in projected_messages[-3].content
+    assert isinstance(projected_messages[-2], AIMessage)
+    assert projected_messages[-1].content.startswith("[工具:attack_action]")
     assert state["messages"][-1].content == tool_message.content
 
 

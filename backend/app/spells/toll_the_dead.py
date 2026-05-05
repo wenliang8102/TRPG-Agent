@@ -49,7 +49,7 @@ def execute(caster: dict, targets: list[dict], slot_level: int, *, cantrip_scale
         else:
             roll_text = f"{save_roll}（劣势）" if disadvantaged else str(save_roll)
         lines.append(f"  → {target_name}: 豁免失败({roll_text}) — {dmg_roll} = {damage} 黯蚀伤害")
-        _, hc, damage_lines = apply_damage_to_target(target, damage)
+        _, hc, damage_lines = apply_damage_to_target(target, damage, damage_type="necrotic")
         hp_changes.append(hc)
         lines.extend(f"  {line}" for line in damage_lines)
 

@@ -12,7 +12,7 @@ from langgraph.types import Command
 
 from app.graph.state import PlaneMapState, Point2D, SpaceState, UnitPlacementState
 from app.services.skills import load_skill_content
-from app.services.tools._helpers import get_combatant
+from app.services.tools._helpers import apply_condition_movement_cost, get_combatant, get_condition_movement_block_reason
 from app.space.geometry import (
     build_space_state,
     distance_between,
@@ -78,6 +78,68 @@ def _unit_label(unit_id: str, state: dict | None) -> str:
         return unit_dict.get("name", unit_id)
 
     return unit_id
+
+
+def _unit_identity_index(state: dict | None) -> dict[str, str]:
+    """把玩家/怪物的常见称呼收束到真实 unit_id，避免模型用显示名创建孤儿落点。"""
+    if not state:
+        return {}
+
+    index: dict[str, str] = {}
+
+    def _add(unit: dict | None) -> None:
+        if not unit or not unit.get("id"):
+            return
+        unit_id = str(unit["id"])
+        aliases = {unit_id, unit_id.lower()}
+        if unit.get("name"):
+            name = str(unit["name"])
+            aliases.update({name, name.lower()})
+        if unit.get("side") == "player":
+            aliases.update({"player", "PLAYER", "玩家", "当前玩家"})
+        for alias in aliases:
+            index[alias] = unit_id
+
+    player = state.get("player")
+    player_dict = player.model_dump() if hasattr(player, "model_dump") else dict(player) if player else None
+    _add(player_dict)
+
+    combat = state.get("combat")
+    combat_dict = combat.model_dump() if hasattr(combat, "model_dump") else dict(combat) if combat else None
+    if combat_dict:
+        for unit in combat_dict.get("participants", {}).values():
+            _add(unit.model_dump() if hasattr(unit, "model_dump") else dict(unit))
+
+    scene_units = state.get("scene_units") or {}
+    if hasattr(scene_units, "items"):
+        for unit in scene_units.values():
+            _add(unit.model_dump() if hasattr(unit, "model_dump") else dict(unit))
+
+    return index
+
+
+def _resolve_unit_id(unit_id: str, state: dict | None) -> str:
+    """空间工具入口只接受真实单位 ID；常见别名在这里统一翻译。"""
+    index = _unit_identity_index(state)
+    return index.get(unit_id) or index.get(unit_id.lower()) or unit_id
+
+
+def _unknown_unit_command(unit_id: str, state: dict | None, tool_call_id: str | None) -> Command | None:
+    """拒绝把未知显示名落到地图上，防止出现 PLAYER 这类无业务归属的节点。"""
+    index = _unit_identity_index(state)
+    if not index:
+        return None
+    if unit_id in index or unit_id.lower() in index:
+        return None
+
+    if build_space_state(state.get("space") if state else None).placements.get(unit_id):
+        return None
+
+    available = ", ".join(sorted(set(index.values()))) or "无"
+    return Command(update={"messages": [ToolMessage(
+        content=f"找不到单位 '{unit_id}'，本次未更新地图。可用单位 ID: {available}。",
+        tool_call_id=tool_call_id,
+    )]})
 
 
 def _combat_actor(state: dict | None, unit_id: str) -> tuple[dict | None, dict | None, dict | None]:
@@ -196,6 +258,11 @@ def _place_unit_command(
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
     """剧情摆放的共享实现，和战斗移动保持明确边界。"""
+    raw_unit_id = unit_id
+    unit_id = _resolve_unit_id(unit_id, state)
+    if unknown := _unknown_unit_command(raw_unit_id, state, tool_call_id):
+        return unknown
+
     space = build_space_state(state.get("space") if state else None)
     plane_map = _active_map(space, map_id)
     position = Point2D(x=x, y=y)
@@ -232,6 +299,11 @@ def _move_unit_command(
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
     """战斗移动的共享实现，集中维护移动力扣减规则。"""
+    raw_unit_id = unit_id
+    unit_id = _resolve_unit_id(unit_id, state)
+    if unknown := _unknown_unit_command(raw_unit_id, state, tool_call_id):
+        return unknown
+
     space = build_space_state(state.get("space") if state else None)
     placement = space.placements[unit_id]
     plane_map = _active_map(space, placement.map_id)
@@ -251,6 +323,9 @@ def _move_unit_command(
             return Command(update={"messages": [ToolMessage(content="当前不是该单位的回合，不能移动。", tool_call_id=tool_call_id)]})
         if not actor:
             return Command(update={"messages": [ToolMessage(content=f"找不到参战单位 '{unit_id}'。", tool_call_id=tool_call_id)]})
+        if block_reason := get_condition_movement_block_reason(actor, state, destination):
+            return Command(update={"messages": [ToolMessage(content=block_reason, tool_call_id=tool_call_id)]})
+        movement_cost = apply_condition_movement_cost(actor, movement_cost)
         movement_left = actor.get("movement_left", actor.get("speed", 30))
         if movement_cost > movement_left:
             return Command(update={"messages": [ToolMessage(
@@ -288,6 +363,15 @@ def _approach_unit_command(
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
     """沿直线靠近目标到指定距离；当前没有障碍物系统，先保持极简路径语义。"""
+    raw_unit_id = unit_id
+    raw_target_id = target_id
+    unit_id = _resolve_unit_id(unit_id, state)
+    target_id = _resolve_unit_id(target_id, state)
+    if unknown := _unknown_unit_command(raw_unit_id, state, tool_call_id):
+        return unknown
+    if unknown := _unknown_unit_command(raw_target_id, state, tool_call_id):
+        return unknown
+
     space = build_space_state(state.get("space") if state else None)
     source = space.placements[unit_id]
     target = space.placements[target_id]
@@ -323,18 +407,24 @@ def _approach_unit_command(
     movement_left = movement_needed
     if actor:
         movement_left = actor.get("movement_left", actor.get("speed", 30))
-    movement_cost = min(movement_needed, movement_left)
+    raw_movement_cost = min(movement_needed, movement_left)
+    movement_cost = apply_condition_movement_cost(actor, raw_movement_cost) if actor else raw_movement_cost
     if movement_cost <= 0:
         return Command(update={"messages": [ToolMessage(
             content=f"{_unit_label(unit_id, state)} 没有剩余移动力，仍距离 {_unit_label(target_id, state)} {current_distance:.1f} 尺。",
             tool_call_id=tool_call_id,
         )]})
+    if actor and movement_cost > movement_left:
+        raw_movement_cost = movement_left / movement_cost * raw_movement_cost
+        movement_cost = movement_left
 
-    ratio = movement_cost / current_distance
+    ratio = raw_movement_cost / current_distance
     destination = Point2D(
         x=source.position.x + (target.position.x - source.position.x) * ratio,
         y=source.position.y + (target.position.y - source.position.y) * ratio,
     )
+    if actor and (block_reason := get_condition_movement_block_reason(actor, state, destination)):
+        return Command(update={"messages": [ToolMessage(content=block_reason, tool_call_id=tool_call_id)]})
     plane_map = _active_map(space, source.map_id)
     if not point_in_map(plane_map, destination):
         return Command(update={"messages": [ToolMessage(
@@ -377,7 +467,7 @@ def _remove_unit_command(
 ) -> Command:
     """把单位从当前空间中彻底移除；这是死亡结算、撤离和场景回收的正式出口。"""
     space = build_space_state(state.get("space") if state else None)
-    targets = [unit_id] if unit_id else list(unit_ids or [])
+    targets = [_resolve_unit_id(unit_id, state)] if unit_id else [_resolve_unit_id(uid, state) for uid in list(unit_ids or [])]
     removed = _remove_unit_from_space(space, [uid for uid in targets if uid])
 
     if not removed:
@@ -403,6 +493,15 @@ def _measure_distance_command(
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
     """测距的共享实现，避免技能入口和旧工具结果漂移。"""
+    raw_source_id = source_id
+    raw_target_id = target_id
+    source_id = _resolve_unit_id(source_id, state)
+    target_id = _resolve_unit_id(target_id, state)
+    if unknown := _unknown_unit_command(raw_source_id, state, tool_call_id):
+        return unknown
+    if unknown := _unknown_unit_command(raw_target_id, state, tool_call_id):
+        return unknown
+
     space = build_space_state(state.get("space") if state else None)
     source = space.placements[source_id]
     target = space.placements[target_id]

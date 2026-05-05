@@ -1,6 +1,6 @@
 """LLM service with LangChain ChatOpenAI and native tool-calling support."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from openai import APITimeoutError, APIConnectionError, BadRequestError
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -53,13 +53,26 @@ class LLMService:
         timeout: float,
         max_retries: int,
     ) -> ChatOpenAI:
-        return ChatOpenAI(
+        build_kwargs: dict[str, Any] = {
             **client_kwargs,
-            model=model,
-            temperature=temperature,
-            timeout=timeout,
-            max_retries=max_retries,
+            "model": model,
+            "temperature": temperature,
+            "timeout": timeout,
+            "max_retries": max_retries,
+        }
+        thinking_extra_body = self._thinking_extra_body_for_model(model)
+        if thinking_extra_body:
+            build_kwargs["extra_body"] = thinking_extra_body
+
+        return ChatOpenAI(
+            **build_kwargs,
         )
+
+    # 中文注释：项目更看重工具链路效率与稳定性，默认关闭各家 OpenAI 兼容模型的 thinking。
+    def _thinking_extra_body_for_model(self, model: str) -> dict[str, dict[str, str]] | None:
+        if settings.llm_thinking_mode == "enabled":
+            return None
+        return {"thinking": {"type": "disabled"}}
 
     # 中文注释：先保留单客户端实现，把 mode 作为稳定接口，后续可无痛分模型。
     def _get_client_for_mode(self, mode: LLMMode) -> ChatOpenAI:
@@ -78,9 +91,10 @@ class LLMService:
             prompt_messages = [SystemMessage(content=system_prompt), *messages]
             client = self._get_client_for_mode(mode)
 
-            # 仅在存在可用工具时启用 tool-calling，避免向上游发送空 tools 数组触发 400。
+            # 中文注释：LangGraph ToolNode 会并行执行同一条 AIMessage 里的多个工具调用；
+            # 空间、战斗等共享状态依赖上一步工具结果，因此要求模型一次只规划一个工具。
             if tools:
-                runnable = client.bind_tools(tools)
+                runnable = client.bind_tools(tools, parallel_tool_calls=False)
                 response = runnable.invoke(prompt_messages)
             else:
                 response = client.invoke(prompt_messages)

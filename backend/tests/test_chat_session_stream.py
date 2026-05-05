@@ -21,6 +21,7 @@ class _FakeGraph:
         self._chunks = chunks
         self._aget_state_calls = 0
         self.state_updates = []
+        self.last_stream_config = None
 
     async def aget_state(self, config):
         index = min(self._aget_state_calls, len(self._states) - 1)
@@ -29,6 +30,7 @@ class _FakeGraph:
 
     async def astream(self, graph_input, config=None, stream_mode=None):
         assert stream_mode == "updates"
+        self.last_stream_config = config
         for chunk in self._chunks:
             yield chunk
 
@@ -283,4 +285,5 @@ def test_stream_injects_recent_episodic_context_before_graph_stream():
     event_names = [_parse_sse_event(event)[0] for event in raw_events]
 
     assert graph.state_updates[0]["episodic_context"] == ["上一轮已经确认地板有陷阱。"]
+    assert graph.last_stream_config["recursion_limit"] == 80
     assert event_names[-1] == "done"

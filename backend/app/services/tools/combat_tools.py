@@ -20,6 +20,7 @@ from app.services.tools._helpers import (
     build_pending_reaction_state,
     clear_player_combat_fields,
     choose_attack,
+    available_attack_names,
     get_all_combatants,
     get_combatant,
     prepare_player_for_combat,
@@ -31,6 +32,14 @@ from app.services.tools.reactions import get_available_reactions
 
 def _message_count(state: dict | None) -> int:
     messages = state.get("messages") or [] if state else []
+    return len(messages)
+
+
+def _combat_archive_start_index(state: dict | None) -> int:
+    """战斗归档从触发 start_combat 的 AIMessage 开始，保证 tool_calls 与 ToolMessage 同生共死。"""
+    messages = state.get("messages") or [] if state else []
+    if messages and getattr(messages[-1], "tool_calls", None):
+        return len(messages) - 1
     return len(messages)
 
 
@@ -213,7 +222,7 @@ def start_combat(
     update: dict = {
         "combat": combat_dict,
         "phase": "combat",
-        "active_combat_message_start": _message_count(state),
+        "active_combat_message_start": _combat_archive_start_index(state),
         "messages": [
             ToolMessage(
                 content=f"战斗开始！第 1 回合。\n先攻顺序：\n{order_desc}\n\n当前行动者：{all_units[order[0]].get('name', order[0])} [ID: {order[0]}]",
@@ -277,10 +286,13 @@ def attack_action(
         return _reject(f"{attacker.get('name', attacker_id)} 本回合的动作已用尽。")
 
     chosen_attack = choose_attack(attacker, attack_name)
+    if attack_name and chosen_attack is None:
+        available = ", ".join(available_attack_names(attacker)) or "无"
+        return _reject(f"未知攻击 '{attack_name}'。可用攻击: {available}。")
     if distance_error := validate_attack_distance(state.get("space"), attacker_id, target_id, chosen_attack):
         return _reject(distance_error)
 
-    roll_info = roll_attack_hit(attacker, target, attack_name, advantage)
+    roll_info = roll_attack_hit(attacker, target, attack_name, advantage, state)
 
     if (
         player_dict
@@ -364,7 +376,7 @@ def next_turn(
     if not combat_dict.get("initiative_order"):
         return "先攻顺序为空，请先调用 start_combat。"
 
-    result_text = advance_turn(combat_dict, player_dict)
+    result_text = advance_turn(combat_dict, player_dict, state)
 
     update: dict = {
         "combat": combat_dict,

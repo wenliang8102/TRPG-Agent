@@ -101,6 +101,7 @@ def modify_character_state(
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
     """角色状态调整技能。用于 HP/AC/能力值/资源/经验/升级/学派/状态效果等客观状态变化。
+    不要用它重放攻击、施法、怪物动作工具刚刚结算过的结果。
     如不确定 action、changes 或 payload 的写法，先用 action="help" 查看完整技能说明。
 
     Args:

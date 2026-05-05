@@ -89,7 +89,7 @@ def resolve_aoe_save(
             lines.append(f"  → {target_name}: {save_text} — {actual_damage} {damage_type}伤害")
 
         if actual_damage > 0:
-            dealt_damage, hc, damage_lines = apply_damage_to_target(target, actual_damage)
+            dealt_damage, hc, damage_lines = apply_damage_to_target(target, actual_damage, damage_type=damage_type)
             hp_changes.append(hc)
             lines.extend(f"  {line}" for line in damage_lines)
             if hc["new_hp"] == 0:
@@ -120,6 +120,7 @@ def resolve_spell_attack(
     slot_level: int,
     damage_formula: str,
     damage_type: str,
+    attack_label: str = "远程法术攻击",
     on_hit_extra: _OnHitCallback | None = None,
 ) -> SpellResult:
     """通用单目标法术攻击解算。
@@ -153,7 +154,7 @@ def resolve_spell_attack(
 
     remove_consume_on_attacked_conditions(target)
 
-    lines = [f"{caster_name} 施放 {spell_name_cn}（{slot_level}环） 发起远程法术攻击！"]
+    lines = [f"{caster_name} 施放 {spell_name_cn}（{slot_level}环） 发起{attack_label}！"]
     hp_changes: list[dict] = []
 
     if is_hit:
@@ -163,7 +164,7 @@ def resolve_spell_attack(
         lines.append(f"  → 攻击检定: {attack_roll} >= AC {target_ac} (命中！)")
         lines.append(f"  伤害骰: {dmg_roll} = {actual_damage} {damage_type}伤害")
 
-        _, hc, damage_lines = apply_damage_to_target(target, actual_damage)
+        _, hc, damage_lines = apply_damage_to_target(target, actual_damage, damage_type=damage_type)
         hp_changes.append(hc)
         lines.extend(f"  {line}" for line in damage_lines)
 
@@ -171,8 +172,41 @@ def resolve_spell_attack(
             on_hit_extra(caster, target, lines)
     else:
         lines.append(f"  → 攻击检定: {attack_roll} < AC {target_ac} (未命中)")
+        reflect_result = _try_spell_reflection(target, caster, targets=[caster, target])
+        if reflect_result:
+            reflected_target = reflect_result["target"]
+            lines.extend(reflect_result["lines"])
+            reflected_ac = compute_ac(reflected_target)
+            reflected_hit = attack_roll.total >= reflected_ac
+            if reflected_hit:
+                dmg_roll = d20.roll(damage_formula)
+                actual_damage = max(1, dmg_roll.total)
+                lines.append(f"  → 反射命中判定: {attack_roll} >= AC {reflected_ac} (命中！)")
+                lines.append(f"  伤害骰: {dmg_roll} = {actual_damage} {damage_type}伤害")
+                _, hc, damage_lines = apply_damage_to_target(reflected_target, actual_damage, damage_type=damage_type)
+                hp_changes.append(hc)
+                lines.extend(f"  {line}" for line in damage_lines)
+            else:
+                lines.append(f"  → 反射命中判定: {attack_roll} < AC {reflected_ac} (未命中)")
 
     return {"lines": lines, "hp_changes": hp_changes}
+
+
+def _try_spell_reflection(target: dict, caster: dict, *, targets: list[dict]) -> dict | None:
+    """查询目标身上的法术反射 hook；法术攻击 resolver 只负责改指和复用同一骰值。"""
+    from app.conditions import get_condition_module
+
+    for condition in target.get("conditions", []):
+        condition_module = get_condition_module(condition.get("id", ""))
+        if condition_module and hasattr(condition_module, "on_spell_attack_missed"):
+            result = condition_module.on_spell_attack_missed(condition, target, {"caster": caster, "targets": targets})
+            if result:
+                return result
+    if "spell_reflection" in target.get("traits", []):
+        condition_module = get_condition_module("spell_reflection")
+        if condition_module:
+            return condition_module.on_spell_attack_missed({"id": "spell_reflection"}, target, {"caster": caster, "targets": targets})
+    return None
 
 
 # ── 内部工具 ────────────────────────────────────────────────────
