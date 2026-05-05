@@ -3,6 +3,7 @@
 import d20
 
 from app.spells._base import SpellDef, SpellResult
+from app.services.tools._helpers import apply_damage_to_target
 
 SPELL_DEF: SpellDef = {
     "name": "Magic Missile",
@@ -39,19 +40,8 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
         target_name = target.get("name", "?")
         lines.append(f"  → {target_name}: {n}枚 [{', '.join(rolls)}] = {total_damage} 力场伤害")
 
-        old_hp = target.get("hp", 0)
-        new_hp = max(0, old_hp - total_damage)
-        target["hp"] = new_hp
-
-        hp_changes.append({
-            "id": target.get("id", ""),
-            "name": target_name,
-            "old_hp": old_hp,
-            "new_hp": new_hp,
-            "max_hp": target.get("max_hp", old_hp),
-        })
-        lines.append(f"  {target_name} HP: {old_hp} → {new_hp}")
-        if new_hp == 0:
-            lines.append(f"  {target_name} 倒下了!")
+        _, hp_change, damage_lines = apply_damage_to_target(target, total_damage, damage_type="force")
+        hp_changes.append(hp_change)
+        lines.extend(f"  {line}" for line in damage_lines)
 
     return {"lines": lines, "hp_changes": hp_changes}

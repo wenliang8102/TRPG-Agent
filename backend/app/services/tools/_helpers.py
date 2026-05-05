@@ -55,21 +55,118 @@ def apply_hp_change(target: dict, delta: int) -> dict:
     }
 
 
-def apply_damage_to_target(target: dict, damage: int) -> tuple[int, dict, list[str]]:
+def apply_damage_to_target(
+    target: dict,
+    damage: int,
+    *,
+    damage_type: str = "",
+    crit: bool = False,
+) -> tuple[int, dict, list[str]]:
     """统一处理受伤后的结界吸收、HP 结算与专注检定。"""
     damage = max(0, damage)
+    damage, adjustment_lines = apply_damage_type_adjustments(target, damage, damage_type)
     damage, effect_lines = _absorb_damage(target, damage)
+    lines = list(adjustment_lines)
+    lines.extend(effect_lines)
 
     hp_change = apply_hp_change(target, -damage)
     name = target.get("name", "?")
-    lines = list(effect_lines)
     lines.append(f"{name} HP: {hp_change['old_hp']} → {hp_change['new_hp']}")
+    _apply_zero_hp_damage_hooks(target, damage, damage_type, crit, hp_change, lines)
     if hp_change["new_hp"] == 0 and hp_change["old_hp"] > 0:
         lines.append(f"{name} 倒下了！")
     if damage > 0:
         lines.extend(check_concentration(target, damage))
 
     return damage, hp_change, lines
+
+
+def apply_damage_type_adjustments(target: dict, damage: int, damage_type: str) -> tuple[int, list[str]]:
+    """统一执行伤害免疫、抗性、易伤调整，所有伤害来源都走同一入口。"""
+    normalized_type = _normalize_damage_type(damage_type)
+    if not normalized_type or damage <= 0:
+        return damage, []
+
+    name = target.get("name", "?")
+    if normalized_type in _normalized_damage_set(target.get("damage_immunities", [])):
+        return 0, [f"  [{name}] 对 {damage_type} 伤害免疫，伤害降为 0。"]
+
+    adjusted = damage
+    lines: list[str] = []
+    if normalized_type in _normalized_damage_set(target.get("damage_resistances", [])):
+        adjusted = damage // 2
+        lines.append(f"  [{name}] 对 {damage_type} 伤害具有抗性：{damage} → {adjusted}。")
+
+    if normalized_type in _normalized_damage_set(target.get("damage_vulnerabilities", [])):
+        old_damage = adjusted
+        adjusted *= 2
+        lines.append(f"  [{name}] 对 {damage_type} 伤害具有易伤：{old_damage} → {adjusted}。")
+
+    return adjusted, lines
+
+
+_DAMAGE_TYPE_ALIASES = {
+    "强酸": "acid",
+    "钝击": "bludgeoning",
+    "冷冻": "cold",
+    "寒冷": "cold",
+    "火焰": "fire",
+    "力场": "force",
+    "闪电": "lightning",
+    "黯蚀": "necrotic",
+    "黯蚀伤害": "necrotic",
+    "穿刺": "piercing",
+    "毒素": "poison",
+    "精神": "psychic",
+    "光耀": "radiant",
+    "挥砍": "slashing",
+    "雷鸣": "thunder",
+    "martial_advantage": "",
+    "surprise_attack": "",
+}
+
+
+def _normalize_damage_type(damage_type: str) -> str:
+    """支持英文 SRD 与当前中文法术表的伤害类型写法。"""
+    lowered = str(damage_type or "").strip().lower()
+    if lowered in _DAMAGE_TYPE_ALIASES:
+        return _DAMAGE_TYPE_ALIASES[lowered]
+    return lowered
+
+
+def _normalized_damage_set(values: list[str]) -> set[str]:
+    """把单位身上的类型列表标准化，避免中英文混写导致抗性失效。"""
+    return {normalized for value in values if (normalized := _normalize_damage_type(value))}
+
+
+def _apply_zero_hp_damage_hooks(
+    target: dict,
+    damage: int,
+    damage_type: str,
+    crit: bool,
+    hp_change: dict,
+    lines: list[str],
+) -> None:
+    """把降到 0 HP 时触发的怪物特质集中处理，避免攻击/法术各写一份。"""
+    if "undead_fortitude" not in target.get("traits", []):
+        return
+    if hp_change["new_hp"] != 0 or _normalize_damage_type(damage_type) == "radiant" or crit:
+        return
+
+    dc = 5 + damage
+    save_roll, auto_fail_reason, disadvantaged = roll_actor_save(target, "con")
+    if auto_fail_reason:
+        lines.append(f"  [不死坚韧] 自动失败（{auto_fail_reason}）。")
+        return
+
+    roll_text = f"{save_roll}（劣势）" if disadvantaged else str(save_roll)
+    if save_roll.total < dc:
+        lines.append(f"  [不死坚韧] CON 豁免 DC {dc}: {roll_text}，失败。")
+        return
+
+    target["hp"] = 1
+    hp_change["new_hp"] = 1
+    lines.append(f"  [不死坚韧] CON 豁免 DC {dc}: {roll_text}，成功，HP 保持为 1。")
 
 
 def prepare_player_for_combat(player_dict: dict) -> dict:
@@ -225,8 +322,20 @@ def choose_attack(attacker: dict, attack_name: str | None = None) -> dict | None
     """按名称选择攻击方式；不传名称时使用第一个攻击。"""
     attacks = attacker.get("attacks", [])
     if attack_name:
-        return next((a for a in attacks if a["name"].lower() == attack_name.lower()), None)
+        requested = attack_name.lower()
+        return next(
+            (
+                a for a in attacks
+                if a["name"].lower() == requested or str(a.get("id", "")).lower() == requested
+            ),
+            None,
+        )
     return attacks[0] if attacks else None
+
+
+def available_attack_names(attacker: dict) -> list[str]:
+    """列出可用普通攻击，供 fail-fast 错误提示直接返回给模型。"""
+    return [attack.get("name", "?") for attack in attacker.get("attacks", [])]
 
 
 def validate_attack_distance(
@@ -350,6 +459,78 @@ def _determine_advantage_from_conditions(
     return "normal"
 
 
+def _merge_advantage_counts(adv_count: int, dis_count: int) -> str:
+    """把多来源优劣势折叠成 5e 的抵消规则。"""
+    if adv_count > 0 and dis_count > 0:
+        return "normal"
+    if adv_count > 0:
+        return "advantage"
+    if dis_count > 0:
+        return "disadvantage"
+    return "normal"
+
+
+def _apply_advantage_value(value: str | None, adv_count: int, dis_count: int) -> tuple[int, int]:
+    """条件 hook 只声明单个优劣势来源，合并仍由主流程统一处理。"""
+    if value == "advantage":
+        adv_count += 1
+    elif value == "disadvantage":
+        dis_count += 1
+    return adv_count, dis_count
+
+
+def _determine_advantage_for_attack(
+    attacker: dict,
+    target: dict,
+    attack: dict | None,
+    state: dict | None,
+) -> str:
+    """按本次攻击上下文计算优劣势；需要距离/射程的状态通过模块 hook 补充。"""
+    adv_count = 0
+    dis_count = 0
+
+    for condition, condition_module, effects in _iter_condition_handlers(attacker.get("conditions", [])):
+        if effects:
+            adv_count, dis_count = _apply_advantage_value(effects.attack_advantage, adv_count, dis_count)
+        if condition_module and hasattr(condition_module, "modify_attack_advantage"):
+            adv_count, dis_count = _apply_advantage_value(
+                condition_module.modify_attack_advantage(condition, "attacker", attacker, target, attack, state),
+                adv_count,
+                dis_count,
+            )
+
+    for condition, condition_module, effects in _iter_condition_handlers(target.get("conditions", [])):
+        if effects:
+            adv_count, dis_count = _apply_advantage_value(effects.defend_advantage, adv_count, dis_count)
+        if condition_module and hasattr(condition_module, "modify_attack_advantage"):
+            adv_count, dis_count = _apply_advantage_value(
+                condition_module.modify_attack_advantage(condition, "defender", attacker, target, attack, state),
+                adv_count,
+                dis_count,
+            )
+
+    return _merge_advantage_counts(adv_count, dis_count)
+
+
+def attack_is_melee_like(attacker: dict, target: dict, attack: dict | None, state: dict | None = None) -> bool:
+    """判断本次攻击是否按 5 尺内攻击处理；无空间状态时回退到攻击数据。"""
+    if state and state.get("space"):
+        try:
+            from app.space.geometry import build_space_state, placement_distance
+
+            space = build_space_state(state.get("space"))
+            if attacker.get("id") in space.placements and target.get("id") in space.placements:
+                distance, reason = placement_distance(space, attacker["id"], target["id"])
+                if not reason:
+                    return distance <= 5
+        except KeyError:
+            pass
+
+    if not attack:
+        return True
+    return not attack.get("normal_range_feet") and not attack.get("long_range_feet")
+
+
 def roll_actor_save(actor: dict, ability: str) -> tuple[d20.RollResult | None, str | None, bool]:
     """统一处理条件对豁免的影响：自动失败优先，其次才是劣势。"""
     disadvantage = False
@@ -370,6 +551,25 @@ def roll_actor_save(actor: dict, ability: str) -> tuple[d20.RollResult | None, s
         save_expr = f"1d20{save_mod:+d}"
 
     return d20.roll(save_expr), None, disadvantage
+
+
+def get_condition_movement_block_reason(actor: dict, state: dict, destination: object) -> str | None:
+    """统一查询条件是否阻止向指定落点移动，供空间工具复用。"""
+    for condition, condition_module, _ in _iter_condition_handlers(actor.get("conditions", [])):
+        if condition_module and hasattr(condition_module, "on_movement_eligibility"):
+            reason = condition_module.on_movement_eligibility(condition, actor, state, destination)
+            if reason:
+                return reason
+    return None
+
+
+def apply_condition_movement_cost(actor: dict, base_cost: float) -> float:
+    """让倒地爬行等状态调整移动消耗，而不是污染基础速度。"""
+    cost = base_cost
+    for condition, condition_module, _ in _iter_condition_handlers(actor.get("conditions", [])):
+        if condition_module and hasattr(condition_module, "modify_movement_cost"):
+            cost = condition_module.modify_movement_cost(condition, actor, cost)
+    return cost
 
 
 def get_condition_action_block_reason(actor: dict, action_type: str = "action") -> str | None:
@@ -470,20 +670,41 @@ def remove_consume_on_attacked_conditions(target: dict) -> None:
         target["conditions"] = surviving_conditions
 
 
+def remove_action_breaking_conditions(actor: dict, *, event: str) -> list[str]:
+    """攻击或施法后移除会被主动行为打断的隐匿类状态。"""
+    break_ids = {"invisible", "hidden"}
+    conditions = actor.get("conditions", [])
+    removed = [condition for condition in conditions if condition.get("id") in break_ids]
+    if not removed:
+        return []
+
+    actor["conditions"] = [condition for condition in conditions if condition.get("id") not in break_ids]
+    if actor.get("concentrating_on") == "invisibility":
+        actor["concentrating_on"] = None
+
+    label = "施法" if event == "spell" else "攻击"
+    names = ", ".join(condition.get("id", "?") for condition in removed)
+    return [f"  [{actor.get('name', '?')}] 因{label}显露，移除状态：{names}。"]
+
+
 def roll_attack_hit(
     attacker: dict,
     target: dict,
     attack_name: str | None = None,
     advantage: str = "normal",
+    state: dict | None = None,
 ) -> dict:
     """第一阶段：仅做命中骰 + AC 比较，不造成伤害、不修改任何状态。
     返回 roll_info dict，供 apply_attack_damage() 或反应中断流程使用。"""
 
-    # 状态系统自动叠加优劣势
-    cond_advantage = _determine_advantage_from_conditions(
-        attacker.get("conditions", []),
-        target.get("conditions", []),
-    )
+    chosen = choose_attack(attacker, attack_name)
+
+    if attack_name and chosen is None:
+        available = ", ".join(available_attack_names(attacker)) or "无"
+        return _build_blocked_attack_result(f"未知攻击 '{attack_name}'。可用攻击: {available}。")
+
+    # 状态系统自动叠加优劣势；倒地等依赖射程的规则在这里拿到本次攻击上下文。
+    cond_advantage = _determine_advantage_for_attack(attacker, target, chosen, state)
     if advantage == "normal":
         advantage = cond_advantage
     elif cond_advantage != "normal" and cond_advantage != advantage:
@@ -492,8 +713,6 @@ def roll_attack_hit(
     block_reason = _determine_attack_block_reason(attacker, target)
     if block_reason:
         return _build_blocked_attack_result(block_reason)
-
-    chosen = choose_attack(attacker, attack_name)
 
     atk_bonus = chosen["attack_bonus"] if chosen else 0
     dmg_dice = chosen["damage_dice"] if chosen else "1d4"
@@ -596,12 +815,18 @@ def apply_attack_damage(
         damage_dealt = max(1, dmg_result.total)
         lines.append(f"伤害骰: {dmg_result} → {damage_dealt} 点 {dmg_type} 伤害")
 
-        damage_dealt, hp_change, damage_lines = apply_damage_to_target(target, damage_dealt)
+        damage_dealt, hp_change, damage_lines = apply_damage_to_target(
+            target,
+            damage_dealt,
+            damage_type=dmg_type,
+            crit=crit,
+        )
         lines.extend(damage_lines)
     else:
         lines.append("未命中！" if natural != 1 else "严重失误！攻击完全落空！")
 
     remove_consume_on_attacked_conditions(target)
+    lines.extend(remove_action_breaking_conditions(attacker, event="attack"))
 
     attacker["action_available"] = False
     return lines, damage_dealt, hp_change, extra_info
@@ -647,7 +872,38 @@ def check_concentration(target: dict, damage: int) -> list[str]:
     return [f"  [{name} 专注检定] DC {dc} — {roll_text} 失败！失去对 {spell_id} 的专注"]
 
 
-# ── 奥术结界伤害吸收 ────────────────────────────────────────────
+# ── 奥术结界 ──────────────────────────────────────────────────
+
+
+def refresh_arcane_ward_on_abjuration(player_dict: dict, spell_def: dict, spell_level: int, lines: list[str]) -> None:
+    """防护学派：所有施法入口都用同一个钩子恢复奥术结界，避免反应法术漏结算。"""
+    if spell_def.get("level", 0) == 0:
+        return
+    if spell_def.get("school") != "abjuration":
+        return
+    if "arcane_ward" not in player_dict.get("class_features", []):
+        return
+
+    from app.conditions._base import build_condition_extra, create_condition, find_condition
+
+    level = player_dict.get("level", 1)
+    int_mod = player_dict.get("modifiers", {}).get("int", 0)
+    ward_max = level * 2 + int_mod
+    name = player_dict.get("name", "?")
+
+    conditions = player_dict.setdefault("conditions", [])
+    ward = find_condition(conditions, "arcane_ward")
+
+    if ward:
+        # 规则收益只与消耗环阶相关，不能超过结界上限。
+        old_hp = ward.get("extra", {}).get("ward_hp", 0)
+        new_hp = min(old_hp + spell_level * 2, ward_max)
+        ward.setdefault("extra", {})["ward_hp"] = new_hp
+        lines.append(f"  [奥术结界] {name} 的结界恢复至 {new_hp}/{ward_max} HP")
+    else:
+        # 结界被打碎后，下一次防护法术会重新建立完整结界。
+        conditions.append(create_condition("arcane_ward", source_id=name, extra=build_condition_extra(ward_hp=ward_max, ward_max=ward_max)))
+        lines.append(f"  [奥术结界] {name} 建立奥术结界（{ward_max}/{ward_max} HP）")
 
 
 def _absorb_damage(target: dict, damage: int) -> tuple[int, list[str]]:
@@ -760,34 +1016,87 @@ def _expire_start_of_turn_conditions(all_combatants: dict[str, dict], actor: dic
     return lines
 
 
-def _process_turn_end_conditions(actor: dict) -> list[str]:
+def _process_turn_end_conditions(actor: dict, all_combatants: dict[str, dict] | None = None, state: dict | None = None) -> list[str]:
     """统一处理回合末生命周期：先递减 duration，再执行 save_ends。"""
     lines: list[str] = []
     conditions = actor.get("conditions", [])
-    if not conditions:
-        return lines
+    if conditions:
+        actor["conditions"] = [condition for condition in conditions if condition.get("id") != "disengaged"]
+        if len(actor["conditions"]) != len(conditions):
+            lines.append(f"（{actor.get('name', '?')} 的撤离状态结束。）")
+        conditions = actor.get("conditions", [])
 
-    remaining, expired = tick_conditions(conditions)
-    actor["conditions"] = remaining
-    if expired:
-        lines.append(f"（{actor.get('name', '?')} 的状态已过期：{', '.join(expired)}）")
+        remaining, expired = tick_conditions(conditions)
+        actor["conditions"] = remaining
+        if expired:
+            lines.append(f"（{actor.get('name', '?')} 的状态已过期：{', '.join(expired)}）")
+
+    if all_combatants:
+        lines.extend(_process_flaming_sphere_turn_end(actor, all_combatants, state))
 
     lines.extend(_process_save_ends(actor))
+    return lines
+
+
+def _process_flaming_sphere_turn_end(actor: dict, all_combatants: dict[str, dict], state: dict | None) -> list[str]:
+    """回合结束时检查所有焰球，命中停在 5 尺内的当前行动者。"""
+    if not state or not state.get("space"):
+        return []
+    if not actor.get("id"):
+        return []
+
+    from app.conditions import find_condition
+    from app.spells.flaming_sphere import damage_targets_near_sphere
+
+    lines: list[str] = []
+    for caster in all_combatants.values():
+        condition = find_condition(caster.get("conditions", []), "flaming_sphere")
+        if not condition:
+            continue
+        damage_result = damage_targets_near_sphere(caster, {actor["id"]: actor}, condition, state, trigger="回合末")
+        lines.extend(damage_result.get("lines", []))
     return lines
 
 
 def _process_turn_start_conditions(actor: dict, all_combatants: dict[str, dict]) -> list[str]:
     """统一处理回合开始生命周期与动作资源重置。"""
     lines = _expire_start_of_turn_conditions(all_combatants, actor)
+    lines.extend(_process_turn_start_condition_hooks(actor, all_combatants))
 
     actor["action_available"] = True
     actor["bonus_action_available"] = True
     actor["reaction_available"] = True
+    from app.services.tools.monster_action_resolvers import roll_action_recharges
+    lines.extend(roll_action_recharges(actor))
     sync_movement_state(actor, reset_to_current_speed=True)
     return lines
 
 
-def advance_turn(combat_dict: dict, player_dict: dict | None = None) -> str:
+def _process_turn_start_condition_hooks(actor: dict, all_combatants: dict[str, dict]) -> list[str]:
+    """处理状态自带的回合开始效果，先走通用 hook，再覆盖 Stirge 贴附吸血。"""
+    lines: list[str] = []
+    for condition in list(actor.get("conditions", [])):
+        condition_module = get_condition_module(condition.get("id", ""))
+        if condition_module and hasattr(condition_module, "on_turn_start"):
+            lines.extend(condition_module.on_turn_start(condition, actor, all_combatants))
+        if condition.get("id") != "attached":
+            continue
+        extra = condition.get("extra", {})
+        target = all_combatants.get(extra.get("target_id", ""))
+        if not target or target.get("hp", 0) <= 0:
+            actor["conditions"] = [item for item in actor.get("conditions", []) if item is not condition]
+            lines.append(f"  [{actor.get('name', '?')}] 贴附目标已失效，自动脱离。")
+            continue
+        damage_spec = extra.get("damage", {"dice": "1d4+3", "damage_type": "piercing"})
+        dmg_result = d20.roll(damage_spec["dice"])
+        damage = max(1, dmg_result.total)
+        lines.append(f"  [{actor.get('name', '?')}] 贴附吸血: {dmg_result} → {damage} {damage_spec.get('damage_type', 'piercing')}伤害。")
+        _, _, damage_lines = apply_damage_to_target(target, damage, damage_type=damage_spec.get("damage_type", "piercing"))
+        lines.extend(f"  {line}" for line in damage_lines)
+    return lines
+
+
+def advance_turn(combat_dict: dict, player_dict: dict | None = None, state: dict | None = None) -> str:
     """推进回合到下一个存活单位，返回描述文本。原地修改 combat_dict 和 player_dict（如有）。
     在切换前对当前行动者执行 tick_conditions（递减持续时间、移除过期状态）。"""
     order = combat_dict.get("initiative_order", [])
@@ -800,7 +1109,11 @@ def advance_turn(combat_dict: dict, player_dict: dict | None = None) -> str:
     if current_id:
         actor_leaving = get_combatant(combat_dict, player_dict, current_id)
         if actor_leaving:
-            lifecycle_lines.extend(_process_turn_end_conditions(actor_leaving))
+            lifecycle_lines.extend(_process_turn_end_conditions(
+                actor_leaving,
+                get_all_combatants(combat_dict, player_dict),
+                state,
+            ))
 
     current_idx = order.index(current_id) if current_id in order else -1
     total = len(order)

@@ -3,9 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently --names frontend,backend --prefix-colors cyan,magenta \"pnpm dev:frontend\" \"pnpm dev:backend\"",
-    "dev:frontend": "cd frontend && set CI=true&& pnpm exec vite --clearScreen false",
-    "dev:backend": "cd backend && .venv\\Scripts\\python.exe -m uvicorn app.main:app"
+    "predev": "pnpm dev:stop",
+    "dev": "concurrently --kill-others --kill-signal SIGINT --names frontend,backend --prefix-colors cyan,magenta \"pnpm dev:frontend\" \"pnpm dev:backend\"",
+    "dev:frontend": "cd frontend && set CI=true&& pnpm exec vite --clearScreen false --strictPort",
+    "dev:backend": "cd backend && .venv\\Scripts\\python.exe -m uvicorn app.main:app",
+    "dev:stop": "node scripts\\stop-dev.mjs"
   },
   "devDependencies": {
     "@types/three": "^0.183.1",

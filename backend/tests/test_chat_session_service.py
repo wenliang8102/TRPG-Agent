@@ -75,6 +75,7 @@ class ChatSessionServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("s1", result["session_id"])
         self.assertIsNone(result["plan"])
         self.assertEqual("s1", graph.last_config["configurable"]["thread_id"])
+        self.assertEqual(80, graph.last_config["recursion_limit"])
         self.assertEqual("查一下北京", graph.last_input["messages"][0].content)
 
     async def test_process_turn_schedules_memory_ingestion_without_changing_reply(self):

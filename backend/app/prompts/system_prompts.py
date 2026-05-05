@@ -36,6 +36,7 @@ _COMBAT_AGENT_RULES_PROMPT = (
     "5. 如果当前行动者已无可用动作、被状态阻止，或战术上已没有进一步收益，不要继续空转，立刻调用 `next_turn`。\n"
     "6. 战斗地图默认采用 1 格 = 5 尺的网格；常规遭遇通常以 30x30 格到 40x40 格起步，狭窄场景可更小，开阔场景可更大。\n"
     "7. 战斗结束后，死亡单位默认应从空间中清理掉，不要只挪到角落充当占位符。\n"
+    "8. `attack_action`、`cast_spell`、`use_monster_action` 已写回 HP/资源/状态，不要再用 `modify_character_state` 重放同一结果。\n"
 )
 
 

@@ -99,6 +99,8 @@ const parseErrorPayload = (payload: any): { message: string; code?: string; requ
   return { message: '' }
 }
 
+const wait = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
+
 // 手工解析 SSE 文本流
 function parseSSEChunk(text: string): Array<{ event: string; data: string }> {
   const events: Array<{ event: string; data: string }> = []
@@ -265,12 +267,26 @@ export const chatService = {
     space?: any
     scene_units?: any
   }> {
-    const response = await fetch(
-      `/api/chat/history?session_id=${encodeURIComponent(sessionId)}&limit=${limit}`
-    )
-    if (!response.ok) {
-      return { messages: [], player: null, combat: null }
+    const url = `/api/chat/history?session_id=${encodeURIComponent(sessionId)}&limit=${limit}`
+    const retryDelays = [300, 700, 1200]
+
+    for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+      try {
+        const response = await fetch(url)
+        if (!response.ok) {
+          return { messages: [], player: null, combat: null }
+        }
+        return await response.json()
+      } catch (error) {
+        // 后端刚启动时 Vite 代理可能短暂 ECONNREFUSED，给它一点就绪时间。
+        if (attempt === retryDelays.length) {
+          console.warn('Failed to fetch chat history:', error)
+          return { messages: [], player: null, combat: null }
+        }
+        await wait(retryDelays[attempt])
+      }
     }
-    return await response.json()
+
+    return { messages: [], player: null, combat: null }
   }
 }

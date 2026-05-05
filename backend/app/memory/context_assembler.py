@@ -7,7 +7,7 @@ from copy import copy
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 
 from app.graph.constants import COMBAT_AGENT_MODE, NARRATIVE_AGENT_MODE
 from app.graph.state import GraphState
@@ -95,13 +95,13 @@ class ContextAssembler:
                 f"先攻顺序: {combat_dict.get('initiative_order', [])}",
             ]
             for uid, combatant in participants.items():
-                attacks_desc = format_attacks(combatant)
+                actions_desc = format_actions(combatant)
                 marker = " ← 当前行动" if uid == current_id else ""
                 display_ac = compute_ac(combatant) if isinstance(combatant, dict) else combatant.get('ac')
                 combat_lines.append(
                     f"  {combatant.get('name', uid)} [ID:{uid}] side={combatant.get('side')} "
                     f"HP:{combatant.get('hp')}/{combatant.get('max_hp')} AC:{display_ac} "
-                    f"conditions=[{format_conditions(combatant)}] attacks=[{attacks_desc}]{marker}"
+                    f"conditions=[{format_conditions(combatant)}] actions=[{actions_desc}]{marker}"
                 )
             sections.append("[当前战斗状态]\n" + "\n".join(combat_lines))
 
@@ -145,7 +145,8 @@ class ContextAssembler:
 
             projected_messages.append(message)
 
-        return insert_runtime_hud_message(projected_messages, hud_text)
+        repaired_messages = repair_tool_call_sequence(projected_messages)
+        return insert_runtime_hud_message(repaired_messages, hud_text)
 
     def _build_combat_brief(self, state: GraphState) -> str:
         combat_dict = state_value_to_dict(state.get("combat"))
@@ -174,7 +175,7 @@ class ContextAssembler:
             status = (
                 f"{combatant.get('name', uid)}[HP:{combatant.get('hp')}/{combatant.get('max_hp')}, "
                 f"AC:{display_ac}, conditions:{format_conditions(combatant)}, "
-                f"attacks:{format_attacks(combatant)}]"
+                f"actions:{format_actions(combatant)}]"
             )
             if combatant.get("side") == "player":
                 player_side.append(status)
@@ -239,7 +240,7 @@ def collapse_archived_combat_messages(messages: list[BaseMessage], combat_archiv
     collapsed: list[BaseMessage] = []
     cursor = 0
     for archive in normalized_archives:
-        start_index = archive["start_index"]
+        start_index = expand_archive_start_to_tool_call(messages, archive["start_index"])
         end_index = archive["end_index"]
 
         if start_index < cursor:
@@ -255,6 +256,74 @@ def collapse_archived_combat_messages(messages: list[BaseMessage], combat_archiv
 
     collapsed.extend(messages[cursor:])
     return collapsed
+
+
+def expand_archive_start_to_tool_call(messages: list[BaseMessage], start_index: int) -> int:
+    """战斗归档必须连同触发工具的 AIMessage 一起折叠，否则会留下悬空 tool_calls。"""
+    if start_index <= 0 or start_index >= len(messages):
+        return start_index
+
+    previous_message = messages[start_index - 1]
+    if isinstance(previous_message, AIMessage) and previous_message.tool_calls:
+        return start_index - 1
+    return start_index
+
+
+def repair_tool_call_sequence(messages: list[BaseMessage]) -> list[BaseMessage]:
+    """投影给模型前修复旧存档中的残缺工具链，避免 OpenAI 协议 400 卡死会话。"""
+    repaired: list[BaseMessage] = []
+    index = 0
+    while index < len(messages):
+        message = messages[index]
+
+        if isinstance(message, AIMessage) and message.tool_calls:
+            tool_messages = collect_following_tool_messages(messages, index + 1)
+            if tool_messages_cover_calls(message, tool_messages):
+                repaired.append(message)
+                repaired.extend(tool_messages)
+                index += 1 + len(tool_messages)
+                continue
+
+            repaired.append(strip_tool_calls(message))
+            index += 1
+            continue
+
+        if isinstance(message, ToolMessage):
+            repaired.append(HumanMessage(content=message_content_to_text(message.content)))
+            index += 1
+            continue
+
+        repaired.append(message)
+        index += 1
+
+    return repaired
+
+
+def collect_following_tool_messages(messages: list[BaseMessage], start_index: int) -> list[ToolMessage]:
+    tool_messages: list[ToolMessage] = []
+    index = start_index
+    while index < len(messages) and isinstance(messages[index], ToolMessage):
+        tool_messages.append(messages[index])
+        index += 1
+    return tool_messages
+
+
+def tool_messages_cover_calls(message: AIMessage, tool_messages: list[ToolMessage]) -> bool:
+    expected_ids = [str(tool_call.get("id", "")) for tool_call in message.tool_calls]
+    actual_ids = [str(tool_message.tool_call_id) for tool_message in tool_messages[: len(expected_ids)]]
+    return bool(expected_ids) and expected_ids == actual_ids
+
+
+def strip_tool_calls(message: AIMessage) -> AIMessage:
+    additional_kwargs = dict(message.additional_kwargs or {})
+    additional_kwargs.pop("tool_calls", None)
+    return message.model_copy(
+        update={
+            "additional_kwargs": additional_kwargs,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+        }
+    )
 
 
 def normalize_combat_archives(combat_archives: list[dict[str, Any]] | None, message_count: int) -> list[dict[str, Any]]:
@@ -300,7 +369,30 @@ def insert_runtime_hud_message(messages: list[BaseMessage], hud_text: str) -> li
     if isinstance(latest_message, HumanMessage) and not is_internal_system_human_message(latest_message):
         return [*projected_messages[:-1], hud_message, latest_message]
 
+    tool_exchange_start = trailing_tool_exchange_start_index(projected_messages)
+    if tool_exchange_start is not None:
+        return [
+            *projected_messages[:tool_exchange_start],
+            hud_message,
+            *projected_messages[tool_exchange_start:],
+        ]
+
     return [*projected_messages, hud_message]
+
+
+def trailing_tool_exchange_start_index(messages: list[BaseMessage]) -> int | None:
+    """工具回填后保持 AI tool_calls 与 ToolMessage 相邻，避免续跑模型误判工具链已结束。"""
+    if not messages or not isinstance(messages[-1], ToolMessage):
+        return None
+
+    first_tool_index = len(messages) - 1
+    while first_tool_index > 0 and isinstance(messages[first_tool_index - 1], ToolMessage):
+        first_tool_index -= 1
+
+    ai_index = first_tool_index - 1
+    if ai_index >= 0 and isinstance(messages[ai_index], AIMessage) and messages[ai_index].tool_calls:
+        return ai_index
+    return None
 
 
 def format_runtime_hud_content(hud_text: str) -> str:
@@ -349,6 +441,17 @@ def format_attacks(combatant: dict[str, Any]) -> str:
     if not attacks:
         return "无"
     return ", ".join(attack.get("name", "?") for attack in attacks)
+
+
+def format_actions(combatant: dict[str, Any]) -> str:
+    """战斗上下文优先展示结构化动作，让模型调用 action_id 而不是猜攻击名。"""
+    actions = combatant.get("actions", []) or []
+    if actions:
+        return ", ".join(
+            f"{action.get('name', '?')}({action.get('id', '?')}, {action.get('kind', '?')})"
+            for action in actions
+        )
+    return format_attacks(combatant)
 
 
 def format_space_summary(space: dict[str, Any]) -> str:
@@ -411,7 +514,7 @@ def summarize_tool_message(message: ToolMessage) -> str:
             return f"[工具:{tool_name}] 掷骰结果 raw={raw_roll} total={final_total}"
 
     summary_lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-    max_lines = 3 if tool_name in {"attack_action", "cast_spell"} else 2
+    max_lines = 3 if tool_name in {"attack_action", "use_monster_action", "cast_spell"} else 2
     summary = " | ".join(summary_lines[:max_lines])
     if not summary:
         summary = raw_text[:180] or "工具已执行。"

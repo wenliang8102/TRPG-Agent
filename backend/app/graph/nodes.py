@@ -128,6 +128,8 @@ def _invoke_assistant(state: GraphState, mode: str) -> dict:
         response=response,
     )
 
+    response = _keep_first_tool_call(response)
+
     if hasattr(response, "tool_calls") and response.tool_calls:
         logger.info("LLM called tools session={} tools={}", session_id, response.tool_calls)
     else:
@@ -139,6 +141,14 @@ def _invoke_assistant(state: GraphState, mode: str) -> dict:
         "messages": [response],
         "output": output,
     }
+
+
+def _keep_first_tool_call(response: BaseMessage) -> BaseMessage:
+    """有状态工具必须按轮次吃到最新状态，兼容模型若返回并行工具调用则只执行第一条。"""
+    tool_calls = getattr(response, "tool_calls", None)
+    if not tool_calls or len(tool_calls) <= 1 or not hasattr(response, "model_copy"):
+        return response
+    return response.model_copy(update={"tool_calls": [tool_calls[0]]})
 
 
 def _all_players_down(combat_dict: dict, player_dict: dict | None) -> bool:
@@ -165,6 +175,104 @@ def _build_combat_system_message(log_lines: list[str], attack_roll: dict | None 
                 "attack_roll": attack_roll_payload,
             }
     return HumanMessage(content=combat_report, **message_kwargs)
+
+
+def _resolve_counterspell_prompt(
+    combat_dict: dict,
+    player_dict: dict | None,
+    pending_dict: dict,
+    reaction_choice: dict,
+) -> dict:
+    """继续结算一次被玩家法术反制暂停的怪物施法。"""
+    from app.monsters.models import MonsterAction
+    from app.services.tools._helpers import get_all_combatants, get_combatant
+    from app.services.tools.monster_action_resolvers import consume_action_resource, resolve_monster_action
+    from app.services.tools.reactions import execute_player_reaction
+
+    actor_id = pending_dict.get("attacker_id", "")
+    actor = get_combatant(combat_dict, player_dict, actor_id)
+    if not actor:
+        result = {"combat": combat_dict, "pending_reaction": None, "reaction_choice": None}
+        if player_dict:
+            result["player"] = player_dict
+        return result
+
+    action = MonsterAction.model_validate(pending_dict["spell_action"])
+    from app.spells import get_spell_def
+
+    spell_def = get_spell_def(action.spell_id)
+    if not spell_def:
+        return {
+            "combat": combat_dict,
+            "messages": [_build_combat_system_message([f"未知怪物法术: {action.spell_id}。"])],
+            "hp_changes": [],
+            "pending_reaction": None,
+            "reaction_choice": None,
+            **({"player": player_dict} if player_dict else {}),
+        }
+    trigger_spell_level = max(action.slot_level, spell_def["level"])
+    target_ids = list(pending_dict.get("target_ids", []))
+    all_combatants = get_all_combatants(combat_dict, player_dict)
+    # 点选范围法术会在恢复结算时重新按空间展开目标，因此这里必须提供全场索引。
+    targets_by_id = all_combatants
+    log_lines: list[str] = []
+    hp_changes: list[dict] = []
+
+    chosen_spell_id = reaction_choice.get("spell_id")
+    if chosen_spell_id and player_dict:
+        reaction_context = {
+            "trigger_caster_id": actor.get("id", actor_id),
+            "trigger_caster_name": actor.get("name", actor_id),
+            "trigger_spell_name_cn": spell_def["name_cn"],
+            "trigger_spell_level": trigger_spell_level,
+            "targets": [actor],
+        }
+        reaction_result = execute_player_reaction(player_dict, reaction_choice, reaction_context)
+        log_lines.extend(reaction_result.lines)
+        if reaction_result.blocked_action:
+            consume_action_resource(actor, action)
+            log_lines.append(f"{actor.get('name', actor_id)} 的 {action.name} 被打断，没有产生效果。")
+            result_state: dict = {
+                "combat": combat_dict,
+                "messages": [_build_combat_system_message(log_lines)],
+                "hp_changes": [],
+                "pending_reaction": None,
+                "reaction_choice": None,
+            }
+            if player_dict:
+                result_state["player"] = player_dict
+            return result_state
+    else:
+        log_lines.append("你放弃了反应。")
+
+    result = resolve_monster_action(
+        actor,
+        targets_by_id,
+        target_ids,
+        action,
+        {
+            "combat": combat_dict,
+            **({"player": player_dict} if player_dict else {}),
+            **({"space": pending_dict.get("space")} if pending_dict.get("space") else {}),
+        },
+        target_point=pending_dict.get("target_point"),
+    )
+    consume_action_resource(actor, action)
+    log_lines.extend(result["lines"])
+    hp_changes.extend(result.get("hp_changes", []))
+
+    result_state = {
+        "combat": combat_dict,
+        "messages": [_build_combat_system_message(log_lines)],
+        "hp_changes": hp_changes,
+        "pending_reaction": None,
+        "reaction_choice": None,
+    }
+    if result.get("space"):
+        result_state["space"] = result["space"]
+    if player_dict:
+        result_state["player"] = player_dict
+    return result_state
 
 
 def _build_player_death_summary(messages: list[BaseMessage]) -> str:
@@ -231,6 +339,8 @@ def combat_resolution_node(state: GraphState) -> dict:
 def resolve_reaction_node(state: GraphState) -> dict:
     """继续结算一条已暂停的攻击；只处理反应和伤害，不隐式结束行动者回合。"""
     from app.services.tools._helpers import get_combatant, apply_attack_damage, compute_ac
+    from app.monsters.models import MonsterAction
+    from app.services.tools.monster_action_resolvers import consume_action_resource, resolve_monster_attack_from_roll
     from app.services.tools.reactions import execute_player_reaction
 
     combat = state.get("combat")
@@ -242,6 +352,9 @@ def resolve_reaction_node(state: GraphState) -> dict:
     player_dict = _state_value_to_dict(state.get("player"))
     pending_dict = _state_value_to_dict(pending_reaction)
     reaction_choice = _state_value_to_dict(state.get("reaction_choice")) or {"spell_id": None}
+
+    if pending_dict.get("trigger") == "on_enemy_cast":
+        return _resolve_counterspell_prompt(combat_dict, player_dict, pending_dict, reaction_choice)
 
     attacker_id = pending_dict.get("attacker_id", "")
     target_id = pending_dict.get("target_id", "")
@@ -294,10 +407,27 @@ def resolve_reaction_node(state: GraphState) -> dict:
     else:
         log_lines.append("你放弃了反应。")
 
-    atk_lines, _, hp_change, _ = apply_attack_damage(actor, target, roll_info)
-    log_lines.extend(atk_lines)
-    if hp_change:
-        hp_changes.append(hp_change)
+    if pending_dict.get("monster_attack_action"):
+        action = MonsterAction.model_validate(pending_dict["monster_attack_action"])
+        attack_result = resolve_monster_attack_from_roll(
+            actor,
+            target,
+            action,
+            {
+                "combat": combat_dict,
+                **({"player": player_dict} if player_dict else {}),
+                **({"space": state.get("space")} if state.get("space") else {}),
+            },
+            roll_info,
+        )
+        consume_action_resource(actor, action)
+        log_lines.extend(attack_result["lines"])
+        hp_changes.extend(attack_result.get("hp_changes", []))
+    else:
+        atk_lines, _, hp_change, _ = apply_attack_damage(actor, target, roll_info)
+        log_lines.extend(atk_lines)
+        if hp_change:
+            hp_changes.append(hp_change)
 
     result_state: dict = {
         "combat": combat_dict,

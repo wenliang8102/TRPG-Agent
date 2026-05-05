@@ -164,6 +164,13 @@ def remove_condition(
             ToolMessage(content=f"{target.get('name', resolved_id)} 当前没有 {condition_id} 状态。", tool_call_id=tool_call_id)
         ]})
 
+    stand_up_line = ""
+    if condition_id == "prone" and "_combat_dict" in ctx:
+        movement_cost = target.get("speed", 30) / 2
+        movement_left = target.get("movement_left", target.get("speed", 30))
+        target["movement_left"] = max(0, round(movement_left - movement_cost, 2))
+        stand_up_line = f"（站起消耗 {movement_cost:g} 尺移动力，剩余 {target['movement_left']:g} 尺）"
+
     remove_condition_by_id(target, condition_id)
     sync_ac_state(target)
     sync_movement_state(target)
@@ -171,6 +178,8 @@ def remove_condition(
     cdef = get_condition_def(condition_id)
     cond_label = cdef.name_cn if cdef else condition_id
     msg = f"{target.get('name', resolved_id)} 移除状态: {cond_label}"
+    if stand_up_line:
+        msg = f"{msg}\n{stand_up_line}"
     if reason:
         msg = f"[{reason}] {msg}"
 

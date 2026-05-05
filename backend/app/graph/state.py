@@ -8,6 +8,7 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
 from app.conditions._base import ActiveCondition
+from app.monsters.models import MonsterAction
 
 
 # ── Pydantic 数据模型 ──────────────────────────────────────────
@@ -137,6 +138,9 @@ class CombatantState(BaseModel, extra="allow"):
     initiative: int = 0
     speed: int = 30
     conditions: list[ActiveCondition] = Field(default_factory=list)
+    damage_resistances: list[str] = Field(default_factory=list)
+    damage_immunities: list[str] = Field(default_factory=list)
+    damage_vulnerabilities: list[str] = Field(default_factory=list)
 
     # 六维能力值与修正（用于怪物攻击/豁免计算）
     abilities: AbilityBlock = Field(default_factory=dict)
@@ -145,6 +149,10 @@ class CombatantState(BaseModel, extra="allow"):
 
     # 该单位可用的攻击列表（从 Open5e actions 解析）
     attacks: list[AttackInfo] = Field(default_factory=list)
+    # 结构化动作列表；后续怪物优先通过这里扩展能力。
+    actions: list[MonsterAction] = Field(default_factory=list)
+    traits: list[str] = Field(default_factory=list)
+    action_recharges: dict[str, bool] = Field(default_factory=dict)
 
     # 动作资源
     action_available: bool = True
@@ -193,6 +201,48 @@ class SpaceState(BaseModel, extra="allow"):
     placements: dict[str, UnitPlacementState] = Field(default_factory=dict)
 
 
+def merge_space_state(left: SpaceState | dict | None, right: SpaceState | dict | None) -> dict:
+    """合并同一步工具产生的空间快照，避免并发摆放单位时互相覆盖。"""
+    if right is None:
+        return _space_dict(left)
+    if left is None:
+        return _space_dict(right)
+
+    left_dict = _space_dict(left)
+    right_dict = _space_dict(right)
+    merged = {
+        **left_dict,
+        **right_dict,
+        "maps": {
+            **left_dict.get("maps", {}),
+            **right_dict.get("maps", {}),
+        },
+        "placements": _merge_space_placements(
+            left_dict.get("placements", {}),
+            right_dict.get("placements", {}),
+        ),
+    }
+    return SpaceState.model_validate(merged).model_dump()
+
+
+def _space_dict(value: SpaceState | dict | None) -> dict:
+    """把 reducer 收到的 Pydantic/dict 统一成普通 dict，便于做浅层领域合并。"""
+    if value is None:
+        return SpaceState().model_dump()
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    return SpaceState.model_validate(value).model_dump()
+
+
+def _merge_space_placements(left: dict, right: dict) -> dict:
+    """并发新增取并集；纯删除或移动取右侧快照，保留 remove_unit/end_combat 语义。"""
+    left_keys = set(left)
+    right_keys = set(right)
+    if right_keys <= left_keys:
+        return dict(right)
+    return {**left, **right}
+
+
 # ── LangGraph 共享状态 ─────────────────────────────────────────
 
 
@@ -224,7 +274,7 @@ class GraphState(TypedDict, total=False):
     scene_units: dict[str, CombatantState]
 
     # 平面空间状态 — 记录地图与单位坐标，供移动、距离、范围判定复用
-    space: SpaceState
+    space: Annotated[SpaceState, merge_space_state]
 
     combat: Optional[CombatState]
 

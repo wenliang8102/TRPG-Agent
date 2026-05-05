@@ -33,12 +33,8 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
     lines: list[str] = [f"{caster_name} 施放 冰刃（{slot_level}环）!"]
     hp_changes: list[dict] = []
     
-    # 用于记录每个单位最终受到的总伤害
-    damage_by_target = {t.get("id", f"target_{i}"): 0 for i, t in enumerate(targets)}
-
     # 1. 穿刺攻击首个目标
     primary = targets[0]
-    p_id = primary.get("id", "target_0")
     p_name = primary.get("name", "?")
 
     p_ac = compute_ac(primary)
@@ -52,7 +48,9 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
         pierce_roll = d20.roll("1d10")
         pierce_dmg = max(1, pierce_roll.total)
         lines.append(f"    命中！造成 {pierce_dmg} 穿刺伤害 ({pierce_roll})")
-        damage_by_target[p_id] += pierce_dmg
+        _, hp_change, damage_lines = apply_damage_to_target(primary, pierce_dmg, damage_type="piercing")
+        hp_changes.append(hp_change)
+        lines.extend(f"    {line}" for line in damage_lines)
     else:
         lines.append("    未命中。但冰刃依然在目标处破碎！")
 
@@ -79,19 +77,7 @@ def execute(caster: dict, targets: list[dict], slot_level: int, **_) -> SpellRes
         save_text = f"成功({roll_text})" if saved else f"失败({roll_text})"
         
         lines.append(f"    → {t_name}: 豁免{save_text} — 受 {actual_cold} 冷冻伤害")
-        damage_by_target[t_id] += actual_cold
-        
-    # 3. 统一结算 HP
-    lines.append("\n  伤害结算：")
-    for i, target in enumerate(targets):
-        t_id = target.get("id", f"target_{i}")
-        t_name = target.get("name", "?")
-        total_dmg = damage_by_target[t_id]
-        
-        if total_dmg == 0:
-            continue
-
-        _, hp_change, damage_lines = apply_damage_to_target(target, total_dmg)
+        _, hp_change, damage_lines = apply_damage_to_target(target, actual_cold, damage_type="cold")
         hp_changes.append(hp_change)
         lines.extend(f"    {line}" for line in damage_lines)
             

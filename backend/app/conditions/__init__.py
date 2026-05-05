@@ -4,7 +4,32 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from app.conditions import blinded, charmed, incapacitated, invisible, guiding_bolt_mark, mage_armor, shield_active, mirror_image, paralyzed, arcane_ward, ray_of_frost_slow
+from app.conditions import (
+    attached,
+    arcane_ward,
+    blinded,
+    blurred,
+    charmed,
+    confused,
+    disengaged,
+    faerie_fire_mark,
+    flaming_sphere,
+    frightened,
+    guiding_bolt_mark,
+    hidden,
+    incapacitated,
+    invisible,
+    mage_armor,
+    mirror_image,
+    paralyzed,
+    prone,
+    ray_of_frost_slow,
+    reaction_suppressed,
+    restrained,
+    shield_active,
+    spell_reflection,
+    suggestion,
+)
 from app.conditions._base import (  # noqa: F401 — re-export
     ActiveCondition,
     CombatEffects,
@@ -21,15 +46,28 @@ from app.conditions._base import (  # noqa: F401 — re-export
 CONDITION_REGISTRY: dict[str, ModuleType] = {
     "blinded": blinded,
     "charmed": charmed,
+    "confused": confused,
+    "disengaged": disengaged,
     "incapacitated": incapacitated,
+    "hidden": hidden,
     "invisible": invisible,
     "guiding_bolt_mark": guiding_bolt_mark,
     "mage_armor": mage_armor,
     "shield_active": shield_active,
+    "spell_reflection": spell_reflection,
     "mirror_image": mirror_image,
     "paralyzed": paralyzed,
     "arcane_ward": arcane_ward,
     "ray_of_frost_slow": ray_of_frost_slow,
+    "reaction_suppressed": reaction_suppressed,
+    "prone": prone,
+    "restrained": restrained,
+    "attached": attached,
+    "blurred": blurred,
+    "faerie_fire_mark": faerie_fire_mark,
+    "flaming_sphere": flaming_sphere,
+    "frightened": frightened,
+    "suggestion": suggestion,
 }
 
 

@@ -68,6 +68,77 @@ class ContextAssemblerTests(unittest.TestCase):
         self.assertEqual(1, len(tool_messages))
         self.assertIn("[工具:attack_action]", tool_messages[0].content)
 
+    def test_hud_preserves_trailing_tool_exchange_for_followup_call(self):
+        assembler = ContextAssembler()
+        state = {
+            "messages": [
+                HumanMessage(content="continue"),
+                AIMessage(
+                    content="",
+                    tool_calls=[{"name": "attack_action", "args": {"attacker_id": "goblin_1"}, "id": "call_1"}],
+                ),
+                ToolMessage(content="attack resolved", tool_call_id="call_1", name="attack_action"),
+            ]
+        }
+
+        assembled = assembler.assemble(state, COMBAT_AGENT_MODE, base_system_prompt="combat rules")
+
+        self.assertIsInstance(assembled.model_input_messages[-3], SystemMessage)
+        self.assertIsInstance(assembled.model_input_messages[-2], AIMessage)
+        self.assertIsInstance(assembled.model_input_messages[-1], ToolMessage)
+        self.assertIn("<runtime_state", assembled.model_input_messages[-3].content)
+        self.assertIn("[工具:attack_action]", assembled.model_input_messages[-1].content)
+
+    def test_archived_combat_expands_start_to_triggering_ai_tool_call(self):
+        assembler = ContextAssembler()
+        state = {
+            "messages": [
+                HumanMessage(content="狼冲出来了。"),
+                AIMessage(content="", tool_calls=[{"name": "start_combat", "args": {"combatant_ids": ["wolf_1"]}, "id": "call_start"}]),
+                ToolMessage(content="战斗开始！第 1 回合。", tool_call_id="call_start", name="start_combat"),
+                AIMessage(content="", tool_calls=[{"name": "end_combat", "args": {}, "id": "call_end"}]),
+                ToolMessage(content="共进行了 1 回合。 倒下: Wolf", tool_call_id="call_end", name="end_combat"),
+                HumanMessage(content="我检查四周。"),
+            ],
+            "combat_archives": [
+                {
+                    "summary": "法师击倒了野狼，战斗结束。",
+                    "start_index": 2,
+                    "end_index": 4,
+                }
+            ],
+        }
+
+        assembled = assembler.assemble(state, NARRATIVE_AGENT_MODE, base_system_prompt="基础规则")
+
+        dangling_tool_call_messages = [
+            message for message in assembled.model_input_messages
+            if isinstance(message, AIMessage) and message.tool_calls
+        ]
+        self.assertEqual([], dangling_tool_call_messages)
+        self.assertTrue(any(
+            isinstance(message, HumanMessage)
+            and isinstance(message.content, str)
+            and message.content.startswith("[系统:战斗归档]")
+            for message in assembled.model_input_messages
+        ))
+
+    def test_projection_strips_legacy_dangling_tool_call(self):
+        assembler = ContextAssembler()
+        state = {
+            "messages": [
+                HumanMessage(content="结束战斗。"),
+                AIMessage(content="战斗结束。", tool_calls=[{"name": "end_combat", "args": {}, "id": "call_end"}]),
+                AIMessage(content="你确认周围暂时安全。", tool_calls=[]),
+            ],
+        }
+
+        assembled = assembler.assemble(state, NARRATIVE_AGENT_MODE, base_system_prompt="基础规则")
+
+        ai_messages = [message for message in assembled.model_input_messages if isinstance(message, AIMessage)]
+        self.assertTrue(any(message.content == "战斗结束。" for message in ai_messages))
+        self.assertFalse(any(message.tool_calls for message in ai_messages))
+
     def test_assemble_adds_combat_brief_and_turn_directive(self):
         assembler = ContextAssembler()
         state = {
@@ -88,6 +159,37 @@ class ContextAssemblerTests(unittest.TestCase):
         self.assertIn("[战斗简报]", assembled.system_prompt)
         self.assertIn("[当前回合指令]", assembled.system_prompt)
         self.assertIn("Goblin", assembled.system_prompt)
+
+    def test_combat_context_lists_monster_actions(self):
+        assembler = ContextAssembler()
+        state = {
+            "messages": [HumanMessage(content="继续战斗。")],
+            "combat": {
+                "round": 1,
+                "current_actor_id": "goblin_1",
+                "initiative_order": ["goblin_1"],
+                "participants": {
+                    "goblin_1": {
+                        "name": "Goblin",
+                        "side": "enemy",
+                        "hp": 7,
+                        "max_hp": 7,
+                        "ac": 15,
+                        "actions": [
+                            {"id": "scimitar", "name": "Scimitar", "kind": "attack"},
+                            {"id": "nimble_escape", "name": "Nimble Escape", "kind": "bonus_action"},
+                        ],
+                        "attacks": [{"name": "Scimitar"}],
+                    }
+                },
+            },
+        }
+
+        assembled = assembler.assemble(state, COMBAT_AGENT_MODE, base_system_prompt="战斗规则")
+
+        self.assertIn("actions:Scimitar(scimitar, attack)", assembled.system_prompt)
+        self.assertIn("actions=[Scimitar(scimitar, attack)", assembled.hud_text)
+        self.assertNotIn("attacks:[", assembled.system_prompt)
 
     def test_hud_includes_planar_space_summary(self):
         assembler = ContextAssembler()

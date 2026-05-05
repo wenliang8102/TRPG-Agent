@@ -1,6 +1,8 @@
 # Open5e REST API 客户端 — 替代本地 bestiary.json
 from __future__ import annotations
 
+import re
+
 import httpx
 from pydantic import BaseModel, Field
 
@@ -31,6 +33,9 @@ class MonsterTemplate(BaseModel):
     challenge_rating: str = "0"
     proficiency_bonus: int = 2
     attacks: list[AttackInfo] = Field(default_factory=list)
+    damage_resistances: list[str] = Field(default_factory=list)
+    damage_immunities: list[str] = Field(default_factory=list)
+    damage_vulnerabilities: list[str] = Field(default_factory=list)
 
 
 def _parse_speed(speed: dict) -> int:
@@ -162,7 +167,32 @@ def _build_template(data: dict) -> MonsterTemplate:
         challenge_rating=str(data.get("challenge_rating", "0")),
         proficiency_bonus=int(prof),
         attacks=_parse_attacks(data.get("actions")),
+        damage_resistances=_parse_damage_type_list(data.get("damage_resistances")),
+        damage_immunities=_parse_damage_type_list(data.get("damage_immunities")),
+        damage_vulnerabilities=_parse_damage_type_list(data.get("damage_vulnerabilities")),
     )
+
+
+def _parse_damage_type_list(raw_value) -> list[str]:
+    """把 Open5e 的抗性/免疫/易伤字段归一成伤害类型列表。"""
+    if not raw_value:
+        return []
+    if isinstance(raw_value, list):
+        values = raw_value
+    else:
+        values = re.split(r"[,;]", str(raw_value))
+    known_types = {
+        "acid", "bludgeoning", "cold", "fire", "force", "lightning",
+        "necrotic", "piercing", "poison", "psychic", "radiant",
+        "slashing", "thunder",
+    }
+    result: list[str] = []
+    for value in values:
+        lowered = str(value).lower()
+        for damage_type in known_types:
+            if damage_type in lowered and damage_type not in result:
+                result.append(damage_type)
+    return result
 
 
 def get_monster_template(slug: str) -> MonsterTemplate:

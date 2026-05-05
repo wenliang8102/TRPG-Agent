@@ -36,7 +36,7 @@ const result = ref<number | null>(null)
 const isRolling = ref(false)
 
 // 后端接口地址（预留）
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
 // 调用后端掷骰接口
 const rollDiceOnBackend = async (): Promise<number> => {

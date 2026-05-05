@@ -9,6 +9,8 @@ from app.spells import (
     fireball, guiding_bolt, thunderwave, mage_armor,
     fire_bolt, toll_the_dead, ray_of_frost,
     mirror_image, hold_person,
+    shocking_grasp, charm_person, misty_step, blur, flaming_sphere,
+    darkness, faerie_fire, invisibility, suggestion, counterspell,
 )
 from app.spells._base import SpellDef, SpellResult  # noqa: F401 — re-export
 
@@ -18,6 +20,7 @@ SPELL_REGISTRY: dict[str, ModuleType] = {
     "fire_bolt": fire_bolt,
     "toll_the_dead": toll_the_dead,
     "ray_of_frost": ray_of_frost,
+    "shocking_grasp": shocking_grasp,
     # 1 环
     "magic_missile": magic_missile,
     "cure_wounds": cure_wounds,
@@ -27,10 +30,20 @@ SPELL_REGISTRY: dict[str, ModuleType] = {
     "guiding_bolt": guiding_bolt,
     "thunderwave": thunderwave,
     "mage_armor": mage_armor,
+    "charm_person": charm_person,
+    "faerie_fire": faerie_fire,
     "fireball": fireball,
     # 2 环
     "mirror_image": mirror_image,
     "hold_person": hold_person,
+    "misty_step": misty_step,
+    "blur": blur,
+    "flaming_sphere": flaming_sphere,
+    "darkness": darkness,
+    "invisibility": invisibility,
+    "suggestion": suggestion,
+    # 3 环
+    "counterspell": counterspell,
 }
 
 

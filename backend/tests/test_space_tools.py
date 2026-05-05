@@ -72,6 +72,49 @@ def test_create_map_place_units_and_measure_distance():
     assert "5.0 尺" in measured.update["messages"][0].content
 
 
+def test_place_unit_resolves_player_alias_without_creating_player_node():
+    space = _invoke_tool(
+        create_plane_map,
+        tool_input={"name": "荒野小径", "width": 80, "height": 60, "state": {}},
+    ).update["space"]
+    player = _make_unit("player_预设-法师", side="player")
+    player["name"] = "预设-法师"
+
+    result = _invoke_tool(
+        manage_space,
+        tool_input={
+            "action": "place_unit",
+            "payload": {"unit_id": "PLAYER", "x": 15, "y": 20},
+            "state": {"space": space, "player": player},
+        },
+    )
+
+    placements = result.update["space"]["placements"]
+    assert "PLAYER" not in placements
+    assert placements["player_预设-法师"]["position"] == {"x": 15.0, "y": 20.0}
+
+
+def test_place_unit_rejects_unknown_unit_when_units_are_known():
+    space = _invoke_tool(
+        create_plane_map,
+        tool_input={"name": "荒野小径", "width": 80, "height": 60, "state": {}},
+    ).update["space"]
+    player = _make_unit("player_预设-法师", side="player")
+    player["name"] = "预设-法师"
+
+    result = _invoke_tool(
+        manage_space,
+        tool_input={
+            "action": "place_unit",
+            "payload": {"unit_id": "mystery_token", "x": 15, "y": 20},
+            "state": {"space": space, "player": player},
+        },
+    )
+
+    assert "找不到单位 'mystery_token'" in result.update["messages"][0].content
+    assert "space" not in result.update
+
+
 def test_move_unit_consumes_current_actor_movement_in_combat():
     space = _invoke_tool(
         create_plane_map,
