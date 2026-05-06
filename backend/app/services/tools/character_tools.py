@@ -92,6 +92,7 @@ def modify_character_state(
         "grant_xp",
         "level_up",
         "choose_arcane_tradition",
+        "choose_fighter_archetype",
         "apply_condition",
         "remove_condition",
     ] = "update",
@@ -126,6 +127,8 @@ def modify_character_state(
         return _level_up_command(state, tool_call_id)
     if action == "choose_arcane_tradition":
         return _choose_arcane_tradition_command(str(payload["tradition"]), state, tool_call_id)
+    if action == "choose_fighter_archetype":
+        return _choose_fighter_archetype_command(str(payload["archetype"]), state, tool_call_id)
 
     # 状态效果通过 changes 复用既有状态写入路径，避免维护两套目标定位逻辑。
     if action == "apply_condition":
@@ -391,6 +394,18 @@ _WIZARD_LEVEL_TABLE: dict[int, dict] = {
 }
 
 
+# 战士升级表只覆盖当前需求的 1-3 级，3 级范型由独立动作选择。
+_FIGHTER_LEVEL_TABLE: dict[int, dict] = {
+    2: {
+        "class_features": ["action_surge"],
+        "resources": {"action_surge_uses": 1},
+    },
+    3: {
+        "choose_archetype": True,
+    },
+}
+
+
 def _apply_wizard_level_up(player_dict: dict, new_level: int) -> list[str]:
     """将法师升级到 new_level，修改 player_dict 并返回日志行。"""
     import d20
@@ -445,6 +460,43 @@ def _apply_wizard_level_up(player_dict: dict, new_level: int) -> list[str]:
     old_prof = calculate_proficiency_bonus(new_level - 1)
     if new_prof != old_prof:
         lines.append(f"  熟练加值: +{old_prof} → +{new_prof}")
+
+    return lines
+
+
+def _apply_fighter_level_up(player_dict: dict, new_level: int) -> list[str]:
+    """按战士职业表升级到 new_level，仅实现当前需要的 1-3 级。"""
+    lines: list[str] = []
+    table = _FIGHTER_LEVEL_TABLE.get(new_level)
+    if not table:
+        lines.append(f"战士暂不支持 {new_level} 级升级表。")
+        return lines
+
+    # 战士规则采用固定升级生命值：6 + 体质调整值。
+    con_mod = player_dict.get("modifiers", {}).get("con", 0)
+    hp_gain = max(1, 6 + con_mod)
+    player_dict["max_hp"] = player_dict.get("max_hp", 0) + hp_gain
+    player_dict["hp"] = player_dict.get("hp", 0) + hp_gain
+    lines.append(f"  HP: +{hp_gain}（6 + CON {con_mod}），最大 HP → {player_dict['max_hp']}")
+
+    resources = player_dict.setdefault("resources", {})
+    resource_caps = player_dict.setdefault("resource_caps", {})
+    for resource_key, count in table.get("resources", {}).items():
+        old = resources.get(resource_key, 0)
+        resources[resource_key] = count
+        resource_caps[resource_key] = count
+        if count > old:
+            lines.append(f"  {resource_key}: {old} → {count}")
+
+    features = player_dict.setdefault("class_features", [])
+    for feat in table.get("class_features", []):
+        if feat not in features:
+            features.append(feat)
+            lines.append(f"  获得职业特性: {feat}")
+
+    if table.get("choose_archetype") and not player_dict.get("fighter_archetype"):
+        lines.append("  [必须选择武术范型：勇士(champion) / 战斗大师(battle_master) / 奥法骑士(eldritch_knight)]")
+        lines.append('  先使用 modify_character_state，action="choose_fighter_archetype" 完成选择，再继续后续流程')
 
     return lines
 
@@ -522,13 +574,94 @@ def _level_up_command(state: dict, tool_call_id: str | None) -> Command:
     if role_class == "法师":
         level_lines = _apply_wizard_level_up(player_dict, new_level)
         lines.extend(level_lines)
+    elif role_class == "战士":
+        level_lines = _apply_fighter_level_up(player_dict, new_level)
+        lines.extend(level_lines)
     else:
-        lines.append(f"  当前仅支持法师升级，{role_class} 的升级表尚未实现。")
+        lines.append(f"  当前仅支持法师和战士升级，{role_class} 的升级表尚未实现。")
         return Command(update={"messages": [
             ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)
         ]})
 
     player_dict["level"] = new_level
+
+    return Command(update={
+        "player": player_dict,
+        "messages": [ToolMessage(content="\n".join(lines), tool_call_id=tool_call_id)],
+    })
+
+
+def _choose_fighter_archetype_command(
+    archetype: str,
+    state: dict,
+    tool_call_id: str | None,
+) -> Command:
+    """为 3 级战士写入武术范型，并授予当前版本支持的范型字段。"""
+    player_dict = _get_player_dict(state)
+    if not player_dict:
+        return _missing_player_message(tool_call_id)
+
+    if player_dict.get("role_class") != "战士":
+        return Command(update={"messages": [
+            ToolMessage(content="仅战士可选择武术范型。", tool_call_id=tool_call_id)
+        ]})
+
+    if player_dict.get("level", 1) < 3:
+        return Command(update={"messages": [
+            ToolMessage(content="战士达到 3 级后才能选择武术范型。", tool_call_id=tool_call_id)
+        ]})
+
+    if player_dict.get("fighter_archetype"):
+        return Command(update={"messages": [
+            ToolMessage(content=f"已选择武术范型: {player_dict['fighter_archetype']}。", tool_call_id=tool_call_id)
+        ]})
+
+    archetype = archetype.strip().lower()
+    valid = {"champion", "battle_master", "eldritch_knight"}
+    if archetype not in valid:
+        return Command(update={"messages": [
+            ToolMessage(content=f"不支持的武术范型: {archetype}。可选: {', '.join(sorted(valid))}", tool_call_id=tool_call_id)
+        ]})
+
+    player_dict["fighter_archetype"] = archetype
+    features = player_dict.setdefault("class_features", [])
+    lines = [f"[武术范型] 选择了 {archetype}"]
+
+    if archetype == "champion":
+        if "improved_critical" not in features:
+            features.append("improved_critical")
+            lines.append("  获得特性: 精通重击 (Improved Critical) — 武器攻击天然 19 或 20 时造成重击")
+    elif archetype == "battle_master":
+        for feat in ["combat_superiority", "student_of_war"]:
+            if feat not in features:
+                features.append(feat)
+        resources = player_dict.setdefault("resources", {})
+        resource_caps = player_dict.setdefault("resource_caps", {})
+        resources["superiority_dice"] = 4
+        resource_caps["superiority_dice"] = 4
+        player_dict["superiority_die"] = "1d8"
+        player_dict.setdefault("maneuvers", [])
+        lines.append("  获得特性: 卓越战技 (Combat Superiority) — 4 枚 d8 卓越骰")
+        lines.append("  获得特性: 战争学徒 (Student of War)")
+    elif archetype == "eldritch_knight":
+        for feat in ["eldritch_knight_spellcasting", "weapon_bond"]:
+            if feat not in features:
+                features.append(feat)
+        player_dict["spellcasting_ability"] = "int"
+        known_cantrips = player_dict.setdefault("known_cantrips", [])
+        for spell_id in ["fire_bolt", "ray_of_frost"]:
+            if spell_id not in known_cantrips:
+                known_cantrips.append(spell_id)
+        known_spells = player_dict.setdefault("known_spells", [])
+        for spell_id in ["shield", "magic_missile", "burning_hands"]:
+            if spell_id not in known_spells:
+                known_spells.append(spell_id)
+        resources = player_dict.setdefault("resources", {})
+        resource_caps = player_dict.setdefault("resource_caps", {})
+        resources["spell_slot_lv1"] = 2
+        resource_caps["spell_slot_lv1"] = 2
+        lines.append("  获得特性: 奥法骑士施法 (Eldritch Knight Spellcasting)")
+        lines.append("  获得特性: 武器联结 (Weapon Bond)")
 
     return Command(update={
         "player": player_dict,
@@ -618,3 +751,13 @@ def choose_arcane_tradition(
 ) -> Command:
     """兼容旧调用：为法师选择奥术传承。新模型可见入口是 modify_character_state。"""
     return _choose_arcane_tradition_command(tradition, state, tool_call_id)
+
+
+@tool
+def choose_fighter_archetype(
+    archetype: str,
+    state: Annotated[dict, InjectedState] = None,
+    tool_call_id: Annotated[str, InjectedToolCallId] = None,
+) -> Command:
+    """兼容旧调用：为战士选择武术范型。新模型可见入口是 modify_character_state。"""
+    return _choose_fighter_archetype_command(archetype, state, tool_call_id)

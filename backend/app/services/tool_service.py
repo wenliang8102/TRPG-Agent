@@ -20,6 +20,7 @@ from app.services.tools.combat_tools import (  # noqa: F401
 )
 from app.services.tools.character_tools import (  # noqa: F401
     choose_arcane_tradition,
+    choose_fighter_archetype,
     grant_xp,
     inspect_unit,
     level_up,

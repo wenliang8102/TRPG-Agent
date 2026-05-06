@@ -51,6 +51,7 @@ class PlayerState(BaseModel, extra="allow"):
     concentrating_on: str | None = None  # 当前专注的法术 ID
     xp: int = 0
     arcane_tradition: str = ""  # 奥术传承（如 "evocation", "abjuration"）
+    fighter_archetype: str = ""  # 战士武术范型（如 "champion", "battle_master"）
 
 
 class CheckState(BaseModel, extra="allow"):

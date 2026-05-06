@@ -14,6 +14,7 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
         "temp_hp": 0,
         "base_ac": 16,
         "ac": 16,
+        "xp": 0,
         "abilities": {
             "str": 16,
             "dex": 14,
@@ -31,10 +32,13 @@ PREDEFINED_CHARACTERS: Dict[str, dict] = {
             "cha": -1,
         },
         "conditions": [],
-        "resources": {},
+        "resources": {"second_wind_uses": 1},
+        "resource_caps": {"second_wind_uses": 1},
         "known_spells": [],
-        "class_features": [],
+        "class_features": ["fighting_style", "second_wind"],
         "spellcasting_ability": "",
+        "fighting_style": "",
+        "fighter_archetype": "",
         "weapons": [
             {"name": "Longsword", "damage_dice": "1d8", "damage_type": "slashing", "weapon_type": "melee", "properties": ["versatile"]},
             {"name": "Handaxe", "damage_dice": "1d6", "damage_type": "slashing", "weapon_type": "melee", "properties": ["light", "thrown"]},
