@@ -125,7 +125,7 @@ const navItems: NavItem[] = [
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 0px;
 }
 
 .sidebar-nav::-webkit-scrollbar {
@@ -138,7 +138,7 @@ const navItems: NavItem[] = [
 
 .sidebar-nav::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  border-radius: 0px;
 }
 
 /* 确保折叠时侧边栏仍然保持玻璃质感 */
@@ -151,15 +151,22 @@ const navItems: NavItem[] = [
 .nav-btn {
   background: transparent !important;
   transition: all 0.2s;
+  width: 100%;
+  border-radius: 0 ;
 }
 
 .nav-btn:hover {
   background: rgba(255, 255, 255, 0.08) !important;
   backdrop-filter: blur(4px);
+  width: 100%;
+  border-radius: 0;
 }
 
+
 .nav-btn.active {
-  background: rgba(66, 184, 131, 0.2) !important;
-  border-left: 2px solid #42b883;
+  background: rgba(255, 255, 255, 0.1) !important;   /* 极淡透明白色背景 */
+  border-left: 2px solid rgba(255, 255, 255, 0.8);   /* 左边框改为亮白 */
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);     /* 可选：极淡外发光，增强白光感 */
 }
+
 </style>

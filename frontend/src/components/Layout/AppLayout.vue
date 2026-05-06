@@ -55,6 +55,7 @@ import DiceDialog from '../DiceDialog/DiceDialog.vue'
 import DiceAnimationPage from '../../Pages_/DiceAnimationPage.vue'
 import HistoryPage from '../../Pages_/HistoryPage.vue'
 import RulePage from '../../Pages_/RulePage.vue'
+import ProfilePage from '../../Pages_/ProfilePage.vue'  // 新增导入
 
 // 在 script 中添加
 const handleNavigate = (tabId: string, params?: Record<string, any>) => {
@@ -77,7 +78,7 @@ const componentMap: Record<string, any> = {
   page5: WelcomePage,
   page6: RulePage,  
   page7: SettingsPage,
-  profile: WelcomePage
+  profile: ProfilePage  // 修改：将 profile 映射到新的 ProfilePage
 }
 
 const currentTab = ref('welcome')
