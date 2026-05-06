@@ -371,7 +371,22 @@ def test_modify_character_state_help_returns_skill_instructions():
     content = result.update["messages"][0].content
     assert "角色状态调整技能" in content
     assert "modify_character_state" in content
+    assert "character_progression" in content
+    assert 'action="level_up"' not in content
+
+
+def test_modify_character_state_progression_help_returns_growth_skill():
+    result = modify_character_state.invoke({
+        "name": "modify_character_state",
+        "args": {"action": "help", "payload": {"topic": "progression"}},
+        "id": "progression-help-call",
+        "type": "tool_call",
+    })
+
+    content = result.update["messages"][0].content
+    assert "角色成长与子职技能" in content
     assert 'action="level_up"' in content
+    assert 'action="choose_fighter_archetype"' in content
 
 
 def test_manage_space_help_returns_skill_instructions():

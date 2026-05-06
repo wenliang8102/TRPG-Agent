@@ -101,9 +101,10 @@ def modify_character_state(
     state: Annotated[dict, InjectedState] = None,
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
-    """角色状态调整技能。用于 HP/AC/能力值/资源/经验/升级/学派/状态效果等客观状态变化。
+    """角色状态调整与成长入口。用于 HP/AC/能力值/资源/状态效果，以及经验、升级、子职选择。
     不要用它重放攻击、施法、怪物动作工具刚刚结算过的结果。
-    如不确定 action、changes 或 payload 的写法，先用 action="help" 查看完整技能说明。
+    如不确定 action、changes 或 payload 的写法，先用 action="help" 查看状态说明；
+    成长流程用 action="help", payload={"topic": "progression"} 查看完整说明。
 
     Args:
         target_id: 目标单位 ID，或 "player" 表示当前玩家。
@@ -114,10 +115,12 @@ def modify_character_state(
     """
     payload = payload or {}
 
-    # 复杂状态调整的完整说明由同一工具按需返回，避免额外暴露 load_skill。
+    # 复杂说明仍由统一工具按需返回，模型可见工具面保持稳定。
     if action == "help":
+        topic = str(payload.get("topic", "state")).strip().lower()
+        skill_id = "character_progression" if topic in {"progression", "growth", "level", "level_up", "xp", "subclass"} else "character_state_management"
         return Command(update={"messages": [
-            ToolMessage(content=load_skill_content("character_state_management"), tool_call_id=tool_call_id)
+            ToolMessage(content=load_skill_content(skill_id), tool_call_id=tool_call_id)
         ]})
 
     # 角色成长类动作收口在同一个工具里，减少模型可见工具数量。

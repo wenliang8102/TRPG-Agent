@@ -495,6 +495,7 @@ def summarize_tool_message(message: ToolMessage) -> str:
     if (
         tool_name in {"consult_rules_handbook", "load_skill"}
         or (tool_name == "modify_character_state" and raw_text.startswith("# 角色状态调整技能"))
+        or (tool_name == "modify_character_state" and raw_text.startswith("# 角色成长与子职技能"))
         or (tool_name == "manage_space" and raw_text.startswith("# 平面空间管理技能"))
     ):
         # 规则/技能结果若被过度压缩，会让下一轮模型看不到关键依据而回退到记忆作答。

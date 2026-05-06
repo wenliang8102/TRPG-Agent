@@ -23,8 +23,14 @@ _SKILLS: tuple[SkillSpec, ...] = (
     SkillSpec(
         skill_id="character_state_management",
         name="角色状态调整",
-        description="说明 HP/AC/资源/经验/升级/法师学派/状态效果等角色状态调整流程。",
+        description="说明 HP/AC/资源/状态效果等角色状态调整流程。",
         path=_SKILL_ROOT / "character_state_management" / "SKILL.md",
+    ),
+    SkillSpec(
+        skill_id="character_progression",
+        name="角色成长与子职",
+        description="说明经验、升级、法师奥术传承和战士武术范型等成长流程。",
+        path=_SKILL_ROOT / "character_progression" / "SKILL.md",
     ),
     SkillSpec(
         skill_id="space_management",
