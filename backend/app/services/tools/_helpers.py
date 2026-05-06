@@ -730,9 +730,11 @@ def roll_attack_hit(
     natural = _get_natural_d20(hit_result)
     target_ac = compute_ac(target)
 
+    # 勇士范型的精通重击只改变武器攻击的重击阈值，天然 1 仍优先失败。
+    crit_threshold = 19 if "improved_critical" in attacker.get("class_features", []) else 20
     if natural == 1:
         hit, crit = False, False
-    elif natural == 20:
+    elif natural >= crit_threshold:
         hit, crit = True, True
     else:
         hit = hit_result.total >= target_ac
@@ -764,8 +766,8 @@ def roll_attack_hit(
 
     if natural == 1:
         lines.append(f"命中骰: {hit_result} (天然 1 - 严重失误!) vs AC {target_ac}")
-    elif natural == 20:
-        lines.append(f"命中骰: {hit_result} (天然 20 - 暴击!) vs AC {target_ac}")
+    elif crit:
+        lines.append(f"命中骰: {hit_result} (天然 {natural} - 暴击!) vs AC {target_ac}")
     else:
         lines.append(f"命中骰: {hit_result} vs AC {target_ac}")
 

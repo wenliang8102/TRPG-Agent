@@ -10,6 +10,7 @@ from langchain_core.tools import BaseTool
 from app.services.tools.dice_tools import request_dice_roll
 from app.services.tools.character_tools import (
     choose_arcane_tradition,
+    choose_fighter_archetype,
     grant_xp,
     inspect_unit,
     level_up,
@@ -98,6 +99,7 @@ _COMPATIBILITY_TOOLS: tuple[BaseTool, ...] = (
     grant_xp,
     level_up,
     choose_arcane_tradition,
+    choose_fighter_archetype,
     create_plane_map,
     switch_plane_map,
     place_unit,
