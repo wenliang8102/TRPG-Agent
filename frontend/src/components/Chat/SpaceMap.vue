@@ -733,8 +733,12 @@ const currentCombatActorId = computed(() => {
   return toLabelText(props.combat.current_actor_id, '')
 })
 
-const isPlayerCombatTurn = computed(() => {
-  return isCombatActive.value && currentCombatActorId.value === playerUnitId.value
+const isControllableCombatTurn = computed(() => {
+  if (!isCombatActive.value || !currentCombatActorId.value) return false
+  if (currentCombatActorId.value === playerUnitId.value) return true
+  if (!isRecord(props.combat) || !isRecord(props.combat.participants)) return false
+  const actor = props.combat.participants[currentCombatActorId.value]
+  return isRecord(actor) && toLabelText(actor.side, 'enemy') !== 'enemy'
 })
 
 // 复活、切图或收尾后前端可能暂时残留空 combat 对象；只有存在当前回合或参战单位时才视为真正战斗中
@@ -1245,7 +1249,7 @@ const handleUnitDoubleClick = (unitId: string) => {
     return
   }
 
-  if (!isPlayerCombatTurn.value) return
+  if (!isControllableCombatTurn.value) return
 
   const unit = visibleUnits.value.find((item) => item.id === unitId)
   if (!unit || unit.side !== 'enemy') return

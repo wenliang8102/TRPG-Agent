@@ -286,18 +286,40 @@ const actionGroups = computed<CombatActionMenuGroup[]>(() => {
 })
 const targetOptions = computed<CombatTargetOption[]>(() => {
   const participants = props.combat?.participants
-  if (!participants || typeof participants !== 'object') return []
-  return Object.values(participants)
+  const options: CombatTargetOption[] = []
+
+  if (props.externalPlayer && toNumber(props.externalPlayer.hp) > 0) {
+    options.push({
+      id: playerUnitId.value || 'player',
+      name: props.externalPlayer.name?.trim() || '玩家',
+      side: 'player',
+      hp: toNumber(props.externalPlayer.hp),
+      maxHp: Math.max(1, toNumber(props.externalPlayer.max_hp)),
+    })
+  }
+
+  if (!participants || typeof participants !== 'object') return options
+
+  Object.values(participants)
     .filter((participant) => participant && typeof participant === 'object')
     .map((participant) => participant as Record<string, any>)
-    .filter((participant) => normalizeText(participant.side) === 'enemy' && toNumber(participant.hp) > 0)
-    .map((participant) => ({
-      id: normalizeText(participant.id) || normalizeText(participant.name),
-      name: normalizeText(participant.name) || normalizeText(participant.id) || '敌方单位',
-      side: 'enemy',
-      hp: toNumber(participant.hp),
-      maxHp: Math.max(1, toNumber(participant.max_hp)),
-    }))
+    .filter((participant) => toNumber(participant.hp) > 0)
+    .forEach((participant) => {
+      const side = normalizeCombatTargetSide(participant.side)
+      if (!side) return
+      const id = normalizeText(participant.id) || normalizeText(participant.name)
+      if (!id || (side === 'player' && id === playerUnitId.value)) return
+
+      options.push({
+        id,
+        name: normalizeText(participant.name) || id || '目标单位',
+        side,
+        hp: toNumber(participant.hp),
+        maxHp: Math.max(1, toNumber(participant.max_hp)),
+      })
+    })
+
+  return options
 })
 const canEndCurrentTurn = computed(() => !!currentControlledActor.value)
 const isContextAvailable = computed(() => canOpenContextActionSheet.value)
@@ -555,6 +577,12 @@ function normalizeText(value: unknown): string {
 
 function toNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function normalizeCombatTargetSide(value: unknown): 'player' | 'ally' | 'enemy' | null {
+  const side = normalizeText(value)
+  if (side === 'player' || side === 'ally' || side === 'enemy') return side
+  return null
 }
 
 </script>
