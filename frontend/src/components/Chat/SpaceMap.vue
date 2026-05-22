@@ -88,6 +88,7 @@
                 :cx="movePreview.toScreenX"
                 :cy="movePreview.toScreenY"
                 r="1.5"
+                @mousedown.stop.prevent="handleMoveTargetHandleDragStart($event, 'inline')"
               />
             </g>
             <g
@@ -101,6 +102,7 @@
               role="button"
               tabindex="0"
               :aria-label="`${unit.name} 坐标 ${formatNumber(unit.x)}, ${formatNumber(unit.y)}`"
+              @mousedown="handleUnitDragStart($event, unit.id, 'inline')"
               @click.stop="handleUnitClick(unit.id)"
               @dblclick.stop="handleUnitDoubleClick(unit.id)"
               @keydown.enter.prevent="selectedUnitId = unit.id"
@@ -231,6 +233,7 @@
                       :cx="movePreview.toScreenX"
                       :cy="movePreview.toScreenY"
                       r="1.5"
+                      @mousedown.stop.prevent="handleMoveTargetHandleDragStart($event, 'detached')"
                     />
                   </g>
                   <g
@@ -244,6 +247,7 @@
                     role="button"
                     tabindex="0"
                     :aria-label="`${unit.name} 坐标 ${formatNumber(unit.x)}, ${formatNumber(unit.y)}`"
+                    @mousedown="handleUnitDragStart($event, unit.id, 'detached')"
                     @click.stop="handleUnitClick(unit.id)"
                     @dblclick.stop="handleUnitDoubleClick(unit.id)"
                     @keydown.enter.prevent="selectedUnitId = unit.id"
@@ -501,9 +505,20 @@ const lastMapClickAt = ref(0)
 const isMoveModeActive = ref(false)
 const moveTarget = ref<{ x: number; y: number } | null>(null)
 const isSubmittingMove = ref(false)
+const isMoveDragging = ref(false)
+const suppressClickUntil = ref(0)
 const preservedViewport = ref<{ zoomScale: number; panX: number; panY: number } | null>(null)
 const detachedMapSide = ref(520)
 const MAP_DOUBLE_CLICK_THRESHOLD_MS = 500
+const MOVE_DRAG_CLICK_SUPPRESS_MS = 220
+const MOVE_DRAG_MIN_DISTANCE_PX = 4
+const moveDragState = ref<{
+  surface: 'inline' | 'detached'
+  unitId: string
+  startClientX: number
+  startClientY: number
+  moved: boolean
+} | null>(null)
 
 // 地图状态来自多路流式更新，先做宽松归一化，避免中间态直接打断整页渲染
 const isRecord = (value: unknown): value is LooseRecord => {
@@ -718,8 +733,12 @@ const currentCombatActorId = computed(() => {
   return toLabelText(props.combat.current_actor_id, '')
 })
 
-const isPlayerCombatTurn = computed(() => {
-  return isCombatActive.value && currentCombatActorId.value === playerUnitId.value
+const isControllableCombatTurn = computed(() => {
+  if (!isCombatActive.value || !currentCombatActorId.value) return false
+  if (currentCombatActorId.value === playerUnitId.value) return true
+  if (!isRecord(props.combat) || !isRecord(props.combat.participants)) return false
+  const actor = props.combat.participants[currentCombatActorId.value]
+  return isRecord(actor) && toLabelText(actor.side, 'enemy') !== 'enemy'
 })
 
 // 复活、切图或收尾后前端可能暂时残留空 combat 对象；只有存在当前回合或参战单位时才视为真正战斗中
@@ -845,8 +864,8 @@ const movePanelTitle = computed(() => {
 
 const moveHintText = computed(() => {
   return moveEligibility.value?.mode === 'explore'
-    ? '探索状态：点击网格调整位置；按住 Ctrl + 鼠标拖动'
-    : '战斗状态：点击网格设置移动目标；按住 Ctrl + 鼠标拖动'
+    ? '探索状态：点击或拖拽主角选择位置；按住 Ctrl + 鼠标拖动画布'
+    : '战斗状态：点击或拖拽主角设置目标；按住 Ctrl + 鼠标拖动画布'
 })
 
 const moveActorLabel = computed(() => {
@@ -989,6 +1008,7 @@ const restorePreservedViewport = () => {
 }
 
 const clearMovePreview = () => {
+  stopMoveTargetDrag(false)
   moveTarget.value = null
 }
 
@@ -1025,6 +1045,7 @@ const toggleMoveMode = () => {
 
 const activateMap = (event?: MouseEvent, surface: 'inline' | 'detached' = 'inline') => {
   const now = Date.now()
+  if (now <= suppressClickUntil.value) return
   if (event?.ctrlKey || isCtrlPressed.value || now - lastCtrlKeydownAt.value <= 560 || isPanning.value) {
     return
   }
@@ -1120,6 +1141,74 @@ const handlePanEnd = () => {
   window.removeEventListener('mouseup', handlePanEnd)
 }
 
+const startMoveTargetDrag = (event: MouseEvent, surface: 'inline' | 'detached') => {
+  if (!isMoveModeActive.value || event.ctrlKey || event.button !== 0) return
+  if (surface === 'inline' && isDetachedMapOpen.value) return
+
+  event.preventDefault()
+  event.stopPropagation()
+  if (playerUnitId.value) {
+    selectedUnitId.value = playerUnitId.value
+  }
+  isMoveDragging.value = true
+  moveDragState.value = {
+    surface,
+    unitId: playerUnitId.value ?? '',
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    moved: false,
+  }
+
+  const point = getMapPointFromMouse(event, surface)
+  if (point) {
+    moveTarget.value = point
+  }
+
+  window.addEventListener('mousemove', handleMoveTargetDrag)
+  window.addEventListener('mouseup', handleMoveTargetDragEnd)
+}
+
+// 中文注释：移动模式下只允许拖拽主角节点来选择终点，避免与查看敌人信息等点击语义混在一起。
+const handleUnitDragStart = (event: MouseEvent, unitId: string, surface: 'inline' | 'detached') => {
+  if (unitId !== playerUnitId.value) return
+  startMoveTargetDrag(event, surface)
+}
+
+const handleMoveTargetDrag = (event: MouseEvent) => {
+  if (!isMoveDragging.value || !moveDragState.value) return
+
+  const deltaX = event.clientX - moveDragState.value.startClientX
+  const deltaY = event.clientY - moveDragState.value.startClientY
+  if (!moveDragState.value.moved && Math.hypot(deltaX, deltaY) >= MOVE_DRAG_MIN_DISTANCE_PX) {
+    moveDragState.value.moved = true
+  }
+
+  const point = getMapPointFromMouse(event, moveDragState.value.surface)
+  if (!point) return
+  moveTarget.value = point
+}
+
+const stopMoveTargetDrag = (suppressClick: boolean) => {
+  if (suppressClick) {
+    suppressClickUntil.value = Date.now() + MOVE_DRAG_CLICK_SUPPRESS_MS
+  }
+  isMoveDragging.value = false
+  moveDragState.value = null
+  window.removeEventListener('mousemove', handleMoveTargetDrag)
+  window.removeEventListener('mouseup', handleMoveTargetDragEnd)
+}
+
+const handleMoveTargetDragEnd = () => {
+  const shouldSuppressClick = !!moveDragState.value?.moved
+  stopMoveTargetDrag(shouldSuppressClick)
+}
+
+// 中文注释：目标点本身也允许继续拖动，保证用户在落点已出现后还能连续微调。
+const handleMoveTargetHandleDragStart = (event: MouseEvent, surface: 'inline' | 'detached') => {
+  if (!moveTarget.value) return
+  startMoveTargetDrag(event, surface)
+}
+
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key !== 'Control') return
   isCtrlPressed.value = true
@@ -1140,16 +1229,19 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   handlePanEnd()
+  stopMoveTargetDrag(false)
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('keyup', handleKeyUp)
   window.removeEventListener('resize', syncDetachedMapSize)
 })
 
 const handleUnitClick = (unitId: string) => {
+  if (Date.now() <= suppressClickUntil.value) return
   selectedUnitId.value = unitId
 }
 
 const handleUnitDoubleClick = (unitId: string) => {
+  if (Date.now() <= suppressClickUntil.value) return
   selectedUnitId.value = unitId
 
   if (unitId === playerUnitId.value && canEnterMoveMode.value) {
@@ -1157,7 +1249,7 @@ const handleUnitDoubleClick = (unitId: string) => {
     return
   }
 
-  if (!isPlayerCombatTurn.value) return
+  if (!isControllableCombatTurn.value) return
 
   const unit = visibleUnits.value.find((item) => item.id === unitId)
   if (!unit || unit.side !== 'enemy') return

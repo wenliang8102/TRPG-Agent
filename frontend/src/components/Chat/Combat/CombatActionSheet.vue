@@ -25,10 +25,10 @@
             <Transition name="sheet-stage" mode="out-in">
               <div v-if="pendingTargetItem" key="target-picker" class="sheet-groups">
                 <section class="sheet-group">
-                  <div class="group-title">攻击对象</div>
-                  <div v-if="targetOptions.length" class="group-list">
+                  <div class="group-title">目标对象</div>
+                  <div v-if="filteredTargetOptions.length" class="group-list">
                     <button
-                      v-for="target in targetOptions"
+                      v-for="target in filteredTargetOptions"
                       :key="target.id"
                       type="button"
                       class="action-item target-item"
@@ -39,10 +39,10 @@
                         <span class="item-label">{{ target.name }}</span>
                         <span class="item-detail">{{ resolveTargetDetail(target) }}</span>
                       </span>
-                      <span class="item-state item-ready">攻击</span>
+                      <span class="item-state item-ready">选择</span>
                     </button>
                   </div>
-                  <div v-else class="group-empty">当前没有可攻击目标。</div>
+                  <div v-else class="group-empty">{{ buildEmptyTargetText(pendingTargetItem) }}</div>
                 </section>
               </div>
 
@@ -127,6 +127,16 @@ const emit = defineEmits<{
 
 const pendingTargetItem = ref<CombatActionMenuItem | null>(null)
 const teleportProps = computed(() => props.renderInOverlay ? { to: 'body' } : {})
+const filteredTargetOptions = computed(() => {
+  if (!pendingTargetItem.value) return []
+  if (pendingTargetItem.value.targetMode === 'enemy') {
+    return props.targetOptions.filter((target) => target.side === 'enemy')
+  }
+  if (pendingTargetItem.value.targetMode === 'ally') {
+    return props.targetOptions.filter((target) => target.side === 'player' || target.side === 'ally')
+  }
+  return []
+})
 
 watch(
   () => props.open,
@@ -146,15 +156,9 @@ const handleItemClick = (item: CombatActionMenuItem) => {
     return
   }
 
-  // 中文注释：武器攻击固定先进入目标选择页，避免“已有目标时直接提交”把交互短路。
-  if (item.accent === 'weapon') {
+  // 中文注释：所有显式选目标的动作统一走右侧目标页，避免武器、道具、职业动作各自分叉。
+  if (item.targetMode !== 'none') {
     pendingTargetItem.value = item
-    return
-  }
-
-  // 中文注释：非武器的敌向动作仍允许在已有明确目标时直接提交。
-  if (props.preferredTarget && item.targetMode === 'enemy') {
-    emit('submit', item)
     return
   }
 
@@ -172,12 +176,18 @@ const resetTargetPicker = () => {
 }
 
 function buildTargetTitle(item: CombatActionMenuItem): string {
-  return `选择 ${item.label} 的攻击对象`
+  return `选择 ${item.label} 的目标`
 }
 
 function resolveTargetDetail(target: CombatTargetOption): string {
-  const sideLabel = target.side === 'enemy' ? '敌方' : target.side === 'ally' ? '友方' : '单位'
+  const sideLabel = target.side === 'enemy' ? '敌方' : target.side === 'ally' ? '友方' : '玩家'
   return `${sideLabel} · HP ${target.hp} / ${target.maxHp}`
+}
+
+function buildEmptyTargetText(item: CombatActionMenuItem): string {
+  if (item.targetMode === 'ally') return '当前没有可选择的我方目标。'
+  if (item.targetMode === 'enemy') return '当前没有可攻击目标。'
+  return '当前没有可用目标。'
 }
 </script>
 

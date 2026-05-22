@@ -232,6 +232,7 @@ function buildItemItems(
     const label = resolveInventoryItemLabel(item)
     const quantity = Math.max(1, item.quantity ?? 1)
     const usage = resolveItemUsage(item)
+    const targetMode = resolveItemTargetMode(item)
     const commandPrefix = `${buildActorCommandLead(context)}使用道具“${label}”`
     const detailParts = [
       resolveInventoryItemKind(item),
@@ -245,13 +246,13 @@ function buildItemItems(
       label,
       detail: detailParts.join(' · '),
       accent: 'item',
-      targetMode: 'none',
+      targetMode,
       commandPrefix,
-      command: buildCombatActionCommand(commandPrefix, 'none'),
+      command: buildCombatActionCommand(commandPrefix, targetMode),
       disabledReason: resolveBlockingReason({
         reasonMap,
         usage,
-        targetMode: 'none',
+        targetMode,
         enemyCount: countLivingEnemies(context.combat, resolvePlayerUnitId(context.player)),
       }),
     }
@@ -450,6 +451,22 @@ function resolveInventoryItemKind(item: InventoryItemData): string {
 
 function resolveItemUsage(item: InventoryItemData): ActionUsage {
   return item.type === 'potion' ? 'bonus_action' : 'action'
+}
+
+function resolveItemTargetMode(item: InventoryItemData): TargetMode {
+  const matcher = `${item.id} ${item.name_en ?? ''} ${item.name ?? ''}`.toLowerCase()
+
+  // 中文注释：治疗类消耗品需要显式挑选己方目标，避免把“默认无目标”写死后挡住队友互救。
+  if (
+    matcher.includes('healing')
+    || matcher.includes('治疗')
+    || matcher.includes('vitality')
+    || matcher.includes('活力')
+  ) {
+    return 'ally'
+  }
+
+  return 'none'
 }
 
 function normalizeText(value: unknown): string {
