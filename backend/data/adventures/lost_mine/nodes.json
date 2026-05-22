@@ -1,0 +1,6786 @@
+[
+  {
+    "id": "adventure_hook_meet_me_in_phandalin",
+    "module_id": "lost_mine",
+    "title": "冒险引子：凡达林见",
+    "kind": "scene",
+    "page_start": 6,
+    "page_end": 6,
+    "source_refs": [
+      {
+        "page_start": 6,
+        "page_end": 6,
+        "section": "冒险引子 Adventure Hook / 凡达林见 Meet Me in Phandalin"
+      }
+    ],
+    "dm_summary": "角色们在无冬城受雇于矮人朋友甘德伦·寻岩者，任务是护送一辆装有补给的货车前往凡达林的交易站。甘德伦与一名叫修达·霍温特的战士已先一步出发。角色可以各自说明为何愿意去凡达林，但核心事实不变：他们受托护送货车，目的地是凡达林，报酬承诺为送达后每人10 gp。本节点用于建立雇佣关系、队伍同行理由和旅程开端；若玩家想采购、闲聊或补充个人动机，留在本节点演绎，准备好后推进到路上的伏击。",
+    "player_visible_intro": "你们在无冬城接下矮人朋友甘德伦·寻岩者的委托：护送一辆装满补给的货车前往凡达林的交易站。甘德伦和名叫修达·霍温特的战士已提前上路，并承诺货物平安送达后，每人可得10 gp。",
+    "scene_beats": [
+      "在无冬城建立委托：甘德伦雇佣角色护送补给货车。",
+      "说明目的地为凡达林交易站，甘德伦与修达已先行一步。",
+      "允许角色补充私人动机，但不能替代货车护送任务。",
+      "送达后每人10 gp只是承诺报酬，本节点不发放。",
+      "玩家完成准备或路上闲聊后，旅程推进到伏击事件。"
+    ],
+    "rules_notes": [
+      "本节点不结构化发放金币；10 gp为送达凡达林后的承诺报酬。",
+      "角色可自定义去凡达林的个人理由，但仍需同行护送补给货车。",
+      "若玩家要采购、寒暄或讨论路线，在本节点内简短处理即可。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "delivery_job",
+        "label": "护送补给委托",
+        "description": "甘德伦雇佣角色把补给货车平安送到凡达林交易站。"
+      },
+      {
+        "id": "phandalin_destination",
+        "label": "目的地凡达林",
+        "description": "货车目的地是凡达林，甘德伦与修达已先行一步。"
+      }
+    ],
+    "events": [
+      "depart_neverwinter_for_phandalin"
+    ],
+    "fallbacks": [
+      {
+        "id": "custom_motive_without_removing_job",
+        "condition": "玩家想改写前往凡达林的理由",
+        "dm_guidance": "允许添加个人动机，但保留甘德伦雇佣、货车护送和凡达林目的地。"
+      }
+    ],
+    "routing_notes": [
+      "本节点只负责开场与上路；准备、闲聊和动机演绎留在本节点，准备好后推进到 goblin_ambush。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "begin_escort_journey",
+        "label": "护送补给上路",
+        "next_node_id": "goblin_ambush",
+        "requires": [
+          "delivery_job",
+          "phandalin_destination",
+          "depart_neverwinter_for_phandalin"
+        ],
+        "transition_kind": "advance",
+        "description": "角色带着补给货车离开无冬城，前往凡达林。"
+      }
+    ]
+  },
+  {
+    "id": "goblin_ambush",
+    "module_id": "lost_mine",
+    "title": "地精伏击",
+    "kind": "encounter",
+    "page_start": 6,
+    "page_end": 7,
+    "source_refs": [
+      {
+        "page_start": 6,
+        "page_end": 6,
+        "section": "第1部分：地精箭头"
+      },
+      {
+        "page_start": 6,
+        "page_end": 7,
+        "section": "地精伏击"
+      },
+      {
+        "page_start": 6,
+        "page_end": 7,
+        "section": "发展"
+      },
+      {
+        "page_start": 8,
+        "page_end": 8,
+        "section": "地精知道的事"
+      }
+    ],
+    "dm_summary": "本节点把“凡达林见”的雇佣关系和三猪小径伏击合并处理：角色受甘德伦·寻岩者雇佣，驾驶满载补给的货车前往凡达林；甘德伦与修达已先行。距凡达林约半日路程时，两匹被黑羽箭射死的马挡住道路，四只克拉摩地精藏在两侧灌木中等待猎物靠近。伏击可通过战斗、俘虏、谈判或失败后幸存推进；解决后队伍可调查踪迹、先去凡达林，或日后回到遇袭处",
+    "player_visible_intro": "你们受矮人甘德伦·寻岩者之托，驾着一辆满载补给的货车从无冬城南下，转入通往凡达林的三猪小径。甘德伦和人类战士修达早已骑马先行。又走了半日，前方转弯处，两匹死马横在路上，身上插着黑羽箭，低垂枝叶与密灌木夹住道路",
+    "scene_beats": [
+      "近看死马可认出属于甘德伦和修达，鞍囊被洗劫，旁有空地图皮匣。",
+      "四只地精分伏道路两侧；有人靠近尸体时，它们从灌木中发动攻击。",
+      "三只地精被击败后，最后一只会尝试逃跑，指向北侧灌木后的踪迹。",
+      "若角色败北，地精打昏并洗劫他们、赶走货车；角色仍可去凡达林或回此追踪。"
+    ],
+    "rules_notes": [
+      "新版突袭：被突袭角色只在先攻检定上有劣势，不跳过首回合。",
+      "为每只地精掷敏捷（隐匿）+6，对比各角色被动察觉判断谁被突袭。",
+      "前两只地精冲出近战，另两只约30尺外射击；按常规先攻处理。",
+      "角色可用近战攻击把地精打至0生命并昏迷，稍后审问或说服其带路。"
+    ],
+    "checks": [
+      {
+        "id": "goblin_stealth_vs_passive",
+        "ability": "dex",
+        "skill": "stealth",
+        "reason": "判断哪些角色被伏击地精突袭",
+        "resolution": "每只地精掷敏捷（隐匿）+6，对比角色被动察觉；低于结果者先攻劣势。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "roadside_goblins",
+        "monster_slug": "goblin",
+        "count": 4,
+        "faction": "enemy",
+        "trigger": "角色靠近死马或在路障前停留调查时"
+      }
+    ],
+    "clues": [
+      {
+        "id": "gundren_and_sildar_horses",
+        "label": "甘德伦与修达的马",
+        "description": "死马属于甘德伦和修达，已死约一日，鞍囊被洗劫，地图皮匣为空。"
+      },
+      {
+        "id": "goblin_trail",
+        "label": "地精踪迹",
+        "description": "伏击点北侧灌木后有一条隐蔽小径，通向西北方的克拉摩窝点。"
+      },
+      {
+        "id": "goblin_intel_klarg_grol",
+        "label": "克拉格与格罗尔",
+        "description": "被俘或被魅惑的地精知道窝点首领是熊地精克拉格，听命于克拉摩堡的格罗尔王。"
+      },
+      {
+        "id": "goblin_intel_black_spider_map",
+        "label": "黑蜘蛛要甘德伦",
+        "description": "地精称黑蜘蛛付钱让克拉摩活捉甘德伦并夺走其所有物，包括一张地图。"
+      },
+      {
+        "id": "sildar_in_eating_cave",
+        "label": "修达被关押",
+        "description": "矮人与地图已送往格罗尔王处，人类保镖修达被关在窝点的“开吃洞室”。"
+      }
+    ],
+    "events": [
+      "goblin_ambush_resolved"
+    ],
+    "fallbacks": [
+      {
+        "id": "party_defeated",
+        "condition": "全队被伏击地精击败",
+        "dm_guidance": "地精打昏并洗劫角色、赶走货车；之后可去凡达林补给并回伏击点追踪。"
+      },
+      {
+        "id": "miss_trail_or_choose_phandalin",
+        "condition": "队伍错过踪迹或决定先去凡达林",
+        "dm_guidance": "切到phandalin；巴森会提到甘德伦未抵达并建议休息后回遇袭处调查。"
+      }
+    ],
+    "routing_notes": [
+      "伏击只需被解决：杀死、驱散、俘虏、说服或角色败后幸存，都可继续推进。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "investigate_goblin_trail",
+        "label": "搜索伏击点并追踪地精",
+        "next_node_id": "goblin_trail_to_cragmaw_hideout",
+        "requires": [
+          "goblin_ambush_resolved",
+          "goblin_trail"
+        ],
+        "transition_kind": "advance",
+        "description": "从北侧灌木后的踪迹追向西北。"
+      },
+      {
+        "id": "go_to_phandalin_first",
+        "label": "先去凡达林",
+        "next_node_id": "phandalin",
+        "requires": [
+          "goblin_ambush_resolved"
+        ],
+        "transition_kind": "switch",
+        "description": "暂不追踪，继续沿三猪小径前往凡达林。"
+      },
+      {
+        "id": "return_to_ambush_site",
+        "label": "回访遇袭处",
+        "next_node_id": "goblin_ambush",
+        "requires": [
+          "goblin_ambush_resolved"
+        ],
+        "transition_kind": "revisit",
+        "description": "从凡达林或别处返回死马路障处重新调查。"
+      },
+      {
+        "id": "captive_leads_to_trail",
+        "label": "让俘虏地精带路",
+        "next_node_id": "goblin_trail_to_cragmaw_hideout",
+        "requires": [
+          "goblin_ambush_resolved",
+          "goblin_trail"
+        ],
+        "transition_kind": "advance",
+        "description": "被说服的地精可带队沿踪迹前往窝点并避开陷阱。"
+      }
+    ]
+  },
+  {
+    "id": "goblin_trail_to_cragmaw_hideout",
+    "module_id": "lost_mine",
+    "title": "地精踪迹",
+    "kind": "stage",
+    "page_start": 7,
+    "page_end": 7,
+    "source_refs": [
+      {
+        "page_start": 7,
+        "page_end": 7,
+        "section": "地精踪迹"
+      },
+      {
+        "page_start": 7,
+        "page_end": 7,
+        "section": "奖励经验值"
+      }
+    ],
+    "dm_summary": "伏击点北侧灌木后藏着一条通往西北的小径。搜索区域可发现这里长期被地精用作埋伏点；成功追踪者还能看出约有一打地精往返，并拖走两个类人生物。小径约五里，通向克拉摩窝点。途中有两个地精布置的简单陷阱：先是倒吊套圈，后是伪装陷坑。若队伍有被说服的俘虏地精带路，可以直接避开陷阱。角色也可把货车赶离大道、拴好牛后再深入林中。",
+    "player_visible_intro": "你们在死马与灌木间仔细搜寻，路旁的泥土、折断的枝条和被压倒的叶片显示这里并非第一次发生伏击。北边灌木后，一条隐蔽小径向西北钻进林地，逐渐远离三猪小径和你们的货车。",
+    "scene_beats": [
+      "搜索伏击点可发现北侧隐蔽小径；成功追踪揭示地精往返与拖走俘虏的痕迹。",
+      "确认是否处理货车和牛，以及林中行进队列；前排决定谁先遭遇陷阱。",
+      "约10分钟后遇到隐藏套圈；未发现者可能被倒吊在10尺高树上。",
+      "再走10分钟遇到6尺宽、10尺深的伪装陷坑；跌落者受伤但易爬出。",
+      "继续沿踪迹前行五里，最终抵达克拉摩窝点入口。"
+    ],
+    "rules_notes": [
+      "发现地精踪迹需DC 10感知（求生）；俘虏地精带路可绕过此不确定性。",
+      "套圈：主动搜索者若被动察觉≥12可发现，否则可做DC 12感知（察觉）。",
+      "套圈未发现时，前排角色做DC 10敏捷豁免；失败被束缚并倒吊10尺。",
+      "割断套索会使目标坠落受1d6钝击，除非同伴小心把他放下。",
+      "陷坑：被动察觉≥15或DC 15感知（察觉）发现；未发现则DC 10敏捷豁免，失败受1d6钝击。"
+    ],
+    "checks": [
+      {
+        "id": "find_goblin_trail",
+        "ability": "wis",
+        "skill": "survival",
+        "dc": 10,
+        "reason": "在伏击点找到并解读通往窝点的地精踪迹",
+        "resolution": "成功发现约一打地精往返，并拖走两个类人生物的迹象。"
+      },
+      {
+        "id": "spot_snare",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 12,
+        "reason": "主动搜索时发现隐藏套圈",
+        "resolution": "若前排探路者被动察觉至少12，则无需掷骰直接发现。"
+      },
+      {
+        "id": "avoid_snare",
+        "ability": "dex",
+        "skill": "save",
+        "dc": 10,
+        "reason": "未发现套圈时避免被套住倒吊",
+        "resolution": "失败者被束缚并吊在10尺高树上。"
+      },
+      {
+        "id": "spot_pit",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 15,
+        "reason": "发现伪装陷坑",
+        "resolution": "前排角色被动察觉至少15时直接发现。"
+      },
+      {
+        "id": "avoid_pit",
+        "ability": "dex",
+        "skill": "save",
+        "dc": 10,
+        "reason": "未发现陷坑时避免跌入",
+        "resolution": "失败者掉入10尺深坑，受1d6钝击伤害，可轻松爬出。"
+      }
+    ],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "goblin_trail",
+        "label": "通往西北的地精踪迹",
+        "description": "伏击点北侧灌木后有小径，通往五里外的克拉摩窝点。"
+      },
+      {
+        "id": "dragged_captives",
+        "label": "拖走两个类人生物",
+        "description": "踪迹显示最近约有一打地精往返，并从伏击点拖走了两个类人生物。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "guided_by_captive",
+        "condition": "俘虏地精被说服带路",
+        "dm_guidance": "让其带队避开两个陷阱，直接抵达克拉摩窝点入口。"
+      },
+      {
+        "id": "trail_not_found",
+        "condition": "追踪失败且无人带路",
+        "dm_guidance": "队伍可回伏击点重查，或先去凡达林取得巴森的提醒后再回来。"
+      }
+    ],
+    "routing_notes": [
+      "本节点处理从伏击点到窝点入口的五里追踪；抵达后由后台按奖励条件结算。",
+      "若玩家中途放弃追踪，可切到phandalin或回访伏击点，不锁死路线。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "follow_trail_to_hideout",
+        "label": "沿踪迹抵达窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [
+          "goblin_trail"
+        ],
+        "transition_kind": "advance",
+        "description": "穿过五里林地，来到山脚洞口。"
+      },
+      {
+        "id": "guided_to_hideout",
+        "label": "由地精俘虏带到窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [
+          "goblin_ambush_resolved"
+        ],
+        "transition_kind": "advance",
+        "description": "俘虏带路避开陷阱，抵达洞口。"
+      },
+      {
+        "id": "return_to_ambush_from_trail",
+        "label": "返回伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到死马路障处重新整理线索或取货车。"
+      },
+      {
+        "id": "break_off_to_phandalin",
+        "label": "放弃追踪去凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "暂时离开林中小径，继续主路前往凡达林。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_entrance",
+    "module_id": "lost_mine",
+    "title": "克拉摩窝点入口：洞口",
+    "kind": "location",
+    "page_start": 7,
+    "page_end": 8,
+    "source_refs": [
+      {
+        "page_start": 7,
+        "page_end": 8,
+        "section": "克拉摩窝点"
+      },
+      {
+        "page_start": 7,
+        "page_end": 8,
+        "section": "通用特征物"
+      },
+      {
+        "page_start": 8,
+        "page_end": 8,
+        "section": "1. 洞口"
+      },
+      {
+        "page_start": 7,
+        "page_end": 7,
+        "section": "奖励经验值"
+      }
+    ],
+    "dm_summary": "地精踪迹通向山脚一处被灌木遮掩的大洞。浅溪从洞口流出，溪右边有狭窄干燥的小道通往内部；区域2的暗哨藏在东岸灌木后，若角色在入口大声争吵、露营或砍枝，分神的地精仍会发现他们并攻击。本节点确认角色已经发现并抵达克拉摩窝点，同时交代洞穴通用环境，供后续进入犬舍、陡峭通道或更深区域使用。",
+    "player_visible_intro": "沿着地精踪迹前进五里后，你们在山腹中发现一个大型洞穴。浓密灌木遮住入口，一条浅溪从黑暗洞内缓缓流出。溪水右侧有一条狭窄而干燥的小道，贴着岩壁通往洞穴深处。四周潮湿阴冷，流水声在石间低低回荡。",
+    "scene_beats": [
+      "抵达洞口即确认克拉摩窝点位置。",
+      "描述浅溪、灌木遮蔽与右侧干路；询问光源、潜行和前进队列。",
+      "若角色在入口制造大声响，区域2地精会从灌木暗哨中发现并攻击。",
+      "玩家可先处理东岸暗哨，也可冒险直接进洞前往后续区域。",
+      "若撤退，队伍可沿原踪迹回伏击点，或暂时转往凡达林。"
+    ],
+    "rules_notes": [
+      "区域1和区域2为室外；其余洞穴区域除非另述都是完全黑暗。",
+      "多数洞室和通道高20到30尺，倾斜拱顶覆有嶙峋钟乳石。",
+      "碎石沙砾为困难地形；石笋可提供掩护。",
+      "洞内溪流仅2尺深，冰冷缓慢，生物可轻松涉水。",
+      "洞中流水声沉闷；洞内生物可用DC 15感知（察觉）聆听附近活动。"
+    ],
+    "checks": [
+      {
+        "id": "listen_through_stream_noise",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 15,
+        "reason": "在溪水声中聆听附近活动",
+        "resolution": "适用于洞穴中生物尝试听见邻近动静。"
+      }
+    ],
+    "encounters": [],
+    "clues": [],
+    "events": [
+      "reach_cragmaw_hideout"
+    ],
+    "fallbacks": [
+      {
+        "id": "loud_at_entrance",
+        "condition": "角色在洞口大声争吵、露营或砍枝",
+        "dm_guidance": "区域2地精发现他们，从有四分之三掩护的灌木暗哨攻击。"
+      }
+    ],
+    "routing_notes": [
+      "到达本节点代表发现克拉摩窝点；奖励结算由结构化奖励字段处理。",
+      "本批不展开犬舍、陡峭通道或更深区域，只保留通往这些目标的出口。"
+    ],
+    "rewards": [
+      {
+        "id": "goblin_ambush_hideout_75_xp",
+        "type": "xp",
+        "amount": 75,
+        "scope": "per_player",
+        "requires": [
+          "goblin_ambush_resolved",
+          "reach_cragmaw_hideout"
+        ],
+        "description": "打败伏击地精并发现或抵达克拉摩窝点后，每名玩家获得75 XP。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "approach_goblin_blind",
+        "label": "涉溪查看东岸暗哨",
+        "next_node_id": "cragmaw_hideout_goblin_blind",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "绕向东岸灌木丛，处理地精哨岗。"
+      },
+      {
+        "id": "enter_cave_to_kennel",
+        "label": "沿干路直接进洞",
+        "next_node_id": "cragmaw_hideout_kennel",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "不先处理暗哨，进入洞内后续犬舍区域。"
+      },
+      {
+        "id": "enter_steep_passage",
+        "label": "继续深入陡峭通道",
+        "next_node_id": "cragmaw_hideout_steep_passage",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "向洞穴更深处推进，本批不展开。"
+      },
+      {
+        "id": "retreat_to_goblin_trail",
+        "label": "沿踪迹撤回",
+        "next_node_id": "goblin_trail_to_cragmaw_hideout",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "离开洞口，回到林中追踪路线。"
+      },
+      {
+        "id": "leave_for_phandalin",
+        "label": "暂离窝点去凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "放弃立刻探索洞穴，转往凡达林休整或求援。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_goblin_blind",
+    "module_id": "lost_mine",
+    "title": "克拉摩窝点：地精暗哨",
+    "kind": "encounter",
+    "page_start": 8,
+    "page_end": 8,
+    "source_refs": [
+      {
+        "page_start": 8,
+        "page_end": 8,
+        "section": "2. 地精暗哨"
+      }
+    ],
+    "dm_summary": "洞口东岸有一片三面合围的荆棘丛，压在灌木上的木板形成隐蔽哨位，两只地精在此无聊发呆。若角色在洞口已被发现，地精会用弓箭发动攻击；若角色只是涉溪而来，地精会注意到他们，但双方都不自动突袭。谨慎潜行或前方探路的角色有机会反过来突袭地精。处理暗哨后，队伍可回洞口重整，或继续进入洞穴后续区域。",
+    "player_visible_intro": "你们涉过冰冷浅溪来到东岸，绕向一片三面合围的荆棘丛。枝条交错成天然屏障，灌木上压着几块木板，像是临时搭出的潜伏平台。就在那片阴影里，两只磨尖牙齿的地精正藏身守望。",
+    "scene_beats": [
+      "若入口处已弄出大声响，地精先在荆棘掩护中射击来敌。",
+      "若角色正常涉溪接近，地精会发现他们，但双方按常规先攻。",
+      "若角色小心移动或派人探路，用隐匿对抗地精被动察觉决定能否突袭。",
+      "荆棘丛拖慢移动并提供半身掩护；地精会利用掩护与短弓。",
+      "暗哨被解决后，入口侧翼安全，队伍可回洞口或继续进洞。"
+    ],
+    "rules_notes": [
+      "每个向前潜行的角色掷敏捷（隐匿），对比地精被动察觉决定是否避开注意。",
+      "若角色成功接近且地精未察觉，可由角色一方造成突袭；仍只影响先攻劣势。",
+      "荆棘丛是显而易见的困难地形，不造成伤害。",
+      "穿过荆棘的生物获得半身掩护；从暗哨射击的地精可借地形防守。",
+      "若地精从入口处因噪声发现角色，可让其在灌木中获得四分之三掩护。"
+    ],
+    "checks": [
+      {
+        "id": "sneak_on_blind",
+        "ability": "dex",
+        "skill": "stealth",
+        "reason": "小心接近暗哨，避免被地精发现",
+        "resolution": "每个向前角色的敏捷（隐匿）对比地精被动察觉；成功者可参与突袭。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "goblin_blind_guards",
+        "monster_slug": "goblin",
+        "count": 2,
+        "faction": "enemy",
+        "trigger": "角色涉溪接近暗哨，或在洞口制造大声响"
+      }
+    ],
+    "clues": [],
+    "events": [
+      "goblin_blind_resolved"
+    ],
+    "fallbacks": [
+      {
+        "id": "bypass_blind_under_fire",
+        "condition": "队伍不想清理暗哨而直接冲进洞",
+        "dm_guidance": "允许推进到后续洞内节点；地精可在后方射击或报警，由后续主持裁定。"
+      }
+    ],
+    "routing_notes": [
+      "本节点只处理区域2暗哨；不要展开犬舍、陡峭通道或其他洞内房间。",
+      "解决暗哨可以是杀死、驱走、俘虏或使其不再威胁入口。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "back_to_cave_mouth",
+        "label": "回到洞口重整",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "返回区域1，重新选择进洞路线或撤退。"
+      },
+      {
+        "id": "press_on_to_kennel",
+        "label": "继续进洞到犬舍",
+        "next_node_id": "cragmaw_hideout_kennel",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从入口进入后续犬舍区域，本批不展开。"
+      },
+      {
+        "id": "press_on_to_steep_passage",
+        "label": "继续深入陡峭通道",
+        "next_node_id": "cragmaw_hideout_steep_passage",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "越过入口区域向洞内更深处推进。"
+      },
+      {
+        "id": "retreat_from_blind",
+        "label": "撤回林中踪迹",
+        "next_node_id": "goblin_trail_to_cragmaw_hideout",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "离开暗哨和洞口，沿来路撤退。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_kennel",
+    "module_id": "lost_mine",
+    "title": "犬舍",
+    "kind": "location",
+    "page_start": 8,
+    "page_end": 9,
+    "source_refs": [
+      {
+        "page_start": 8,
+        "page_end": 9,
+        "section": "3. 犬舍 Kennel"
+      }
+    ],
+    "dm_summary": "通道东侧的潮湿斗室是克拉摩一族的犬舍，三头残暴的狼被铁链拴在入口石笋下的铁棒上。它们够不到停在阶梯上的目标，但会攻击任何非地精生物；邻近地精习惯了狼嚎，不会因普通战斗声赶来。角色可用驯兽安抚，喂食会降低难度。东墙狭缝是一条堆满垃圾的天然竖井，向上三十尺通往区域8。",
+    "player_visible_intro": "通道东边，几级高低不平的石阶通向一间狭小潮湿的斗室。尽头处空间收窄成一条陡峭裂缝，牲畜恶臭从中涌出。里面传来野兽低吼与铁链哗啦声，几头狼被拴在入口附近的石笋下。",
+    "scene_beats": [
+      "角色从主通道进入或窥探时，看见三头被铁链限制的狼。",
+      "停在阶梯上暂时安全；进入斗室或靠近时，狼会扑咬非地精目标。",
+      "可尝试驯兽安抚，若先喂食，检定难度降低。",
+      "狼若持续看见敌人会猛拽铁链，可能逐步挣脱。",
+      "处理狼后，可检查东墙狭缝并攀上通往区域8的竖井。"
+    ],
+    "rules_notes": [
+      "狼够不到站在阶梯上的目标，但会攻击进入其可及范围的非地精生物。",
+      "邻近洞穴的地精会无视狼战斗声，因为狼平时也常咆哮撕咬。",
+      "每轮只要角色在狼视野内，狼可进行力量检定；先DC15，成功后下次DC10，再成功即挣脱。",
+      "地精或熊地精可用自己的动作松开狼的铁链。",
+      "竖井攀爬成功则以半速上下；结果6到9原地不动，5或更低坠落并倒地。"
+    ],
+    "checks": [
+      {
+        "id": "calm_wolves",
+        "ability": "wis",
+        "skill": "animal_handling",
+        "dc": 15,
+        "reason": "安抚犬舍中的狼",
+        "resolution": "成功则狼允许角色穿过斗室；若给狼喂食，DC降为10。"
+      },
+      {
+        "id": "climb_fissure",
+        "ability": "str",
+        "skill": "athletics",
+        "dc": 10,
+        "reason": "沿天然竖井上下攀爬30尺",
+        "resolution": "成功以半速移动；6到9不动；5或更低坠落，每10尺受1d6钝击伤害并倒地。"
+      },
+      {
+        "id": "wolf_break_chain",
+        "ability": "str",
+        "skill": "athletics",
+        "dc": 15,
+        "reason": "狼在看见敌人时猛拽铁链",
+        "resolution": "第一次成功拽松铁棒，下一次DC降为10；第二次成功铁棒拔起，狼挣脱。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "kennel_wolves",
+        "monster_slug": "wolf",
+        "count": 3,
+        "faction": "enemy",
+        "trigger": "非地精生物进入狼的可及范围或主动攻击狼"
+      }
+    ],
+    "clues": [
+      {
+        "id": "fissure_to_area8",
+        "label": "通往上层的狭缝",
+        "description": "东墙天然竖井向上三十尺，可从犬舍抵达区域8。"
+      }
+    ],
+    "events": [
+      "kennel_wolves_resolved"
+    ],
+    "fallbacks": [
+      {
+        "id": "avoid_kennel",
+        "condition": "队伍不想处理狼或无法攀爬竖井",
+        "dm_guidance": "让他们退回主通道，继续走正常洞穴路线。"
+      }
+    ],
+    "routing_notes": [
+      "击败、安抚或安全绕过狼后可记录kennel_wolves_resolved。",
+      "犬舍是通往区域8的危险捷径；不走竖井则回主通道推进。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "back_to_cave_mouth",
+        "label": "退回洞口主通道",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "从石阶退回西侧通道，回到洞口附近。"
+      },
+      {
+        "id": "continue_main_tunnel",
+        "label": "沿主通道深入",
+        "next_node_id": "cragmaw_hideout_overpass",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "离开犬舍，继续沿溪流通道向洞内前进。"
+      },
+      {
+        "id": "climb_to_area8",
+        "label": "攀上狭缝",
+        "next_node_id": "cragmaw_hideout_klarg_cave",
+        "requires": [
+          "kennel_wolves_resolved",
+          "fissure_to_area8"
+        ],
+        "transition_kind": "advance",
+        "description": "处理狼后攀爬竖井，从犬舍直达区域8。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_steep_passage",
+    "module_id": "lost_mine",
+    "title": "陡峭通道",
+    "kind": "location",
+    "page_start": 9,
+    "page_end": 10,
+    "source_refs": [
+      {
+        "page_start": 9,
+        "page_end": 10,
+        "section": "4. 陡峭通道 Steep Passage"
+      }
+    ],
+    "dm_summary": "主通道自洞口向上变陡，溪流贴着西岸飞溅。没有黑暗视觉的角色从这里起需要光源。溪流对面阴影中有一条向西的岔路；继续向上可看见区域5的吊桥悬在二十尺高处。桥上可能有地精哨兵，若它发现入侵者，会去通知区域7释放洪水。西侧岔路崎岖且平台脆弱，重压会塌落并造成坠摔伤害。",
+    "player_visible_intro": "主通道在洞内陡然向上，湿冷的溪水拍打石壁，水声在狭窄岩道里回响。若你们举起光源或凭黑暗视觉观察，西侧阴影里似乎藏着一条岔路；更远的上方，隐约有木梁和绳索横跨在半空。",
+    "scene_beats": [
+      "进入此处后强调黑暗、湿滑、上坡与溪流噪声。",
+      "有光源或黑暗视觉时，可看见二十尺高的简陋吊桥。",
+      "角色可沿主通道上行、调查西侧岔路、回撤或尝试潜行。",
+      "若桥上地精发现队伍，它不先攻击，而是去通知区域7放洪水。",
+      "西侧碎石平台负重超100磅会塌落，可能把生物砸向东侧。"
+    ],
+    "rules_notes": [
+      "从此处开始，无黑暗视觉者需要光源才能正常视物。",
+      "西边通道受碎石和峭壁阻隔，视为困难地形。",
+      "平台塌落时，其上生物DC10敏捷豁免；失败受2d6钝击并倒地，成功伤害减半。",
+      "若地精通报区域7，洪水按区域5“洪水”节奏处理。",
+      "模组地图只给DM使用；向玩家描述局部空间即可。"
+    ],
+    "checks": [
+      {
+        "id": "notice_bridge_guard",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "从下方注意吊桥上的隐藏地精",
+        "resolution": "角色的感知（察觉）检定对抗地精的敏捷（隐匿）；也可用被动察觉与地精隐匿结果比较。"
+      },
+      {
+        "id": "fragile_ledge_save",
+        "ability": "dex",
+        "skill": "save",
+        "dc": 10,
+        "reason": "西侧脆弱平台塌落时保持平衡",
+        "resolution": "失败受2d6钝击伤害并倒地；成功伤害减半。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "bridge_sentry_from_below",
+        "monster_slug": "goblin",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "角色看见或接近吊桥，且地精哨兵可能发现他们。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "hidden_western_passage",
+        "label": "西侧岔路",
+        "description": "溪流对面阴影里有一条向西的岔路，可绕向窝点更深处。"
+      },
+      {
+        "id": "overpass_seen",
+        "label": "上方吊桥",
+        "description": "主通道上方二十尺处有木绳吊桥，连接东西两条隧道。"
+      },
+      {
+        "id": "overpass_guard_seen",
+        "label": "桥上哨兵",
+        "description": "吊桥上有一名躲藏的地精哨兵，会试图通知同伙放洪水。"
+      }
+    ],
+    "events": [
+      "overpass_guard_alerted",
+      "flood_released",
+      "western_ledge_collapsed"
+    ],
+    "fallbacks": [
+      {
+        "id": "flood_sweeps_back",
+        "condition": "角色被洪水冲走",
+        "dm_guidance": "将他们击倒并冲回区域1，再由入口路线重进。"
+      },
+      {
+        "id": "no_light_stalls",
+        "condition": "队伍无黑暗视觉且拒绝点灯",
+        "dm_guidance": "只能摸索前进，难以发现西侧岔路和桥上哨兵。"
+      }
+    ],
+    "routing_notes": [
+      "从洞口或犬舍上行通常到此；沿主通道继续就是天桥，西侧可转向地精居住区。",
+      "若哨兵报警，优先切到天桥与区域7洪水的即时后果。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_overpass",
+        "label": "沿主通道上行到吊桥下",
+        "next_node_id": "cragmaw_hideout_overpass",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "靠近区域5的天桥哨岗。"
+      },
+      {
+        "id": "to_goblin_den_west",
+        "label": "走西侧崎岖岔路",
+        "next_node_id": "cragmaw_hideout_goblin_den",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "穿过困难地形，前往西侧区域。"
+      },
+      {
+        "id": "to_kennel",
+        "label": "转回犬舍方向",
+        "next_node_id": "cragmaw_hideout_kennel",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到较低处的犬舍路线。"
+      },
+      {
+        "id": "to_cave_mouth",
+        "label": "沿溪流撤回洞口",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "退回窝点入口。"
+      },
+      {
+        "id": "retreat_to_ambush_site",
+        "label": "离开窝点回伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "完全撤离洞穴，回到路上伏击地点。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_overpass",
+    "module_id": "lost_mine",
+    "title": "天桥",
+    "kind": "encounter",
+    "page_start": 10,
+    "page_end": 10,
+    "source_refs": [
+      {
+        "page_start": 10,
+        "page_end": 10,
+        "section": "5. 天桥 Overpass"
+      },
+      {
+        "page_start": 10,
+        "page_end": 10,
+        "section": "洪水 Flood!"
+      }
+    ],
+    "dm_summary": "这里是地精在主通道上方设置的哨岗。溪流通道继续向上并转向东，远处洞窟传来瀑布轰鸣。吊桥距溪流二十尺，连接东西隧道；一名懒散但隐藏的地精站岗。若它发现冒险者，会通知区域7地精释放洪水，随后向下投掷标枪。角色可潜行通过、射击或攀墙上桥，也可破坏吊桥。洪水会威胁主通道中的生物，可能将其冲回区域1。",
+    "player_visible_intro": "溪流通道继续向上，前方传来更沉重的水声，像有瀑布在洞窟深处轰鸣。你们头顶二十尺处，一座摇晃的木绳吊桥横跨通道，连接左右两边黑暗隧道，水雾让桥下石壁显得湿滑发亮。",
+    "scene_beats": [
+      "若先前未发现吊桥，此处自动看见它横跨溪流上方。",
+      "桥上隐藏着一名地精；有光源或未潜行接近时，它会直接发现队伍。",
+      "地精发现入侵者后先报信放洪水，再向下投掷标枪。",
+      "角色可无光潜行匍匐通过、攀墙登桥、远程攻击或破坏吊桥。",
+      "洪水若爆发，天桥上或已攀上墙者不受影响，主通道中生物受威胁。"
+    ],
+    "rules_notes": [
+      "发现桥上地精：感知（察觉）对抗地精敏捷（隐匿）。",
+      "无光源时，每名角色可用敏捷（隐匿）对抗地精被动察觉，成功可不被注意通过。",
+      "攀上二十尺湿滑石壁需DC15力量（运动）。",
+      "吊桥AC5、10生命值；降至0时倒塌。桥上生物DC10敏捷豁免，失败坠落受2d6钝击并倒地。",
+      "洪水：被波及者先DC10敏捷豁免跳开；失败后可DC15力量豁免抓稳，否则倒地并冲到区域1，受1d6钝击。"
+    ],
+    "checks": [
+      {
+        "id": "spot_hidden_sentry",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "发现吊桥上的隐藏地精",
+        "resolution": "感知（察觉）检定对抗地精的敏捷（隐匿）检定。"
+      },
+      {
+        "id": "sneak_under_bridge",
+        "ability": "dex",
+        "skill": "stealth",
+        "reason": "无光源时悄悄从桥下通过",
+        "resolution": "每名角色分别用敏捷（隐匿）对抗地精被动察觉；成功者不被注意。"
+      },
+      {
+        "id": "climb_to_bridge",
+        "ability": "str",
+        "skill": "athletics",
+        "dc": 15,
+        "reason": "攀上二十尺高、被水冲刷的洞壁",
+        "resolution": "成功可抵达吊桥高度或抓住安全位置。"
+      },
+      {
+        "id": "falling_bridge_save",
+        "ability": "dex",
+        "skill": "save",
+        "dc": 10,
+        "reason": "吊桥倒塌时避免坠落",
+        "resolution": "失败坠落受2d6钝击并倒地；成功抓住桥但仍需爬上去。"
+      },
+      {
+        "id": "flood_escape",
+        "ability": "dex",
+        "skill": "save",
+        "dc": 10,
+        "reason": "洪水冲下时跳离路线",
+        "resolution": "失败者再作DC15力量豁免抓稳；再失败则倒地冲到区域1并受1d6钝击。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "overpass_sentry",
+        "monster_slug": "goblin",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "角色接近天桥、暴露光源、未潜行或被哨兵发现。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "waterfall_ahead",
+        "label": "前方瀑布声",
+        "description": "主通道继续向东上行，前方大型洞窟传来瀑布轰鸣。"
+      },
+      {
+        "id": "flood_mechanism_implied",
+        "label": "哨兵报信",
+        "description": "桥上地精会向东通知区域7同伙，随后主通道可能被洪水冲没。"
+      },
+      {
+        "id": "bridge_can_collapse",
+        "label": "脆弱吊桥",
+        "description": "吊桥结构简陋，可被攻击破坏，桥上生物会面临坠落风险。"
+      }
+    ],
+    "events": [
+      "overpass_guard_alerted",
+      "flood_released",
+      "bridge_collapsed"
+    ],
+    "fallbacks": [
+      {
+        "id": "guard_escapes_east",
+        "condition": "地精脱离战斗去报信",
+        "dm_guidance": "按洪水倒计时处理，并可切向区域7。"
+      },
+      {
+        "id": "party_swept_to_entrance",
+        "condition": "洪水把角色冲走",
+        "dm_guidance": "转回区域1入口，保留已惊动窝点的后果。"
+      }
+    ],
+    "routing_notes": [
+      "天桥是主通道、东侧蓄水池与西侧隧道的交叉点；上下和东西方向都可成为下一步。",
+      "若第一次洪水未冲走所有入侵者，桥上地精会让区域7再释放第二个蓄水池。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "down_to_steep_passage",
+        "label": "沿主通道下行",
+        "next_node_id": "cragmaw_hideout_steep_passage",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到区域4陡峭通道。"
+      },
+      {
+        "id": "east_to_twin_pools",
+        "label": "走东侧隧道",
+        "next_node_id": "cragmaw_hideout_twin_pools",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往区域7的蓄水池与洪水源头。"
+      },
+      {
+        "id": "west_to_goblin_den",
+        "label": "走西侧隧道",
+        "next_node_id": "cragmaw_hideout_goblin_den",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往西侧地精活动区。"
+      },
+      {
+        "id": "continue_upstream",
+        "label": "沿溪流继续向前",
+        "next_node_id": "cragmaw_hideout_twin_pools",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "顺着水声进入更高处洞窟。"
+      },
+      {
+        "id": "retreat_to_cave_mouth",
+        "label": "撤回洞口",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "离开天桥威胁，退向窝点入口。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_goblin_den",
+    "module_id": "lost_mine",
+    "title": "地精休息室",
+    "kind": "encounter",
+    "page_start": 10,
+    "page_end": 11,
+    "source_refs": [
+      {
+        "page_start": 10,
+        "page_end": 11,
+        "section": "6. 地精休息室 Goblin Den"
+      }
+    ],
+    "dm_summary": "这是克拉摩窝点的公共休息室和营房，被十尺高峭壁分成南北两层。五只地精在北侧低处照看灶火，头领伊米克在南侧高处看守被绑的修达·霍温特。角色若逼近高台，伊米克会抓起修达当人质，试图用修达的命换取角色去杀死克拉格。修达虚弱但清醒，获救后能提供甘德伦、黑蜘蛛、克拉摩城堡、伊阿诺失踪等关键线索，并希望尽快前往凡达林。",
+    "player_visible_intro": "薄烟从灶火上方盘旋，兽皮和地精的恶臭充满洞窟。洞穴被一道十尺高的峭壁分成高低两层，天然石阶连接其间。北侧低处有几只地精围着火堆；南侧高处，一个被捆住、遍体鳞伤的人类男子倒在地上。",
+    "scene_beats": [
+      "进入时先呈现低处五只地精、南侧高台与被绑的修达。",
+      "角色往高处推进时，伊米克抓起修达到崖边，威胁处死他。",
+      "若和谈，伊米克要求用区域8克拉格的头换修达；修达警告别信它。",
+      "若拒绝或激怒伊米克，它把修达推下崖再战，修达可能濒死。",
+      "救下并治疗修达后，他愿同行去凡达林；伊米克小包有三颗金牙和15sp。"
+    ],
+    "rules_notes": [
+      "修达被绑在南部高处，当前只有1点生命值，虚弱且无武器护甲。",
+      "伊米克是有12点生命值的地精头领；其余五只为普通地精。",
+      "修达被推下十尺崖时受1d6钝击伤害，通常会降至0生命值。",
+      "稳定0生命值修达可用规则书的伤害、治疗与死亡规则。",
+      "若修达短期加入队伍，保持行动简单；若对战斗胜利贡献重大，应平分经验。"
+    ],
+    "checks": [
+      {
+        "id": "stabilize_sildar",
+        "ability": "wis",
+        "skill": "medicine",
+        "dc": 10,
+        "reason": "修达跌落至0生命值后，角色试图在他死亡前稳定伤势。",
+        "resolution": "成功则修达稳定；失败按通常死亡豁免或后续治疗处理。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "low_den_goblins",
+        "monster_slug": "goblin",
+        "count": 5,
+        "faction": "enemy",
+        "trigger": "角色进入或战斗爆发时，北侧低处的地精参战。"
+      },
+      {
+        "id": "yeemik_boss",
+        "monster_slug": "goblin",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "伊米克在南侧高处休息；角色上前时以修达为人质谈判或战斗。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "rockseekers_found_wave_echo_cave",
+        "label": "寻岩者找到矿洞",
+        "description": "甘德伦、萨登和南卓最近确认了潮音洞穴的位置。"
+      },
+      {
+        "id": "gundren_taken_to_black_spider",
+        "label": "甘德伦被送给黑蜘蛛",
+        "description": "克拉格受命伏击甘德伦，修达听说甘德伦被带去黑蜘蛛那里。"
+      },
+      {
+        "id": "map_sent_to_cragmaw_castle",
+        "label": "地图与城堡",
+        "description": "甘德伦的潮音洞穴地图被夺走，修达认为甘德伦和地图被送到克拉摩城堡。"
+      },
+      {
+        "id": "iarno_missing_in_phandalin",
+        "label": "伊阿诺失踪",
+        "description": "修达在凡达林的联络人伊阿诺·阿布雷克两个月前抵达后失联。"
+      }
+    ],
+    "events": [
+      "sildar_rescued"
+    ],
+    "fallbacks": [
+      {
+        "id": "accept_yeemik_bargain",
+        "condition": "角色接受伊米克交易",
+        "dm_guidance": "让他们转向区域8；即使带回克拉格头，伊米克仍会索要赎金。"
+      },
+      {
+        "id": "sildar_dies_or_cannot_speak",
+        "condition": "修达死亡或未能被救醒",
+        "dm_guidance": "保留其装备已被送往克拉摩堡的事实，其他线索需从后续俘虏或凡达林获得。"
+      }
+    ],
+    "routing_notes": [
+      "本室可作为救修达、逼问地精、转攻克拉格或撤出休整的分岔点。",
+      "修达获救后会建议先清理地精强盗，但其个人目标是尽快到凡达林。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_overpass",
+        "label": "返回高架通道",
+        "next_node_id": "cragmaw_hideout_overpass",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "沿来路离开休息室，回到相邻通道。"
+      },
+      {
+        "id": "to_klarg_cave",
+        "label": "去找克拉格",
+        "next_node_id": "cragmaw_hideout_klarg_cave",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "接受交易或主动进攻区域8的熊地精首领。"
+      },
+      {
+        "id": "to_twin_pools",
+        "label": "深入上游水池",
+        "next_node_id": "cragmaw_hideout_twin_pools",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从洞内通路继续探索窝点上游。"
+      },
+      {
+        "id": "escort_sildar_to_phandalin",
+        "label": "护送修达去凡达林",
+        "next_node_id": "phandalin",
+        "requires": [
+          "sildar_rescued"
+        ],
+        "transition_kind": "switch",
+        "description": "带获救的修达离开窝点，前往最近的休整地。"
+      },
+      {
+        "id": "retreat_from_hideout",
+        "label": "撤出窝点",
+        "next_node_id": "cragmaw_hideout_aftermath",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "放弃继续深入，离开洞穴处理伤员或补给。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_twin_pools",
+    "module_id": "lost_mine",
+    "title": "双子池洞窟",
+    "kind": "encounter",
+    "page_start": 11,
+    "page_end": 12,
+    "source_refs": [
+      {
+        "page_start": 11,
+        "page_end": 12,
+        "section": "7. 双子池 Twin Pools Cave"
+      }
+    ],
+    "dm_summary": "两个石坝围出的蓄水池占去洞窟半数空间，瀑布轰鸣使声音难以传远。三只地精守在此处；若区域5已示警，它们会戒备并可按信号放水。战斗中一只地精会试图跑去区域8警告克拉格。",
+    "player_visible_intro": "洞窟里回荡着震耳瀑布声。两座低矮碎石坝拦出大型蓄水池，水从东侧高处跌落，又从西侧开口汇成溪流流向洞外。西边有狭小通道，南边则通向更宽阔的黑暗洞室。",
+    "scene_beats": [
+      "进入时强调瀑布轰鸣；远处战斗声很难被区域8听见，反之亦然。",
+      "三只地精守池；若已被示警，它们占位戒备并准备放水。",
+      "若战斗爆发，一只地精试图脱离战斗去区域8警告克拉格。",
+      "石坝可释放蓄水，若区域5发出信号，溪流会暴涨。",
+      "从南侧宽口可推进到克拉格洞穴；也可沿西侧通道回撤或转往其他洞室。"
+    ],
+    "rules_notes": [
+      "瀑布噪声使相邻区域很难听见这里的战斗，除非有地精亲自报信。",
+      "新版突袭：被突袭者只在先攻检定上劣势，不跳过首回合。",
+      "若洪水已经释放，调整水池水位、溪流涨势与通行描述。"
+    ],
+    "checks": [
+      {
+        "id": "notice_runner",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "注意试图逃往克拉格洞穴的地精",
+        "resolution": "按当时位置、遮蔽与战斗混乱裁定；瀑布声不妨碍看到其移动。"
+      },
+      {
+        "id": "understand_dams",
+        "ability": "int",
+        "skill": "investigation",
+        "reason": "看出石坝可被地精用来蓄水放洪",
+        "resolution": "近看石坝与水流即可理解基本用途；更细节由主持按行动说明。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "pool_goblin_guards",
+        "monster_slug": "goblin",
+        "count": 3,
+        "faction": "enemy",
+        "trigger": "角色进入双子池或与守卫发生接触"
+      }
+    ],
+    "clues": [
+      {
+        "id": "goblin_trail",
+        "label": "地精踪迹",
+        "description": "从伏击地点追踪来的地精踪迹最终通向克拉摩窝点。"
+      },
+      {
+        "id": "flood_control_dams",
+        "label": "放洪石坝",
+        "description": "双子池的石坝可被守卫放空，使通往洞口的溪流暴涨。"
+      }
+    ],
+    "events": [
+      "cragmaw_alerted",
+      "cragmaw_flood_released"
+    ],
+    "fallbacks": [
+      {
+        "id": "warned_klarg",
+        "condition": "有地精成功逃往区域8",
+        "dm_guidance": "标记克拉格已获警告；其洞室改用伏击布置。"
+      },
+      {
+        "id": "late_arrival",
+        "condition": "队伍先去凡达林或回访伏击点后才来",
+        "dm_guidance": "从洞口路线接回窝点，并按实际路径继续探索。"
+      }
+    ],
+    "routing_notes": [
+      "从冒险引子、伏击点追踪、先去凡达林后再来，都可汇入“抵达克拉摩窝点”。",
+      "双子池是区域7：南进克拉格洞穴，西侧可回到窝点其他通道或撤离。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_klarg_cave",
+        "label": "从南侧宽口进入克拉格洞穴",
+        "next_node_id": "cragmaw_hideout_klarg_cave",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "推进到区域8。"
+      },
+      {
+        "id": "to_overpass_or_passages",
+        "label": "沿西侧小通道返回窝点通路",
+        "next_node_id": "cragmaw_hideout_overpass",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "转往区域5及相邻洞内路线。"
+      },
+      {
+        "id": "to_goblin_den",
+        "label": "回到南侧相邻地精洞室路线",
+        "next_node_id": "cragmaw_hideout_goblin_den",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "转向窝点内其他已知区域。"
+      },
+      {
+        "id": "retreat_to_entrance",
+        "label": "沿溪流方向撤出洞口",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到窝点入口或离开。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_klarg_cave",
+    "module_id": "lost_mine",
+    "title": "克拉格的洞穴",
+    "kind": "encounter",
+    "page_start": 12,
+    "page_end": 12,
+    "source_refs": [
+      {
+        "page_start": 12,
+        "page_end": 12,
+        "section": "8. 克拉格的洞穴 Klarg’s Cave"
+      }
+    ],
+    "dm_summary": "克拉格亲自看守劫来的补给，洞内有熊地精克拉格、狼“裂皮”和两只地精。若区域7报信，敌人会藏在石笋与补给堆后伏击；若未获警告，角色可能从竖井或北侧入口抢得先机。狼被杀后，克拉格会试图沿西侧竖井逃往区域3。",
+    "player_visible_intro": "火坑里的煤炭烧得通红，照出洞穴南角堆满的麻袋与板条箱。北边宽口传来瀑布轰鸣，西侧地面斜向一个黑暗狭窄的开口。洞内有粗重的脚步、低吼，以及地精紧张的窃语。",
+    "scene_beats": [
+      "克拉格自称战争之王，常用第三人称威吓闯入者；地精畏惧且怨恨他。",
+      "若已被区域7警告，克拉格与裂皮藏于石笋后，地精藏在补给堆后。",
+      "若未被警告，角色尤其从区域3竖井上来时，可能反过来突袭敌人。",
+      "裂皮先死时，克拉格尝试从西侧竖井下逃，并经区域3离开窝点。",
+      "补给多带蓝色狮子徽记；归还凡达林狮盾小贩可获50 gp并赢得莱妮友谊。"
+    ],
+    "rules_notes": [
+      "火坑：踏入受1点火焰伤害；在其中倒地受1d6火焰伤害；每轮各最多一次。",
+      "西侧天然竖井向下30尺通往区域3，攀爬与通行按区域3说明裁定。",
+      "补给堆后方提供半身掩护；克拉格的小金库藏在补给中。",
+      "小金库含600 cp、110 sp、两瓶治疗药水和镶金珠眼的翡翠青蛙。",
+      "新版突袭：被突袭者只在先攻检定上劣势，不跳过首回合。"
+    ],
+    "checks": [
+      {
+        "id": "search_supplies",
+        "ability": "int",
+        "skill": "investigation",
+        "reason": "在补给堆中寻找克拉格的小金库",
+        "resolution": "成功搜查补给堆即可发现；具体耗时与风险按战斗或非战斗状态裁定。"
+      },
+      {
+        "id": "spot_ambush_positions",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "发现石笋后或补给堆后的伏击者",
+        "resolution": "若敌人已藏好，用被动察觉或主动检定对抗其隐匿结果。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "klarg",
+        "monster_slug": "bugbear",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "角色进入克拉格洞穴或敌人发动伏击"
+      },
+      {
+        "id": "ripper",
+        "monster_slug": "wolf",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "与克拉格同场作战"
+      },
+      {
+        "id": "klarg_goblins",
+        "monster_slug": "goblin",
+        "count": 2,
+        "faction": "enemy",
+        "trigger": "与克拉格同场作战或藏于补给堆后伏击"
+      }
+    ],
+    "clues": [
+      {
+        "id": "lion_shield_supplies",
+        "label": "狮盾货物",
+        "description": "许多补给带有蓝色狮子徽记，属于凡达林的狮盾小贩。"
+      },
+      {
+        "id": "klarg_cache",
+        "label": "克拉格小金库",
+        "description": "克拉格把自己的钱币、治疗药水和翡翠青蛙藏在补给堆中。"
+      },
+      {
+        "id": "natural_chimney_route",
+        "label": "天然竖井",
+        "description": "西侧竖井连接区域3，既可潜入，也可能成为克拉格逃路。"
+      }
+    ],
+    "events": [
+      "cragmaw_alerted",
+      "cragmaw_hideout_milestone_complete",
+      "klarg_escaped",
+      "klarg_treasure_found"
+    ],
+    "fallbacks": [
+      {
+        "id": "klarg_flees",
+        "condition": "裂皮先死且克拉格有机会脱离",
+        "dm_guidance": "让克拉格尝试下竖井逃往区域3；后续可追击或让其逃离窝点。"
+      },
+      {
+        "id": "aftermath_routes",
+        "condition": "克拉格威胁已解除",
+        "dm_guidance": "收束到离开窝点、去凡达林、归还狮盾货物或继续清理未探索区域。"
+      }
+    ],
+    "routing_notes": [
+      "克拉格洞穴是窝点核心战斗；结局可通向清理余敌、撤离、凡达林或归还货物。",
+      "若此前救出修达，可让他在收束时强化前往凡达林的动机，但不改变本洞室奖励。"
+    ],
+    "rewards": [
+      {
+        "id": "cragmaw_hideout_milestone_275_xp",
+        "type": "xp",
+        "amount": 275,
+        "scope": "per_player",
+        "requires": [
+          "cragmaw_hideout_milestone_complete"
+        ],
+        "description": "击败或驱逐克拉格及其盟友，完成克拉摩窝点核心目标后获得。"
+      },
+      {
+        "id": "klarg_treasure_cache",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "klarg_treasure_found"
+        ],
+        "description": "克拉格的小金库：600 cp、110 sp、两瓶治疗药水和一只镶金珠眼的翡翠青蛙。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "back_to_twin_pools",
+        "label": "从北侧石阶回到双子池",
+        "next_node_id": "cragmaw_hideout_twin_pools",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "返回区域7。"
+      },
+      {
+        "id": "down_chimney_to_kennel",
+        "label": "沿西侧竖井下到区域3",
+        "next_node_id": "cragmaw_hideout_kennel",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "经天然竖井转往狼圈路线。"
+      },
+      {
+        "id": "pursue_klarg",
+        "label": "追击逃入竖井的克拉格",
+        "next_node_id": "cragmaw_hideout_kennel",
+        "requires": [
+          "klarg_escaped"
+        ],
+        "transition_kind": "advance",
+        "description": "追到区域3或窝点出口方向。"
+      },
+      {
+        "id": "leave_hideout",
+        "label": "离开克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [
+          "cragmaw_hideout_milestone_complete"
+        ],
+        "transition_kind": "advance",
+        "description": "完成核心威胁后撤出洞穴。"
+      },
+      {
+        "id": "to_phandalin_after_klarg",
+        "label": "带消息或货物前往凡达林",
+        "next_node_id": "phandalin",
+        "requires": [
+          "cragmaw_hideout_milestone_complete"
+        ],
+        "transition_kind": "advance",
+        "description": "归还狮盾货物、休整或推进城镇剧情。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_hideout_aftermath",
+    "module_id": "lost_mine",
+    "title": "克拉摩窝点后续",
+    "kind": "stage",
+    "page_start": 12,
+    "page_end": 12,
+    "source_refs": [
+      {
+        "page_start": 12,
+        "page_end": 12,
+        "section": "后续 / 奖励经验值"
+      }
+    ],
+    "dm_summary": "克拉摩窝点告一段落后，下一阶段通常转向凡达林。角色可能要把货物送到巴森补给并领报酬；若修达·霍温特获救，他会因伤恳求护送，并承诺支付50 gp；角色背景也可能指向凡达林的特定人物。若玩家不去凡达林而执意寻找克拉摩城堡，则直接切到第3章。窝点里涉及的财物、狮盾货物、治疗药水等只按此前探索结果处理，不在此节点另给结构化奖励。",
+    "player_visible_intro": "克拉摩窝点的威胁暂时平息，潮湿洞道和地精的喧嚣被抛在身后。现在你们要决定下一步：护送伤员、运送货物前往凡达林，回头处理遗漏之事，或追着克拉摩部族的线索继续深入更大的危险。",
+    "scene_beats": [
+      "清点幸存者、货物与已带出的财物，确认是否还要回洞内搜索。",
+      "若修达获救，他恳求被护送到凡达林，并承诺支付50 gp。",
+      "若承接了运货开局，货物应送往凡达林的巴森补给领取报酬。",
+      "若带出狮盾货物或治疗药水，按此前发现记录处理，不作为本节点奖励。",
+      "玩家若追寻克拉摩城堡，结束窝点收束并转入第3章路线。"
+    ],
+    "rules_notes": [],
+    "checks": [],
+    "encounters": [],
+    "clues": [],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "skip_phandalin_for_castle",
+        "condition": "玩家不去凡达林而寻找克拉摩城堡",
+        "dm_guidance": "直接切到第3章相关节点，不强迫返回凡达林。"
+      },
+      {
+        "id": "return_for_loose_ends",
+        "condition": "玩家想回窝点或伏击点补搜",
+        "dm_guidance": "按已解决威胁和未探索区域回访相应节点。"
+      }
+    ],
+    "routing_notes": [
+      "默认下一站是凡达林；若玩家明确追城堡线索，则切到克拉摩城堡路线。",
+      "此节点只收束路线、护送与交付事宜；战斗里程碑奖励由克拉格洞室承担。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_phandalin",
+        "label": "前往凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "护送修达、交付货物或追随背景目标。"
+      },
+      {
+        "id": "to_barthen_delivery",
+        "label": "把货物送到巴森补给",
+        "next_node_id": "barthen_provisions",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "在凡达林完成运货开局的交付。"
+      },
+      {
+        "id": "to_cragmaw_castle",
+        "label": "寻找克拉摩城堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "玩家放弃凡达林优先追查城堡。"
+      },
+      {
+        "id": "revisit_hideout",
+        "label": "回到克拉摩窝点入口",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回洞内处理遗漏区域、货物或线索。"
+      },
+      {
+        "id": "revisit_ambush_site",
+        "label": "回访伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "返回路上伏击地点或货车处。"
+      }
+    ]
+  },
+  {
+    "id": "phandalin",
+    "module_id": "lost_mine",
+    "title": "凡达林镇",
+    "kind": "location",
+    "page_start": 6,
+    "page_end": 8,
+    "source_refs": [
+      {
+        "page_start": 6,
+        "page_end": 8,
+        "section": "第2部分：凡达林 / Phandalin"
+      }
+    ],
+    "dm_summary": "凡达林是建在古镇废墟上的新兴边境小镇，镇民多为农夫、伐木工、皮草商和矿工。这里没有强力政权，近两个月被红标帮敲诈滋扰，镇民知道其首领被称作“玻璃手杖”。角色若从伏击或克拉摩窝点后来到此处，可交付货物、休息、打听甘德伦、修达、伊阿诺和红标帮，也可回访伏击点或克拉摩窝点。初到时天色已晚，通常只能访问一两处后过夜。",
+    "player_visible_intro": "山林间的车辙逐渐清晰，凡达林出现在前方：四五十座朴素木屋散布在古老石墙废墟之间，荆棘覆着断石。泥泞主路穿过镇子，通往东面山上的废弃庄园。镇民抬头看你们一眼，又继续手头工作。",
+    "scene_beats": [
+      "描述古镇废墟、新建木屋、主路与东面废弃庄园，建立边境小镇氛围。",
+      "若修达同行，他建议先去石丘旅馆休息，再调查失踪的伊阿诺。",
+      "询问去处时，给出巴森补给、石丘旅馆、狮盾小贩、镇长大厅等镇内方向。",
+      "打听红标帮时，镇民提到其横行两个月，首领被称作“玻璃手杖”。",
+      "若玩家晚到，提醒最多办一两件事；休息后可继续镇内调查或回访野外地点。"
+    ],
+    "rules_notes": [
+      "凡达林很小，从镇子一头走到另一头只需几分钟。",
+      "晚到时限制可访问地点数量，用夜色推动角色寻找住处。",
+      "若发生红标帮街面冲突，按新版突袭规则：被突袭者仅先攻劣势，不跳过回合。",
+      "镇内问路通常无需检定；只有隐瞒、威胁或争执时再按主持裁定处理。",
+      "运货和归还货物的奖励只在对应长期状态已满足时结算。"
+    ],
+    "checks": [],
+    "encounters": [
+      {
+        "id": "redbrand_street_ruffians",
+        "monster_slug": "redbrand_ruffian",
+        "count": 4,
+        "faction": "enemy",
+        "trigger": "角色在镇上公开挑战、调查或被红标帮恶霸拦截时触发街面遭遇。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "phandalin_redbrand_threat",
+        "label": "红标帮横行",
+        "description": "红标帮近两个月控制凡达林，敲诈勒索并威吓镇民。"
+      },
+      {
+        "id": "glasstaff_leader_name",
+        "label": "玻璃手杖",
+        "description": "镇民只知道红标帮的神秘头领被称作“玻璃手杖”。"
+      },
+      {
+        "id": "tresendar_manor_overlooks_town",
+        "label": "东面废弃庄园",
+        "description": "镇东山上的废弃庄园由主路可达，是凡达林显眼的旧废墟。"
+      },
+      {
+        "id": "sildar_iarno_search",
+        "label": "修达寻找伊阿诺",
+        "description": "若修达抵达凡达林，他会在休息后寻找失踪法师伊阿诺，必要时拜访镇长。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "late_arrival_limit",
+        "condition": "角色傍晚或夜间抵达还想连续跑遍全镇",
+        "dm_guidance": "只开放一两处关键访问，然后引导去石丘旅馆或次日继续。"
+      },
+      {
+        "id": "missed_goblin_lead",
+        "condition": "角色未追踪地精而直接进镇",
+        "dm_guidance": "允许在镇内补给和打听，再回访伏击点或前往克拉摩窝点。"
+      }
+    ],
+    "routing_notes": [
+      "本节点负责镇内调度：先安顿与领奖，再把问题导向红标帮、伊阿诺、野外线索或后续支线。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_stonehill_inn",
+        "label": "前往石丘旅馆休息或打听消息",
+        "next_node_id": "stonehill_inn",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "镇内最自然的落脚点，修达也会建议前往。"
+      },
+      {
+        "id": "to_barthen_provisions",
+        "label": "前往巴森补给交货",
+        "next_node_id": "barthen_provisions",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "处理开局运货、补给和与甘德伦相关的询问。"
+      },
+      {
+        "id": "to_lionshield_coster",
+        "label": "前往狮盾小贩",
+        "next_node_id": "lionshield_coster",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "询问被劫货物或结算归还货物的奖励。"
+      },
+      {
+        "id": "to_townmaster_hall",
+        "label": "前往镇长大厅",
+        "next_node_id": "townmasters_hall",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "寻找镇长哈宾·威斯特、公告或官方委托。"
+      },
+      {
+        "id": "to_sleeping_giant",
+        "label": "去沉睡巨人附近找红标帮",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "把红标帮麻烦推进为街面冲突或正面交涉。"
+      },
+      {
+        "id": "to_tresendar_manor",
+        "label": "沿主路前往东面废弃庄园",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "调查俯瞰镇子的崔森德庄园废墟。"
+      },
+      {
+        "id": "to_redbrand_hideout",
+        "label": "寻找红标帮藏身处入口",
+        "next_node_id": "redbrand_hideout_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "当线索足够或玩家直接追查时进入后续地下城入口。"
+      },
+      {
+        "id": "revisit_goblin_ambush",
+        "label": "回访地精伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到路上检查车辙、尸体或地精踪迹。"
+      },
+      {
+        "id": "to_cragmaw_hideout",
+        "label": "前往克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从镇上整备后再去地精窝点入口。"
+      },
+      {
+        "id": "to_old_owl_well",
+        "label": "追查旧枭井支线",
+        "next_node_id": "old_owl_well",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往后续章节的荒野目标。"
+      },
+      {
+        "id": "to_wyvern_tor",
+        "label": "追查飞龙岩支线",
+        "next_node_id": "wyvern_tor",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往后续章节的荒野目标。"
+      },
+      {
+        "id": "to_agatha_lair",
+        "label": "前往康尼贝瑞与阿加莎相关地点",
+        "next_node_id": "conyberry_agatha_lair",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往后续章节的荒野目标。"
+      },
+      {
+        "id": "to_thundertree",
+        "label": "前往雷树镇",
+        "next_node_id": "thundertree",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往后续章节的荒野目标。"
+      },
+      {
+        "id": "to_cragmaw_castle",
+        "label": "寻找克拉摩城堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "追查甘德伦或地精势力的后续目标。"
+      }
+    ]
+  },
+  {
+    "id": "stonehill_inn",
+    "module_id": "lost_mine",
+    "title": "石丘旅馆",
+    "kind": "location",
+    "page_start": 6,
+    "page_end": 8,
+    "source_refs": [
+      {
+        "page_start": 6,
+        "page_end": 8,
+        "section": "第2部分：凡达林 / 抵达凡达林与石丘旅馆"
+      }
+    ],
+    "dm_summary": "石丘旅馆是角色初到凡达林后最合适的安全落脚点。若修达同行，他明确建议先到这里休息，并在之后寻找失踪法师伊阿诺·阿布雷克；若调查没有进展，他会去找镇长哈宾·威斯特。旅馆也适合作为镇内情报交换与次日计划的枢纽：角色可整理伏击与克拉摩窝点所得，决定交货、寻找甘德伦、调查红标帮，或回到野外继续追踪。",
+    "player_visible_intro": "你们来到镇上的旅馆。经历过山路、伏击或地精巢穴后，这里至少看起来比野外安全得多。若修达在队伍中，他明显放松下来，提议先找个地方住下，等休息后再打听失踪法师伊阿诺的下落。",
+    "scene_beats": [
+      "让角色安顿、休息、整理战利品与未完成的运货或救援目标。",
+      "修达若在场，会说明自己接下来要寻找伊阿诺，必要时拜访镇长。",
+      "玩家可在旅馆中打听甘德伦、修达、红标帮、镇内商铺和东面庄园。",
+      "若天色已晚，把旅馆作为当天收束点，次日再开放更多镇内地点。",
+      "把红标帮传闻引向沉睡巨人或崔森德庄园，把补给事务引向巴森补给。"
+    ],
+    "rules_notes": [
+      "旅馆可作为安全休息与信息整理场景；是否完成长休由主持按时间裁定。",
+      "修达的下一步是调查伊阿诺；没有线索时转向镇长大厅。",
+      "普通打听方向和镇内地点无需固定DC，除非角色采取强迫或隐秘手段。",
+      "不要在接到后续委托时预发哈利娅、修达或镇长的任务奖励。",
+      "晚到限制可在旅馆结束：次日角色能自由切换到镇内地点。"
+    ],
+    "checks": [
+      {
+        "id": "inn_rumor_talk",
+        "ability": "cha",
+        "skill": "persuasion",
+        "reason": "在旅馆中主动攀谈、筛选传闻或追问敏感话题。",
+        "resolution": "无固定DC；根据角色态度、话题敏感度和已知线索决定镇民愿意透露多少。"
+      }
+    ],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "stonehill_safe_lodging",
+        "label": "安全住处",
+        "description": "石丘旅馆是修达认可的安全落脚点，适合休息后再展开调查。"
+      },
+      {
+        "id": "sildar_seeks_iarno",
+        "label": "伊阿诺失踪",
+        "description": "修达抵达凡达林后会寻找失踪法师伊阿诺·阿布雷克。"
+      },
+      {
+        "id": "sildar_to_townmaster_if_stalled",
+        "label": "转向镇长",
+        "description": "若修达调查伊阿诺没有进展，他会去找镇长哈宾·威斯特。"
+      },
+      {
+        "id": "inn_points_to_redbrands",
+        "label": "红标帮话题",
+        "description": "旅馆中的交谈可把角色引向镇上的红标帮威胁、沉睡巨人或东面庄园。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "players_skip_rest",
+        "condition": "角色不愿在旅馆休息而想连夜行动",
+        "dm_guidance": "允许去一个明确目标；其余事务推到次日或承受夜间行动风险。"
+      },
+      {
+        "id": "no_clear_plan_after_inn",
+        "condition": "休息后玩家没有目标",
+        "dm_guidance": "让修达提出寻找伊阿诺或拜访镇长，并提醒尚可交货。"
+      }
+    ],
+    "routing_notes": [
+      "本节点是镇内节奏重置点：休息后把角色送往交货、镇长、红标帮线或回访野外。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "back_to_phandalin",
+        "label": "回到凡达林镇内选择去处",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "返回镇内总览，选择商铺、镇长大厅或其他目标。"
+      },
+      {
+        "id": "to_barthen_from_inn",
+        "label": "去巴森补给交付货物",
+        "next_node_id": "barthen_provisions",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "处理开局运货报酬与补给事务。"
+      },
+      {
+        "id": "to_townmaster_from_inn",
+        "label": "陪修达或自行去镇长大厅",
+        "next_node_id": "townmasters_hall",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "寻找哈宾·威斯特，推进伊阿诺或镇内委托。"
+      },
+      {
+        "id": "to_lionshield_from_inn",
+        "label": "去狮盾小贩",
+        "next_node_id": "lionshield_coster",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "处理被劫货物与克拉摩窝点相关信息。"
+      },
+      {
+        "id": "to_sleeping_giant_from_inn",
+        "label": "去沉睡巨人找红标帮",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "把旅馆中听到的红标帮问题推进为正面遭遇。"
+      },
+      {
+        "id": "to_tresendar_from_inn",
+        "label": "调查东面崔森德庄园",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "沿镇中主路前往山上的废弃庄园。"
+      },
+      {
+        "id": "to_redbrand_hideout_from_inn",
+        "label": "追查红标帮藏身处",
+        "next_node_id": "redbrand_hideout_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "当玩家决定深入红标帮线时前往后续入口。"
+      },
+      {
+        "id": "revisit_ambush_from_inn",
+        "label": "回到伏击现场",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "休息整备后回去检查地精伏击留下的线索。"
+      },
+      {
+        "id": "to_cragmaw_hideout_from_inn",
+        "label": "前往克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从旅馆出发追踪或回访地精窝点。"
+      },
+      {
+        "id": "to_cragmaw_castle_from_inn",
+        "label": "寻找克拉摩城堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "追查甘德伦或地精势力的后续目标。"
+      },
+      {
+        "id": "to_old_owl_well_from_inn",
+        "label": "前往旧枭井",
+        "next_node_id": "old_owl_well",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "转入后续章节的荒野支线。"
+      },
+      {
+        "id": "to_wyvern_tor_from_inn",
+        "label": "前往飞龙岩",
+        "next_node_id": "wyvern_tor",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "转入后续章节的荒野支线。"
+      },
+      {
+        "id": "to_agatha_from_inn",
+        "label": "前往阿加莎相关地点",
+        "next_node_id": "conyberry_agatha_lair",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "转入后续章节的荒野支线。"
+      },
+      {
+        "id": "to_thundertree_from_inn",
+        "label": "前往雷树镇",
+        "next_node_id": "thundertree",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "转入后续章节的荒野支线。"
+      }
+    ]
+  },
+  {
+    "id": "barthen_provisions",
+    "module_id": "lost_mine",
+    "title": "巴森补给",
+    "kind": "location",
+    "page_start": 13,
+    "page_end": 14,
+    "source_refs": [
+      {
+        "page_start": 13,
+        "page_end": 13,
+        "section": "凡达林入口地点"
+      },
+      {
+        "page_start": 14,
+        "page_end": 14,
+        "section": "重要非玩家角色"
+      }
+    ],
+    "dm_summary": "巴森补给是“凡达林见”开局货物的交付点。店主艾尔玛·巴森经营这间贸易站，并欠队伍运货报酬。这里适合结算开局任务、让玩家确认他们已正式抵达凡达林，并把他们重新导向镇内活动：休息打听可去石丘旅馆，处理克拉摩窝点货物可去狮盾小贩，寻找甘德伦或修达线索则应继续在镇中询问。若队伍还没解决伏击、没送到货或想回头追踪地精，允许他们离镇回访道路与窝点。",
+    "player_visible_intro": "你们来到镇内一处贸易站。店主艾尔玛·巴森认出这批本该送到凡达林的货物，急切地查看车上的补给，并欢迎你们进店说明路上发生了什么。",
+    "scene_beats": [
+      "进入贸易站时，艾尔玛先确认队伍身份与运来的货物。",
+      "若货物交齐，标记交货完成，并按约给每名角色10 gp。",
+      "玩家可询问甘德伦、修达、红标帮或镇内去处。",
+      "若还未休息或缺乏方向，建议他们去石丘旅馆打听消息。",
+      "若提到克拉摩窝点货箱，引导去狮盾小贩找莱妮·灰风。"
+    ],
+    "rules_notes": [
+      "凡达林很小，角色一天内可走访多个地点。",
+      "分头行动可覆盖更多地点，但红标帮相关遭遇会更危险。",
+      "普通镇民通常无战斗理由；必要时成年NPC可用平民数据。",
+      "NPC互动以询问来意、提供需求和情报来推进下一地点。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "barthen_owes_delivery_pay",
+        "label": "运货报酬",
+        "description": "艾尔玛·巴森是开局货物收货人，货物送达后应支付每名角色10 gp。"
+      },
+      {
+        "id": "stonehill_info_hub",
+        "label": "旅馆消息",
+        "description": "石丘旅馆是镇上吃住与打听流言的最佳起点。"
+      },
+      {
+        "id": "cragmaw_goods_belong_lionshield",
+        "label": "狮盾货物",
+        "description": "若队伍找回克拉摩窝点补给品，可能应交给狮盾小贩的莱妮·灰风。"
+      }
+    ],
+    "events": [
+      "phandalin_supplies_delivered"
+    ],
+    "fallbacks": [
+      {
+        "id": "cargo_not_delivered",
+        "condition": "队伍没有带来或拒绝交付货物",
+        "dm_guidance": "暂不发放报酬；让他们可回伏击点、窝点或继续镇内打听。"
+      },
+      {
+        "id": "players_need_direction",
+        "condition": "玩家不知道下一步去哪里",
+        "dm_guidance": "让艾尔玛建议先去石丘旅馆休息并听镇民消息。"
+      }
+    ],
+    "routing_notes": [
+      "本节点主要结算开局运货，并把队伍导回凡达林镇内调度或克拉摩相关路线。"
+    ],
+    "rewards": [
+      {
+        "id": "phandalin_delivery_10gp",
+        "type": "gold",
+        "amount": 10,
+        "scope": "per_player",
+        "currency": "gp",
+        "requires": [
+          "phandalin_supplies_delivered"
+        ],
+        "description": "把开局护送的补给货车交到巴森补给后，每名玩家获得10 gp报酬。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "back_to_phandalin",
+        "label": "回到镇内选择下一站",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "返回凡达林总览，询问队伍去哪里。"
+      },
+      {
+        "id": "go_stonehill_inn",
+        "label": "去石丘旅馆休息打听",
+        "next_node_id": "stonehill_inn",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "寻找住宿、修达或镇内流言。"
+      },
+      {
+        "id": "go_lionshield_coster",
+        "label": "去狮盾小贩处理货物",
+        "next_node_id": "lionshield_coster",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "归还或报告克拉摩窝点的狮盾补给。"
+      },
+      {
+        "id": "go_townmaster_hall",
+        "label": "去镇长大厅",
+        "next_node_id": "townmasters_hall",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "询问镇长或公告任务。"
+      },
+      {
+        "id": "go_sleeping_giant",
+        "label": "去沉睡巨人",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "主动接触红标帮恶霸。"
+      },
+      {
+        "id": "go_tresendar_manor",
+        "label": "调查崔森德庄园",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "追查红标帮大本营方向。"
+      },
+      {
+        "id": "revisit_ambush_site",
+        "label": "回访伏击地点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到路上检查战斗现场或重新找地精踪迹。"
+      },
+      {
+        "id": "return_cragmaw_hideout",
+        "label": "返回克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "继续追踪地精、救人或取回货物。"
+      }
+    ]
+  },
+  {
+    "id": "lionshield_coster",
+    "module_id": "lost_mine",
+    "title": "狮盾小贩",
+    "kind": "location",
+    "page_start": 13,
+    "page_end": 14,
+    "source_refs": [
+      {
+        "page_start": 13,
+        "page_end": 13,
+        "section": "凡达林入口地点"
+      },
+      {
+        "page_start": 14,
+        "page_end": 14,
+        "section": "重要非玩家角色"
+      }
+    ],
+    "dm_summary": "狮盾小贩由莱妮·灰风经营，是处理从克拉摩窝点找回补给品的地点。若角色带回货物，或能明确告知货物在克拉摩窝点的位置，莱妮会为归还失物支付50 gp。这里不需要展开额外战斗；重点是确认队伍是否掌握了克拉摩窝点货物、是否愿意交还，并把他们导向镇内下一步：休息打听、继续追查红标帮、或返回窝点取货。若玩家从伏击后直接进镇，这里也是提醒他们克拉摩路线尚未完结的节点。",
+    "player_visible_intro": "狮盾小贩是一处贸易站。莱妮·灰风接待你们时格外关注克拉摩窝点与失踪补给的消息；若你们带着标记清楚的货箱，她立刻意识到这些正是她遗失的货物。",
+    "scene_beats": [
+      "莱妮先询问队伍是否见过从克拉摩窝点来的补给品。",
+      "若角色归还货物或可靠告知位置，标记完成并支付50 gp。",
+      "若只听说有货但未确认，莱妮要求更明确的地点或实物。",
+      "玩家可从这里转向休息打听、回窝点取货或追查红标帮。",
+      "若队伍担心镇中局势，让他们回总览选择旅馆、镇长或红标帮线。"
+    ],
+    "rules_notes": [
+      "奖励只在归还货物或明确告知克拉摩窝点货物位置后结算。",
+      "若玩家只是猜测货物归属，不应视为完成。",
+      "本地点以交涉和任务结算为主，除非玩家主动挑衅，否则无战斗。",
+      "镇内地点可灵活切换，不必严格记录每处耗时。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "lionshield_lost_goods",
+        "label": "遗失补给",
+        "description": "狮盾小贩的补给品可能在克拉摩窝点，莱妮·灰风会奖励归还者。"
+      },
+      {
+        "id": "lionshield_reward_offer",
+        "label": "50 gp酬谢",
+        "description": "归还货物或明确告知货物位置后，莱妮会支付队伍50 gp。"
+      },
+      {
+        "id": "phandalin_redbrand_pressure",
+        "label": "红标帮阴影",
+        "description": "镇民普遍受红标帮困扰，队伍可选择去沉睡巨人或崔森德庄园追查。"
+      }
+    ],
+    "events": [
+      "lionshield_goods_returned"
+    ],
+    "fallbacks": [
+      {
+        "id": "no_goods_or_location",
+        "condition": "队伍没有货物也说不出位置",
+        "dm_guidance": "不发奖励；提示可返回克拉摩窝点确认或取回。"
+      },
+      {
+        "id": "party_skips_reward",
+        "condition": "队伍不愿处理货物",
+        "dm_guidance": "保留线索，允许他们先去旅馆、镇长或红标帮相关地点。"
+      }
+    ],
+    "routing_notes": [
+      "本节点用于结算狮盾货物，并把队伍在镇内调查与克拉摩窝点回访之间切换。"
+    ],
+    "rewards": [
+      {
+        "id": "lionshield_recovered_goods_50gp",
+        "type": "gold",
+        "amount": 50,
+        "scope": "party",
+        "currency": "gp",
+        "requires": [
+          "lionshield_goods_returned"
+        ],
+        "description": "归还或告知克拉摩窝点中狮盾货物的位置后，莱妮支付50 gp。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "back_to_phandalin",
+        "label": "回到镇内选择下一站",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "返回凡达林总览继续调度。"
+      },
+      {
+        "id": "go_barthen",
+        "label": "去巴森补给交货",
+        "next_node_id": "barthen_provisions",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "处理开局运货报酬。"
+      },
+      {
+        "id": "go_stonehill_inn",
+        "label": "去石丘旅馆",
+        "next_node_id": "stonehill_inn",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "休息、住宿或打听流言。"
+      },
+      {
+        "id": "go_townmaster_hall",
+        "label": "去镇长大厅",
+        "next_node_id": "townmasters_hall",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "询问镇长与公告任务。"
+      },
+      {
+        "id": "go_sleeping_giant",
+        "label": "去沉睡巨人面对红标帮",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "主动寻找红标帮恶霸。"
+      },
+      {
+        "id": "go_tresendar_manor",
+        "label": "前往崔森德庄园方向",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "追查红标帮大本营入口。"
+      },
+      {
+        "id": "return_cragmaw_hideout",
+        "label": "返回克拉摩窝点取货或确认",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到窝点处理尚未带回的狮盾货物。"
+      },
+      {
+        "id": "revisit_ambush_site",
+        "label": "回访地精伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "重新检查路上痕迹并衔接地精踪迹。"
+      }
+    ]
+  },
+  {
+    "id": "edermath_orchard",
+    "module_id": "lost_mine",
+    "title": "埃德玛果园",
+    "kind": "location",
+    "page_start": 16,
+    "page_end": 16,
+    "source_refs": [
+      {
+        "page_start": 16,
+        "page_end": 16,
+        "section": "埃德玛果园 Edermath Orchard"
+      },
+      {
+        "page_start": 16,
+        "page_end": 16,
+        "section": "任务：古枭井 Old Owl Trouble"
+      },
+      {
+        "page_start": 16,
+        "page_end": 16,
+        "section": "加入铁手教团 Joining the Order of the Gauntlet"
+      }
+    ],
+    "dm_summary": "达朗·埃德玛是住在苹果园旁农舍里的半精灵退役冒险者，年逾百岁，曾在巨龙海岸任指挥官与调度官。他仍关心凡达林的安危，愿与善意的冒险者交换情报。他会明确指出红标帮常在沉睡巨人出没，但真正据点在镇东崔森德庄园废墟下；也会委托队伍调查古枭井的不死生物传闻。若日后队伍解决红标帮与古枭井，并体现荣誉与警觉，他可能私下邀请其加入铁手教团。",
+    "player_visible_intro": "苹果树环绕着一间整洁的小农舍。屋主是一位银发半精灵老人，举止仍带着军人般的沉稳。他打量你们时并无敌意，反而像是在判断你们是否愿意为这座镇子做些正事。",
+    "scene_beats": [
+      "进入果园时，达朗以退役老兵的稳重态度接待来访者。",
+      "若谈到红标帮，他说镇子需要有人站出来对抗玻璃手杖。",
+      "他指出红标帮常在沉睡巨人出没，真正据点在崔森德庄园下。",
+      "若队伍愿接远行委托，他请求调查古枭井与不死生物传闻。",
+      "日后若红标帮和古枭井都解决，他可能私下提出铁手教团邀请。"
+    ],
+    "rules_notes": [
+      "达朗乐于与善意冒险者交换情报，不需付费或检定。",
+      "他知道红标帮据点在崔森德庄园废墟下，但不提供地下细节。",
+      "古枭井委托只引向后续地点；本节点不结算任务奖励。",
+      "铁手教团邀请发生在红标帮和古枭井都解决之后，由主持判断美德表现。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "redbrand_base_tresendar",
+        "label": "红标帮据点",
+        "description": "红标帮常在沉睡巨人出没，但大本营藏在镇东崔森德庄园废墟下。"
+      },
+      {
+        "id": "old_owl_well_undead",
+        "label": "古枭井异动",
+        "description": "东北山丘的古枭井废墟有人发掘，附近淘金者遭不死生物追赶。"
+      },
+      {
+        "id": "old_owl_well_netheril",
+        "label": "奈瑟瑞尔遗迹",
+        "description": "古枭井是远古魔法帝国奈瑟瑞尔的瞭望塔，达朗担心残留危险魔法。"
+      }
+    ],
+    "events": [
+      "old_owl_well_job_offered"
+    ],
+    "fallbacks": [
+      {
+        "id": "no_interest_in_redbrands",
+        "condition": "队伍暂不愿招惹红标帮",
+        "dm_guidance": "达朗改以古枭井委托引导队伍先处理镇外威胁。"
+      },
+      {
+        "id": "asks_for_gundren_only",
+        "condition": "队伍只追问甘德伦或城堡",
+        "dm_guidance": "达朗没有克拉摩堡情报，建议回镇内向商人或矿工打听。"
+      }
+    ],
+    "routing_notes": [
+      "本节点主要把善意队伍导向红标帮主线或古枭井支线；不强迫立即战斗。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "back_to_phandalin",
+        "label": "回到凡达林镇内",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "返回镇内调度，选择旅馆、商店或其他 NPC。"
+      },
+      {
+        "id": "go_sleeping_giant",
+        "label": "前往沉睡巨人",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "去红标帮常出没的酒馆附近找麻烦。"
+      },
+      {
+        "id": "go_tresendar_manor",
+        "label": "调查崔森德庄园",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "直奔红标帮大本营所在的废墟。"
+      },
+      {
+        "id": "go_redbrand_hideout",
+        "label": "寻找庄园地下入口",
+        "next_node_id": "redbrand_hideout_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从庄园线索继续进入红标帮地下据点。"
+      },
+      {
+        "id": "go_old_owl_well",
+        "label": "接受古枭井委托",
+        "next_node_id": "old_owl_well",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往东北山丘调查废墟与不死生物。"
+      },
+      {
+        "id": "visit_miners_exchange",
+        "label": "去矿工兑换所打听",
+        "next_node_id": "miners_exchange",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "向哈利娅或矿工打听周边消息。"
+      },
+      {
+        "id": "return_cragmaw_hideout",
+        "label": "回访克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "若仍需追查甘德伦或货物，可离镇返回窝点。"
+      },
+      {
+        "id": "return_ambush_site",
+        "label": "回访伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到三猪小径附近检查伏击现场或踪迹。"
+      }
+    ]
+  },
+  {
+    "id": "miners_exchange",
+    "module_id": "lost_mine",
+    "title": "凡达林矿工兑换所",
+    "kind": "location",
+    "page_start": 16,
+    "page_end": 17,
+    "source_refs": [
+      {
+        "page_start": 16,
+        "page_end": 17,
+        "section": "凡达林矿工兑换所 Phandalin Miner’s Exchange"
+      },
+      {
+        "page_start": 16,
+        "page_end": 17,
+        "section": "任务：哈利娅的委托 Halia’s Job Offer"
+      },
+      {
+        "page_start": 17,
+        "page_end": 17,
+        "section": "加入散塔林会 Joining the Zhentarim"
+      }
+    ],
+    "dm_summary": "矿工兑换所为淘金者称量售卖发现物，也登记周边挖掘点所有权。会长哈利娅·桑顿精明、有野心，秘密属于散塔林会，想让兑换所成为镇子的实际统治机构。她不知克拉摩堡位置，但听说红标帮有个地精奴仆，可能知道城堡所在。若她认为能操控冒险者，会提出100 gp委托：除掉红标帮首领玻璃手杖，并带回其住处的信件。她掩饰想取而代之的野心，成功察觉可看出动机不纯。",
+    "player_visible_intro": "兑换所里进出的多是满身尘土的淘金者，柜台后记录着各处挖掘点的归属。哈利娅·桑顿以冷静而审慎的目光接待你们，她的语气像商人，却带着某种衡量筹码的锋利。",
+    "scene_beats": [
+      "进入兑换所时，可见矿工称量矿样、登记挖掘点的忙碌景象。",
+      "哈利娅可谈周边地形、淘金者消息和凡达林权力真空。",
+      "若谈甘德伦或城堡，她说红标帮的地精奴仆也许知道克拉摩堡。",
+      "若她认为能利用队伍，会悬赏除掉玻璃手杖并取回信件。",
+      "日后若玻璃手杖解决，她可能私下邀请逐利者加入散塔林会。"
+    ],
+    "rules_notes": [
+      "哈利娅不知道克拉摩堡具体位置，只提供红标帮地精奴仆这条线索。",
+      "她的100 gp是完成后续委托才结算，接任务时不支付。",
+      "她不会明说自己想接管红标帮；察觉检定可看出动机不纯。",
+      "兑换所矿工熟悉周边地形，可作为镇外路线与传闻的自然来源。"
+    ],
+    "checks": [
+      {
+        "id": "sense_halia_motive",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 15,
+        "reason": "判断哈利娅为何特别想让玻璃手杖死",
+        "resolution": "成功可察觉她索要信件和除掉玻璃手杖的动机并不单纯。"
+      }
+    ],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "cragmaw_castle_goblin_slave",
+        "label": "红标帮的地精奴仆",
+        "description": "哈利娅听说红标帮里有个地精奴仆，推测它可能知道克拉摩堡位置。"
+      },
+      {
+        "id": "halia_wants_glasstaff_letters",
+        "label": "哈利娅的委托",
+        "description": "哈利娅愿付100 gp，要队伍除掉玻璃手杖并带回他住处找到的信件。"
+      },
+      {
+        "id": "halia_hidden_motive",
+        "label": "动机不纯",
+        "description": "哈利娅想要玻璃手杖死和取得信件，并非只为镇子除害。"
+      },
+      {
+        "id": "miners_know_region",
+        "label": "矿工熟悉周边",
+        "description": "兑换所聚集的矿工大多熟悉凡达林周边地形与挖掘点。"
+      }
+    ],
+    "events": [
+      "halia_job_offered"
+    ],
+    "fallbacks": [
+      {
+        "id": "party_refuses_halia",
+        "condition": "队伍不信任哈利娅或拒绝委托",
+        "dm_guidance": "仍可保留地精奴仆线索，引向沉睡巨人或崔森德庄园。"
+      },
+      {
+        "id": "party_wants_castle_now",
+        "condition": "队伍急于寻找克拉摩堡",
+        "dm_guidance": "哈利娅没有地图，只建议从红标帮的地精奴仆逼问线索。"
+      }
+    ],
+    "routing_notes": [
+      "本节点用利益交换把队伍导向红标帮，同时给追查克拉摩堡的队伍一个城堡线索入口。"
+    ],
+    "rewards": [
+      {
+        "id": "halia_glasstaff_letters_100gp",
+        "type": "gold",
+        "amount": 100,
+        "scope": "party",
+        "currency": "gp",
+        "requires": [
+          "glasstaff_letters_delivered_to_halia"
+        ],
+        "description": "完成哈利娅委托：除掉玻璃手杖并带回其住处信件后获得。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "back_to_phandalin",
+        "label": "回到凡达林镇内",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "返回镇内总览，选择补给、休息或继续打听。"
+      },
+      {
+        "id": "go_sleeping_giant",
+        "label": "去沉睡巨人找红标帮",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "寻找经常在酒馆附近闲晃的红标帮恶棍。"
+      },
+      {
+        "id": "go_tresendar_manor",
+        "label": "调查崔森德庄园",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往镇东废墟，寻找红标帮大本营。"
+      },
+      {
+        "id": "go_redbrand_hideout",
+        "label": "深入红标帮据点",
+        "next_node_id": "redbrand_hideout_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "继续追查玻璃手杖、信件或地精奴仆。"
+      },
+      {
+        "id": "visit_edermath_orchard",
+        "label": "去埃德玛果园",
+        "next_node_id": "edermath_orchard",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "向达朗打听红标帮与镇外危险。"
+      },
+      {
+        "id": "go_cragmaw_castle",
+        "label": "追查克拉摩堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "若队伍已有足够线索，可转向寻找城堡。"
+      },
+      {
+        "id": "return_cragmaw_hideout",
+        "label": "回访克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到窝点寻找遗漏货物、俘虏或甘德伦线索。"
+      },
+      {
+        "id": "return_ambush_site",
+        "label": "回访伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到伏击地点重新检查地精踪迹。"
+      }
+    ]
+  },
+  {
+    "id": "alderleaf_farm",
+    "module_id": "lost_mine",
+    "title": "阿德里夫农场",
+    "kind": "location",
+    "page_start": 16,
+    "page_end": 17,
+    "source_refs": [
+      {
+        "page_start": 16,
+        "page_end": 17,
+        "section": "阿德里夫农场 Alderleaf Farm"
+      }
+    ],
+    "dm_summary": "奎琳·阿德里夫是务实热心的半身人农夫，熟悉镇上大小消息；若角色不住旅馆，她可让他们睡干草棚。她的儿子卡普崇拜冒险者，曾在崔森德庄园附近发现荆棘中的秘道，并看见“大个儿丑八怪”与红标帮会合。奎琳还会把询问克拉摩堡、潮音洞穴等地点的角色引向雷树镇的德鲁伊里多斯。",
+    "player_visible_intro": "农场坐落在凡达林镇边，田地与谷仓显得朴素而安稳。半身人女主人热情招呼来客，十岁男孩卡普则用发亮的眼神打量你们，仿佛等着听一场冒险故事。",
+    "scene_beats": [
+      "奎琳欢迎角色打听消息，也可提供干草棚过夜。",
+      "卡普会主动或在被询问红标帮时讲出秘道见闻。",
+      "卡普可指路或带队到崔森德庄园附近的秘道。",
+      "询问克拉摩堡或潮音洞穴时，奎琳推荐雷树镇的里多斯。"
+    ],
+    "rules_notes": [
+      "卡普的秘道通往红标帮大本营区域8；本批只导向入口占位。",
+      "奎琳的住宿帮助不等同旅馆服务或任务奖励。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "redbrand_secret_tunnel",
+        "label": "庄园秘道",
+        "description": "卡普在崔森德庄园附近发现荆棘隐藏的秘道，见到怪物与红标帮会合。"
+      },
+      {
+        "id": "reidoth_thundertree",
+        "label": "里多斯在雷树镇",
+        "description": "奎琳说德鲁伊里多斯了解许多地点，最近去了凡达林西北约50里外的雷树镇废墟。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "no_inn_lodging",
+        "condition": "角色不愿或不能住石丘旅馆",
+        "dm_guidance": "奎琳提供干草棚，使队伍仍可在镇内休整。"
+      },
+      {
+        "id": "miss_redbrand_lead",
+        "condition": "角色未去沉睡巨人却想查红标帮",
+        "dm_guidance": "让卡普的秘道见闻把路线转向崔森德庄园。"
+      }
+    ],
+    "routing_notes": [
+      "本节点是红标帮秘密入口与雷树镇里多斯线索的温和入口。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "back_phandalin",
+        "label": "回到凡达林镇内",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "继续选择镇内地点或处理补给休息。"
+      },
+      {
+        "id": "to_redbrand_secret_entrance",
+        "label": "让卡普带去秘道",
+        "next_node_id": "redbrand_hideout_entrance",
+        "requires": [
+          "redbrand_secret_tunnel"
+        ],
+        "transition_kind": "advance",
+        "description": "前往崔森德庄园附近的隐藏入口。"
+      },
+      {
+        "id": "to_tresendar_approach",
+        "label": "调查崔森德庄园周边",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [
+          "redbrand_secret_tunnel"
+        ],
+        "transition_kind": "advance",
+        "description": "从地表接近庄园并寻找秘道。"
+      },
+      {
+        "id": "to_thundertree",
+        "label": "去雷树镇寻找里多斯",
+        "next_node_id": "thundertree",
+        "requires": [
+          "reidoth_thundertree"
+        ],
+        "transition_kind": "advance",
+        "description": "追随奎琳的建议寻找德鲁伊。"
+      },
+      {
+        "id": "to_townmasters_hall",
+        "label": "去镇长大厅打听公事",
+        "next_node_id": "townmasters_hall",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "查看公告并询问镇长或修达。"
+      },
+      {
+        "id": "to_shrine_of_luck",
+        "label": "去幸运圣坛",
+        "next_node_id": "shrine_of_luck",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "拜访加莉尔修女。"
+      },
+      {
+        "id": "revisit_ambush_site",
+        "label": "回访伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "离镇返回三猪小径的伏击现场。"
+      },
+      {
+        "id": "to_cragmaw_hideout",
+        "label": "返回克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "从镇上折返窝点入口继续处理。"
+      }
+    ]
+  },
+  {
+    "id": "shrine_of_luck",
+    "module_id": "lost_mine",
+    "title": "幸运圣坛",
+    "kind": "location",
+    "page_start": 17,
+    "page_end": 17,
+    "source_refs": [
+      {
+        "page_start": 17,
+        "page_end": 17,
+        "section": "幸运圣坛 Shrine of Luck"
+      }
+    ],
+    "dm_summary": "幸运圣坛是凡达林唯一神庙，供奉泰摩拉，由年轻精灵侍僧加莉尔修女照看。她是竖琴手同盟成员，对镇子摆脱红标帮已不乐观，但仍关注弱者与情报。她希望角色带一把镶宝石银梳去找女妖阿加莎，以奉承与礼物换取博哲托尔法术书所在位置；成功后她以三瓶治疗药水致谢，并可能私下招募志同道合者加入竖琴手同盟。",
+    "player_visible_intro": "一座小型石砌圣坛静立在镇中，石材像是从旧废墟搬来。圣坛前的精灵修女神情疲惫却礼貌，她以泰摩拉之名欢迎来客，也敏锐地留意你们带来的消息。",
+    "scene_beats": [
+      "加莉尔可提供镇上局势视角，尤其对红标帮感到失望。",
+      "若角色愿帮忙，她说明女妖阿加莎与银梳礼物。",
+      "她提醒奉承阿加莎、满足虚荣心比威胁更有用。",
+      "带回法术书情报后，结算三瓶治疗药水。",
+      "完成任务后，她可私下邀请合适角色加入竖琴手同盟。"
+    ],
+    "rules_notes": [
+      "竖琴手同盟身份是剧情身份，不作为本节点物质奖励。",
+      "阿加莎任务目的只是取得法术书位置情报，不要求战斗。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "agatha_bargain",
+        "label": "女妖的交易",
+        "description": "加莉尔请求角色带镶宝石银梳去找阿加莎，换取博哲托尔法术书位置。"
+      },
+      {
+        "id": "harpers_garaele",
+        "label": "加莉尔是竖琴手",
+        "description": "加莉尔隶属竖琴手同盟，暗中收集情报、反对滥权并帮助受压迫者。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "decline_agatha",
+        "condition": "角色暂不接受女妖任务",
+        "dm_guidance": "加莉尔保留委托，允许之后回到圣坛再接。"
+      },
+      {
+        "id": "need_redbrand_direction",
+        "condition": "角色只询问镇上麻烦",
+        "dm_guidance": "加莉尔可表达对红标帮的忧虑，引导他们去镇内继续打听。"
+      }
+    ],
+    "routing_notes": [
+      "本节点主要把队伍引向康尼贝瑞的阿加莎，并提供竖琴手同盟接触点。"
+    ],
+    "rewards": [
+      {
+        "id": "agatha_potions_3",
+        "type": "item",
+        "amount": 3,
+        "scope": "party",
+        "requires": [
+          "agatha_bowgentle_info_obtained"
+        ],
+        "description": "加莉尔以三瓶治疗药水感谢队伍带回博哲托尔法术书情报。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "back_phandalin",
+        "label": "回到凡达林镇内",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "继续镇内调度、休息或打听消息。"
+      },
+      {
+        "id": "to_agatha_lair",
+        "label": "前往康尼贝瑞找阿加莎",
+        "next_node_id": "conyberry_agatha_lair",
+        "requires": [
+          "agatha_bargain"
+        ],
+        "transition_kind": "advance",
+        "description": "携带银梳去与女妖交涉。"
+      },
+      {
+        "id": "to_townmasters_hall",
+        "label": "去镇长大厅",
+        "next_node_id": "townmasters_hall",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "查看悬赏或寻找修达、镇长。"
+      },
+      {
+        "id": "to_alderleaf_farm",
+        "label": "去阿德里夫农场",
+        "next_node_id": "alderleaf_farm",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "拜访奎琳与卡普。"
+      },
+      {
+        "id": "to_sleeping_giant",
+        "label": "去沉睡巨人酒馆",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "接触红标帮常出没的危险酒馆。"
+      },
+      {
+        "id": "revisit_ambush_site",
+        "label": "回访伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "离开镇子返回三猪小径现场。"
+      },
+      {
+        "id": "to_cragmaw_hideout",
+        "label": "返回克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "折返窝点入口继续探索或处理俘虏。"
+      }
+    ]
+  },
+  {
+    "id": "townmasters_hall",
+    "module_id": "lost_mine",
+    "title": "镇长大厅",
+    "kind": "location",
+    "page_start": 17,
+    "page_end": 18,
+    "source_refs": [
+      {
+        "page_start": 17,
+        "page_end": 18,
+        "section": "镇长大厅 Townmaster’s Hall"
+      }
+    ],
+    "dm_summary": "镇长大厅是石墙木顶小建筑，门旁公告悬赏飞龙岩兽人。镇长哈宾·威斯特自命不凡又怕事，轻描淡写红标帮，只愿谈官方悬赏；大厅地窖有两间牢房，钥匙挂在地窖门上。若修达已在镇上表明领主联盟身份，他会支持寻找克拉摩堡、调查伊阿诺失踪与崔森德庄园；发现伊阿诺变节或清除红标帮后，他会支付报酬并可能招募角色加入领主联盟。",
+    "player_visible_intro": "石墙镇厅后方立着一座钟塔，门边公告板上用通用语写着悬赏飞龙岩兽人。屋内空间不大，镇长哈宾摆出官样姿态；若修达在场，他的态度明显更务实而急切。",
+    "scene_beats": [
+      "角色先看到兽人悬赏，可入内向哈宾询问详情。",
+      "哈宾把红标帮说成只是贪财，避免正面处理。",
+      "修达在场时，会支持追查克拉摩堡和崔森德庄园。",
+      "伊阿诺被描述为三十来岁、黑胡子、矮个子人类法师。",
+      "完成兽人、克拉摩堡或红标帮相关目标后在此结算报酬。"
+    ],
+    "rules_notes": [
+      "牢房在地窖，共两间；钥匙挂在地窖门上。",
+      "哈宾给飞龙岩兽人任务报酬100 gp，完成后结算。",
+      "修达给克拉摩堡威胁解决报酬500 gp。",
+      "修达给消除红标帮威胁报酬200 gp，不取决于伊阿诺最终命运。",
+      "领主联盟邀请是剧情身份，不作为金币或物品奖励。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "wyvern_tor_orcs",
+        "label": "飞龙岩兽人",
+        "description": "三猪小径以东、飞龙岩附近有兽人威胁旅行者，哈宾悬赏解决。"
+      },
+      {
+        "id": "cragmaw_castle_search",
+        "label": "寻找克拉摩堡",
+        "description": "修达建议沿三猪小径清剿地精强盗，可能找到克拉摩堡线索。"
+      },
+      {
+        "id": "iarno_tresendar_missing",
+        "label": "伊阿诺失踪",
+        "description": "领主联盟成员伊阿诺约两个月前去探索崔森德庄园后失踪。"
+      },
+      {
+        "id": "redbrands_minimized_by_harbin",
+        "label": "镇长回避红标帮",
+        "description": "哈宾声称红标帮只是贪财，显示官方不会主动保护镇民。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "harbin_blocks_redbrand",
+        "condition": "角色要求镇长处理红标帮",
+        "dm_guidance": "哈宾推诿，可把压力转向沉睡巨人或崔森德庄园线索。"
+      },
+      {
+        "id": "sildar_absent",
+        "condition": "修达尚未同行或未到镇长大厅",
+        "dm_guidance": "只提供哈宾与兽人悬赏；修达任务可之后回访触发。"
+      }
+    ],
+    "routing_notes": [
+      "本节点承接官方悬赏与修达任务，把队伍导向飞龙岩、三猪小径、克拉摩堡或红标帮线。"
+    ],
+    "rewards": [
+      {
+        "id": "wyvern_tor_orcs_100gp",
+        "type": "gold",
+        "amount": 100,
+        "scope": "party",
+        "currency": "gp",
+        "requires": [
+          "wyvern_tor_orcs_defeated"
+        ],
+        "description": "哈宾支付解决飞龙岩兽人威胁的悬赏。"
+      },
+      {
+        "id": "cragmaw_castle_500gp",
+        "type": "gold",
+        "amount": 500,
+        "scope": "party",
+        "currency": "gp",
+        "requires": [
+          "cragmaw_castle_threat_ended"
+        ],
+        "description": "修达奖励队伍找到克拉摩堡并打倒或赶走部族首领。"
+      },
+      {
+        "id": "redbrand_threat_200gp",
+        "type": "gold",
+        "amount": 200,
+        "scope": "party",
+        "currency": "gp",
+        "requires": [
+          "redbrand_threat_ended"
+        ],
+        "description": "修达感谢队伍消除红标帮威胁。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "back_phandalin",
+        "label": "回到凡达林镇内",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "继续交货、休息、购物或打听。"
+      },
+      {
+        "id": "to_wyvern_tor",
+        "label": "接受兽人悬赏去飞龙岩",
+        "next_node_id": "wyvern_tor",
+        "requires": [
+          "wyvern_tor_orcs"
+        ],
+        "transition_kind": "advance",
+        "description": "沿三猪小径以东处理兽人威胁。"
+      },
+      {
+        "id": "to_cragmaw_castle_search",
+        "label": "沿三猪小径追查克拉摩堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [
+          "cragmaw_castle_search"
+        ],
+        "transition_kind": "advance",
+        "description": "按修达建议寻找地精强盗与城堡线索。"
+      },
+      {
+        "id": "to_tresendar_manor",
+        "label": "调查崔森德庄园",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [
+          "iarno_tresendar_missing"
+        ],
+        "transition_kind": "advance",
+        "description": "追查伊阿诺失踪和红标帮关联。"
+      },
+      {
+        "id": "to_redbrand_hideout",
+        "label": "进入红标帮藏身处",
+        "next_node_id": "redbrand_hideout_entrance",
+        "requires": [
+          "iarno_tresendar_missing"
+        ],
+        "transition_kind": "advance",
+        "description": "从庄园线索推进到地下入口。"
+      },
+      {
+        "id": "to_sleeping_giant",
+        "label": "去沉睡巨人找红标帮",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [
+          "redbrands_minimized_by_harbin"
+        ],
+        "transition_kind": "advance",
+        "description": "在红标帮常出没的酒馆正面接触。"
+      },
+      {
+        "id": "to_alderleaf_farm",
+        "label": "去阿德里夫农场",
+        "next_node_id": "alderleaf_farm",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "寻找镇民线索或住宿帮助。"
+      },
+      {
+        "id": "to_shrine_of_luck",
+        "label": "去幸运圣坛",
+        "next_node_id": "shrine_of_luck",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "拜访加莉尔修女。"
+      },
+      {
+        "id": "revisit_ambush_site",
+        "label": "回访伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "返回三猪小径伏击现场。"
+      },
+      {
+        "id": "to_cragmaw_hideout",
+        "label": "返回克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "从镇上折返窝点入口。"
+      }
+    ]
+  },
+  {
+    "id": "sleeping_giant_redbrand_ruffians",
+    "module_id": "lost_mine",
+    "title": "沉睡巨人与红标帮恶霸",
+    "kind": "encounter",
+    "page_start": 17,
+    "page_end": 18,
+    "source_refs": [
+      {
+        "page_start": 17,
+        "page_end": 18,
+        "section": "沉睡巨人 / 红标帮恶霸"
+      }
+    ],
+    "dm_summary": "沉睡巨人是凡达林东端一间肮脏危险的小酒馆，红标帮常在此出没。角色若主动来这里找红标帮麻烦，四名披红披风的人类恶棍会在门口挑衅；若角色在镇上待了约一天仍回避红标帮，恶霸也会在他们离镇前于街上拦路勒索。双方剑拔弩张，不发生突袭。打败三人后，最后一名恶霸会逃向崔森德庄园。战后镇民多半感激，镇长担心报复但不会惩罚角色。",
+    "player_visible_intro": "凡达林大道尽头，沉睡巨人酒馆歪斜得像一座危房。四个系着污迹斑斑红披风的人类恶棍守在门口或街边，手按武器，带着嘲弄和敌意盯住你们。",
+    "scene_beats": [
+      "进入沉睡巨人或准备离镇时，红标帮恶霸主动挑衅。",
+      "若角色不先动手，恶霸在一两轮内升级为战斗。",
+      "打败三名恶霸后，剩下一人逃向崔森德庄园。",
+      "俘虏可被威胁或说服暂时关押，但镇长在红标帮覆灭前不愿正式收监。",
+      "战后应自然引导角色调查崔森德庄园或先回镇内整备。"
+    ],
+    "rules_notes": [
+      "双方一开始互相戒备；不使用突袭。新版突袭也只影响先攻劣势。",
+      "四名红标帮恶霸使用 redbrand_ruffian 数据。",
+      "打败三名后，最后一名优先逃往崔森德庄园。",
+      "打败恶霸后，队伍平分400 XP。",
+      "镇长不会惩罚角色，但会警告他们别再惹麻烦。"
+    ],
+    "checks": [],
+    "encounters": [
+      {
+        "id": "redbrand_street_confrontation",
+        "monster_slug": "redbrand_ruffian",
+        "count": 4,
+        "faction": "enemy",
+        "trigger": "角色前往沉睡巨人，或在凡达林停留后仍回避红标帮并准备离镇"
+      }
+    ],
+    "clues": [
+      {
+        "id": "redbrand_trail_to_tresendar",
+        "label": "逃向崔森德庄园",
+        "description": "战败的红标帮恶霸会逃往镇东山坡的崔森德庄园，暗示那里与其大本营有关。"
+      },
+      {
+        "id": "redbrands_dominate_sleeping_giant",
+        "label": "红标帮占据沉睡巨人",
+        "description": "沉睡巨人几乎只有红标帮出没，是他们在镇上公开滋事的据点。"
+      }
+    ],
+    "events": [
+      "redbrand_ruffians_defeated"
+    ],
+    "fallbacks": [
+      {
+        "id": "force_confrontation_before_departure",
+        "condition": "角色长期不理会红标帮且准备离开凡达林",
+        "dm_guidance": "让恶霸在街上拦路勒索，触发同一遭遇。"
+      },
+      {
+        "id": "need_direction_after_fight",
+        "condition": "战后角色仍不知下一步",
+        "dm_guidance": "让已结识的镇民或NPC指出崔森德庄园是调查方向。"
+      }
+    ],
+    "routing_notes": [
+      "此节点用于把镇内红标帮压力推进成公开冲突，并导向崔森德庄园或回镇整备。"
+    ],
+    "rewards": [
+      {
+        "id": "redbrand_ruffians_400_xp",
+        "type": "xp",
+        "amount": 400,
+        "scope": "party",
+        "requires": [
+          "redbrand_ruffians_defeated"
+        ],
+        "description": "击败沉睡巨人或街面冲突中的四名红标帮恶霸后，队伍平分400 XP。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_tresendar_after_fight",
+        "label": "追查逃跑恶霸或调查庄园",
+        "next_node_id": "tresendar_manor_approach",
+        "requires": [
+          "redbrand_ruffians_defeated"
+        ],
+        "transition_kind": "advance",
+        "description": "沿线索前往镇东山坡的崔森德庄园。"
+      },
+      {
+        "id": "return_to_phandalin",
+        "label": "回到凡达林镇内",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回镇内交货、休息、打听消息或拜访其他地点。"
+      },
+      {
+        "id": "direct_to_hideout",
+        "label": "跳过街面冲突，直接进入红标帮窝点",
+        "next_node_id": "redbrand_hideout_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "若角色已决定调查庄园地下，切到窝点入口。"
+      },
+      {
+        "id": "revisit_cragmaw_hideout",
+        "label": "回访克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "角色可暂缓红标帮，返回处理克拉摩相关事务。"
+      },
+      {
+        "id": "revisit_goblin_ambush_site",
+        "label": "回访地精伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "角色可离镇返回伏击道路调查或追踪。"
+      }
+    ]
+  },
+  {
+    "id": "tresendar_manor_approach",
+    "module_id": "lost_mine",
+    "title": "崔森德庄园外部调查",
+    "kind": "location",
+    "page_start": 17,
+    "page_end": 18,
+    "source_refs": [
+      {
+        "page_start": 17,
+        "page_end": 17,
+        "section": "阿德里夫农场：卡普的故事"
+      },
+      {
+        "page_start": 18,
+        "page_end": 18,
+        "section": "崔森德庄园"
+      },
+      {
+        "page_start": 16,
+        "page_end": 17,
+        "section": "矿工兑换所：哈利娅的委托"
+      }
+    ],
+    "dm_summary": "崔森德庄园坐落在凡达林镇东山坡，林木环绕、荆棘丛生，地上建筑早已荒废，像一座破败小城堡。原文指出其地窖已被红标帮改造成地下堡垒，角色搜索周边可发现大本营入口。若他们从卡普处获得消息，十岁半身人男孩可指出荆棘中的秘道，通往窝点深处；若从哈利娅或街面遭遇获得线索，则会知道红标帮大本营就在庄园下。此节点只处理接近、搜索和选择入口，不展开地下房间。",
+    "player_visible_intro": "镇东小山坡上，崔森德庄园的废墟被树木和荆棘包围。残破的石墙与坍塌屋顶显出旧日堡垒的轮廓，地上部分寂静荒凉，但周围的踩踏痕迹暗示这里并非无人来往。",
+    "scene_beats": [
+      "角色从镇内线索、逃跑恶霸或卡普指引来到庄园废墟。",
+      "近看可确认地上建筑长期废弃，但地下仍可能被使用。",
+      "搜索周边能找到通往红标帮大本营的入口。",
+      "若有卡普带路，可直接找到荆棘丛中的秘道。",
+      "角色可进入窝点、回镇整备，或改去沉睡巨人正面挑衅红标帮。"
+    ],
+    "rules_notes": [
+      "此节点不生成红标帮地下城房间，只把队伍带到入口选择。",
+      "庄园地上部分废弃已久，重点是通往地窖或秘道的入口。",
+      "卡普知道的秘道通往红标帮大本营区域8，但本批不展开该区域。",
+      "若玩家已决定调查庄园，原文允许跳过街面恶霸遭遇。"
+    ],
+    "checks": [
+      {
+        "id": "search_manor_approach",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "搜索庄园周边入口",
+        "resolution": "原文未给固定DC；角色认真搜索周边即可发现红标帮大本营入口。"
+      },
+      {
+        "id": "notice_halia_motive",
+        "ability": "wis",
+        "skill": "insight",
+        "dc": 15,
+        "reason": "判断哈利娅委托的动机",
+        "resolution": "成功可察觉她想要玻璃手杖死掉的动机并不单纯。"
+      }
+    ],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "redbrand_base_under_tresendar",
+        "label": "红标帮大本营在庄园下",
+        "description": "哈利娅等镇内消息指出，红标帮的大本营藏在镇东崔森德庄园下方。"
+      },
+      {
+        "id": "carp_secret_tunnel",
+        "label": "卡普发现的秘道",
+        "description": "卡普曾在庄园附近荆棘中发现一条秘道，并看见大个儿丑八怪与红标帮会合。"
+      },
+      {
+        "id": "manor_cellar_fortress",
+        "label": "废弃庄园的地窖",
+        "description": "庄园地上废弃已久，但地窖被红标帮改造成地下堡垒。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "skip_ruffians_if_investigating_manor",
+        "condition": "角色直接调查崔森德庄园",
+        "dm_guidance": "按原文跳过红标帮恶霸遭遇，直接推进到窝点入口。"
+      },
+      {
+        "id": "return_later_pressure",
+        "condition": "角色离开庄园不处理红标帮",
+        "dm_guidance": "允许去做其他短期冒险；回镇时强调红标帮更猖狂。"
+      }
+    ],
+    "routing_notes": [
+      "此节点承接镇内所有红标帮线索，并把选择收束到进入窝点、回镇整备或改走街面冲突。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "enter_redbrand_hideout",
+        "label": "进入红标帮窝点",
+        "next_node_id": "redbrand_hideout_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从庄园地窖入口或秘道进入后续地下城入口。"
+      },
+      {
+        "id": "to_sleeping_giant",
+        "label": "改去沉睡巨人挑衅红标帮",
+        "next_node_id": "sleeping_giant_redbrand_ruffians",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "角色选择先在镇上公开对付红标帮恶霸。"
+      },
+      {
+        "id": "return_to_phandalin",
+        "label": "回凡达林整备或打听",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回镇内休息、购物、交货、接任务或继续询问红标帮。"
+      },
+      {
+        "id": "to_old_owl_well",
+        "label": "暂去调查古枭井",
+        "next_node_id": "old_owl_well",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "角色可先处理达朗提到的不死生物与废墟问题。"
+      },
+      {
+        "id": "to_wyvern_tor",
+        "label": "暂去飞龙岩",
+        "next_node_id": "wyvern_tor",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "角色可先响应镇长大厅的兽人悬赏。"
+      },
+      {
+        "id": "to_conyberry_agatha",
+        "label": "暂去兔莓与阿加莎巢穴",
+        "next_node_id": "conyberry_agatha_lair",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "角色可先处理加莉尔修女的女妖交易。"
+      },
+      {
+        "id": "to_thundertree",
+        "label": "暂去雷树镇寻找里多斯",
+        "next_node_id": "thundertree",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "角色可追寻奎琳提到的德鲁伊里多斯。"
+      },
+      {
+        "id": "to_cragmaw_castle",
+        "label": "追查克拉摩堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "若角色已取得城堡线索，可转去寻找甘德伦相关目标。"
+      },
+      {
+        "id": "revisit_cragmaw_hideout",
+        "label": "回访克拉摩窝点",
+        "next_node_id": "cragmaw_hideout_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "角色可返回窝点处理货物或残留线索。"
+      },
+      {
+        "id": "revisit_goblin_ambush_site",
+        "label": "回访地精伏击点",
+        "next_node_id": "goblin_ambush",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "角色可回到伏击点继续调查或追踪。"
+      }
+    ]
+  },
+  {
+    "id": "spider_web_overview",
+    "module_id": "lost_mine",
+    "title": "蜘蛛之网总览",
+    "kind": "stage",
+    "page_start": 26,
+    "page_end": 26,
+    "source_refs": [
+      {
+        "page_start": 26,
+        "page_end": 26,
+        "section": "第3部分：蜘蛛之网"
+      }
+    ],
+    "dm_summary": "本节点用于调度第三部分的开放调查。角色在凡达林得到若干支线与主线线索后，可以休整补给，再选择向周边荒野出发。各地点彼此并非必访；主持只需确认玩家当前掌握的委托、想追查的问题，以及准备前往的方向。若他们犹豫，可把焦点放回委托人、失踪的甘德伦、克拉摩堡、潮音洞穴或周边威胁上。",
+    "player_visible_intro": "凡达林给不了你们所有答案。关于失踪矮人、克拉摩堡、古老废墟、荒野怪物和一位隐居德鲁伊的传闻，像蛛网一样从小镇延伸到北方的森林、丘陵与旧道。休整妥当后，你们可以选择一条线索追出去。",
+    "scene_beats": [
+      "从凡达林已有委托或线索开场，确认队伍想先调查哪一条。",
+      "提醒玩家可在镇上休息、补给、回访委托人后再出发。",
+      "若目标在北方或东方，通常先进入三猪小径荒野旅行。",
+      "各地点不是必访；玩家可按兴趣追主线或处理支线威胁。",
+      "选择目标后切换到对应地点或旅行节点。"
+    ],
+    "rules_notes": [
+      "本节点不结算遭遇；它只负责开放式任务选择与路线调度。",
+      "若玩家回镇整理情报，切回凡达林枢纽或对应委托NPC。",
+      "第三部分允许跳过未选择地点，不要求完成全部支线。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "agatha_bowgentle_lead",
+        "label": "阿加莎与博哲托尔",
+        "description": "加莉尔修女希望角色去兔莓废墟寻找女妖阿加莎，询问博哲托尔法术书的问题。"
+      },
+      {
+        "id": "frontier_threat_jobs",
+        "label": "荒野威胁委托",
+        "description": "达朗关心古枭井附近的活动；哈宾希望角色驱赶飞龙突岩一带的兽人。"
+      },
+      {
+        "id": "reidoth_thundertree_lead",
+        "label": "雷树的里多斯",
+        "description": "奎琳建议去雷树废墟找德鲁伊里多斯，他可能知道克拉摩堡和潮音洞穴的位置。"
+      },
+      {
+        "id": "cragmaw_castle_rescue_goal",
+        "label": "克拉摩堡与甘德伦",
+        "description": "修达希望角色找到克拉摩堡，营救甘德伦·寻岩者并取回他的地图。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "no_clear_thread",
+        "condition": "玩家没有明确目标或忘记线索",
+        "dm_guidance": "让他们回顾凡达林委托人，选择一条最紧迫的线索。"
+      },
+      {
+        "id": "party_returns_to_town",
+        "condition": "玩家暂缓出发并回镇处理事务",
+        "dm_guidance": "切回凡达林枢纽或相应委托NPC，不强推荒野。"
+      }
+    ],
+    "routing_notes": [
+      "Director按玩家选择的线索切到目标地点；若只是上路穿越北方荒野，先切到三猪小径。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_triboar_trail",
+        "label": "沿三猪小径出发",
+        "next_node_id": "triboar_trail_wilderness",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "进入北方旧道与荒野旅行。"
+      },
+      {
+        "id": "to_conyberry_agatha",
+        "label": "前往兔莓寻找阿加莎",
+        "next_node_id": "conyberry_agatha_lair",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "追查加莉尔修女的女妖委托。"
+      },
+      {
+        "id": "to_old_owl_well",
+        "label": "调查古枭井",
+        "next_node_id": "old_owl_well",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "处理达朗关心的废墟活动。"
+      },
+      {
+        "id": "to_wyvern_tor",
+        "label": "寻找飞龙突岩兽人",
+        "next_node_id": "wyvern_tor",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "追查哈宾的兽人威胁委托。"
+      },
+      {
+        "id": "to_thundertree",
+        "label": "去雷树找里多斯",
+        "next_node_id": "thundertree",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "寻求德鲁伊关于堡垒或潮音洞穴的建议。"
+      },
+      {
+        "id": "to_cragmaw_castle_search",
+        "label": "寻找克拉摩堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "推进营救甘德伦与找回地图的主线。"
+      },
+      {
+        "id": "back_to_phandalin",
+        "label": "回凡达林休整或问询",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回镇补给、休息或回访委托人。"
+      }
+    ]
+  },
+  {
+    "id": "triboar_trail_wilderness",
+    "module_id": "lost_mine",
+    "title": "三猪小径荒野旅行",
+    "kind": "location",
+    "page_start": 26,
+    "page_end": 27,
+    "source_refs": [
+      {
+        "page_start": 26,
+        "page_end": 26,
+        "section": "三猪小径"
+      },
+      {
+        "page_start": 26,
+        "page_end": 27,
+        "section": "使用大地图"
+      },
+      {
+        "page_start": 27,
+        "page_end": 27,
+        "section": "野外遭遇"
+      }
+    ],
+    "dm_summary": "三猪小径是凡达林北方的旧道，也被称作三猪捷径或兔子隘口，连接兔莓废墟以西的荒野并通往更远的三猪镇。这里夹在宝剑山脉与无冬森林之间，旅行常需数日。主持应确认行军队列、守夜安排和目的地；白天与夜晚都可能发生遭遇。随机遭遇本身不必变成长期状态，只有能开启路线或解释阴谋的情报需要记录。",
+    "player_visible_intro": "你们离开凡达林，踏上北方的旧路。潮湿的草地、起伏的丘陵、稀疏树林与远处山影交替出现。三猪小径看似安静，却少有人敢说它安全；每次扎营、每段开阔路面，都可能暴露在野兽、强盗或怪物眼中。",
+    "scene_beats": [
+      "进入旅程时询问队列、速度、目的地与夜间守望者。",
+      "用简短景物表现路途推进，不必让无事发生的里程拖慢节奏。",
+      "每日白天和夜晚各检定一次是否遭遇；发生时再决定怪物。",
+      "地精或大地精遭遇可能提供克拉摩堡线索，但态度和条件不同。",
+      "若玩家坚持目标，旅行结束后切到对应地点；若撤回则返凡达林。"
+    ],
+    "rules_notes": [
+      "大地图旅行按每日10小时行走约24里处理，并需要8小时休息。",
+      "白天和夜晚各掷1次d20，17至20发生野外遭遇。",
+      "遭遇后掷d12查表；可出现蚊蝠、食尸鬼、食人魔、地精、大地精、兽人、狼或枭熊。",
+      "击败随机怪物后，按怪物资料板XP总值由角色平分。",
+      "遭遇危险前，行军队列和守夜安排决定谁先接触威胁。"
+    ],
+    "checks": [
+      {
+        "id": "wilderness_encounter_roll",
+        "ability": "special",
+        "skill": "none",
+        "reason": "判定白天或夜间是否发生遭遇",
+        "resolution": "白天与夜晚各掷1次d20，结果为17至20时发生遭遇，再掷d12决定类型。"
+      },
+      {
+        "id": "goblin_interrogation",
+        "ability": "cha",
+        "skill": "intimidation",
+        "reason": "逼问或威胁地精取得克拉摩堡方向",
+        "resolution": "按玩家手段裁定；原文说明俘虏或威胁地精可获得城堡位置方向线索。"
+      },
+      {
+        "id": "hobgoblin_information",
+        "ability": "cha",
+        "skill": "special",
+        "reason": "从大地精处取得克拉摩堡情报",
+        "resolution": "大地精知道克拉摩堡位置，但除非被魅惑，否则不会透露情报。"
+      }
+    ],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "goblin_cragmaw_castle_direction",
+        "label": "地精知道克拉摩堡",
+        "description": "三猪小径上的地精知道克拉摩堡的位置；俘虏或威胁它们可取得方向线索。"
+      },
+      {
+        "id": "hobgoblin_black_spider_bounty",
+        "label": "黑蜘蛛悬赏画像",
+        "description": "大地精身上有某位冒险者的粗略画像，写着悬赏此人25 gp，并印有黑蜘蛛徽记。"
+      },
+      {
+        "id": "hobgoblin_cragmaw_castle_knowledge",
+        "label": "大地精知道城堡",
+        "description": "大地精也知道克拉摩堡位置，但除非被魅惑，否则不会给出情报。"
+      },
+      {
+        "id": "wyvern_tor_orc_scouts",
+        "label": "飞龙突岩兽人斥候",
+        "description": "路上的兽人是飞龙突岩营地的分队，正在巡逻、伏击或四处劫掠。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "lost_or_uncertain_destination",
+        "condition": "玩家上路但目的地不清",
+        "dm_guidance": "让队伍在路标、旧道和已知委托中重新选择方向。"
+      },
+      {
+        "id": "retreat_from_wilderness",
+        "condition": "遭遇后资源不足或决定撤退",
+        "dm_guidance": "允许返回凡达林休整，再从总览节点重选路线。"
+      }
+    ],
+    "routing_notes": [
+      "Director把本节点视为旅行中转；只在随机遭遇产生城堡、黑蜘蛛或飞龙突岩情报时记录线索。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_spider_web_overview",
+        "label": "重新选择调查线索",
+        "next_node_id": "spider_web_overview",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "停下整理路线，回到第三部分调度。"
+      },
+      {
+        "id": "to_phandalin",
+        "label": "返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回镇休整、补给或回访委托人。"
+      },
+      {
+        "id": "to_conyberry_agatha",
+        "label": "继续前往兔莓",
+        "next_node_id": "conyberry_agatha_lair",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "沿路前往兔莓废墟与阿加莎的地点。"
+      },
+      {
+        "id": "to_old_owl_well",
+        "label": "转向古枭井",
+        "next_node_id": "old_owl_well",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "穿越荒野调查古枭井废墟。"
+      },
+      {
+        "id": "to_wyvern_tor",
+        "label": "前往飞龙突岩",
+        "next_node_id": "wyvern_tor",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "追踪或主动寻找兽人营地。"
+      },
+      {
+        "id": "to_wyvern_tor_from_orc_scouts",
+        "label": "循兽人斥候线索追去",
+        "next_node_id": "wyvern_tor",
+        "requires": [
+          "wyvern_tor_orc_scouts"
+        ],
+        "transition_kind": "advance",
+        "description": "根据遭遇的兽人分队锁定飞龙突岩方向。"
+      },
+      {
+        "id": "to_thundertree",
+        "label": "继续去雷树",
+        "next_node_id": "thundertree",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "长途前往雷树废墟寻找里多斯。"
+      },
+      {
+        "id": "to_cragmaw_castle_search",
+        "label": "寻找克拉摩堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "按既有主线或地图判断展开搜索。"
+      },
+      {
+        "id": "to_cragmaw_castle_with_goblin_clue",
+        "label": "按地精线索找城堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [
+          "goblin_cragmaw_castle_direction"
+        ],
+        "transition_kind": "advance",
+        "description": "利用地精供出的方向推进城堡搜索。"
+      },
+      {
+        "id": "to_cragmaw_castle_with_hobgoblin_clue",
+        "label": "按大地精情报找城堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [
+          "hobgoblin_cragmaw_castle_knowledge"
+        ],
+        "transition_kind": "advance",
+        "description": "利用被魅惑大地精透露的信息推进搜索。"
+      }
+    ]
+  },
+  {
+    "id": "conyberry_agatha_lair",
+    "module_id": "lost_mine",
+    "title": "兔莓与阿加莎的巢穴",
+    "kind": "location",
+    "page_start": 27,
+    "page_end": 27,
+    "source_refs": [
+      {
+        "page_start": 27,
+        "page_end": 27,
+        "section": "兔莓与阿加莎的巢穴"
+      },
+      {
+        "page_start": 27,
+        "page_end": 27,
+        "section": "与阿加莎打交道"
+      }
+    ],
+    "dm_summary": "兔莓废墟是三猪小径上的地标，旧路向西北通往无冬森林中阿加莎的树枝圆顶巢穴。阿加莎会在角色进入后显现，起初威吓来客；若角色粗鲁、威胁或忘记来意，她会消失且不再回应。礼貌交涉可用DC 15魅力（游说）说服她，送上加莉尔修女的银梳子则自动成功。她只回答一个问题，可能给出博哲托尔法术书、克拉摩堡、潮音洞穴、黑蜘蛛或哈姆·科斯特相关情报。",
+    "player_visible_intro": "兔莓只剩被野蛮人洗劫后的废墟。沿旧路向西北进入无冬森林后，空气愈发寒冷，藤蔓与青苔垂落。小径转弯处，纠结的树枝编成一座阴影中的低矮圆顶栖所，入口就在前方。",
+    "scene_beats": [
+      "从兔莓废墟沿旧路入林，找到阿加莎的树枝圆顶巢穴。",
+      "进入后阿加莎显现并质问来意；粗鲁或威胁会使她离去。",
+      "礼貌交涉可游说；献上银梳子则直接获得她的好感。",
+      "阿加莎只答一个问题，玩家必须在诸多线索间作选择。",
+      "得到回答后可回凡达林交付加莉尔相关情报，或转往新地点。"
+    ],
+    "rules_notes": [
+      "主要交谈者进行DC 15魅力（游说）；优秀扮演可给优势。",
+      "把加莉尔修女的银梳子作为礼物送出时，游说自动成功。",
+      "阿加莎不会主动攻击；若被冒犯，她消失且本次不再返回。",
+      "本地点无官方地图；只需用树枝圆顶巢穴和少量家具描述空间。"
+    ],
+    "checks": [
+      {
+        "id": "persuade_agatha",
+        "ability": "cha",
+        "skill": "persuasion",
+        "dc": 15,
+        "reason": "以礼貌态度请求女妖回答一个问题",
+        "resolution": "成功则阿加莎允许提问一次；赠送银梳子自动成功，粗鲁威胁则无需检定而失败。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "agatha_manifestation",
+        "monster_slug": "banshee",
+        "count": 1,
+        "faction": "neutral",
+        "trigger": "角色进入巢穴后阿加莎显现并质问来意"
+      }
+    ],
+    "clues": [
+      {
+        "id": "bowgentle_spellbook_tsernoth",
+        "label": "博哲托尔法术书去向",
+        "description": "阿加莎一百多年前把法术书交易给伊利亚巴的死灵法师瑟诺斯，之后下落不明。"
+      },
+      {
+        "id": "agatha_cragmaw_castle_info",
+        "label": "克拉摩堡情报",
+        "description": "若以唯一问题询问，阿加莎可提供克拉摩堡位置或相关指引。"
+      },
+      {
+        "id": "agatha_wave_echo_or_black_spider_info",
+        "label": "潮音洞穴或黑蜘蛛",
+        "description": "若玩家选择询问，阿加莎可用占卜知识回答潮音洞穴位置或黑蜘蛛身份相关问题。"
+      },
+      {
+        "id": "agatha_kost_question_answer",
+        "label": "古枭井塔主之名",
+        "description": "若询问哈姆·科斯特的问题，阿加莎知道建造古枭井塔的法师名为阿辛多。"
+      }
+    ],
+    "events": [
+      "agatha_bowgentle_info_obtained"
+    ],
+    "fallbacks": [
+      {
+        "id": "agatha_offended",
+        "condition": "角色威胁、辱骂或强闯后继续纠缠",
+        "dm_guidance": "阿加莎消失且不再回应；队伍只能离开并改走其他线索。"
+      },
+      {
+        "id": "wrong_question_chosen",
+        "condition": "玩家没有询问加莉尔委托的问题",
+        "dm_guidance": "照常给出所问答案和XP，但加莉尔的法术书情报仍未完成。"
+      }
+    ],
+    "routing_notes": [
+      "阿加莎是一次性情报节点：成功后按玩家所问问题切往凡达林回报或对应地点。"
+    ],
+    "rewards": [
+      {
+        "id": "agatha_answer_200_xp",
+        "type": "xp",
+        "amount": 200,
+        "scope": "party",
+        "requires": [
+          "agatha_bowgentle_info_obtained"
+        ],
+        "description": "成功说服女妖阿加莎并得到一个问题的回答后，队伍平分200 XP。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "return_phandalin_after_agatha",
+        "label": "带着答案回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [
+          "agatha_bowgentle_info_obtained"
+        ],
+        "transition_kind": "switch",
+        "description": "返回镇上交付或继续选择支线。"
+      },
+      {
+        "id": "to_shrine_with_bowgentle_info",
+        "label": "向加莉尔回报法术书情报",
+        "next_node_id": "shrine_of_luck",
+        "requires": [
+          "bowgentle_spellbook_tsernoth"
+        ],
+        "transition_kind": "switch",
+        "description": "把博哲托尔法术书去向告诉加莉尔。"
+      },
+      {
+        "id": "to_cragmaw_castle_search",
+        "label": "追踪克拉摩堡线索",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [
+          "agatha_cragmaw_castle_info"
+        ],
+        "transition_kind": "advance",
+        "description": "利用阿加莎给出的情报寻找城堡。"
+      },
+      {
+        "id": "to_old_owl_well_with_answer",
+        "label": "把阿辛多之名带去古枭井",
+        "next_node_id": "old_owl_well",
+        "requires": [
+          "agatha_kost_question_answer"
+        ],
+        "transition_kind": "switch",
+        "description": "可用答案与哈姆·科斯特交涉。"
+      },
+      {
+        "id": "to_spider_web_overview",
+        "label": "暂不追问，重选目标",
+        "next_node_id": "spider_web_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回到第三部分开放式调度。"
+      }
+    ]
+  },
+  {
+    "id": "old_owl_well",
+    "module_id": "lost_mine",
+    "title": "古枭井",
+    "kind": "location",
+    "page_start": 27,
+    "page_end": 28,
+    "source_refs": [
+      {
+        "page_start": 27,
+        "page_end": 28,
+        "section": "古枭井"
+      },
+      {
+        "page_start": 28,
+        "page_end": 28,
+        "section": "宝藏"
+      },
+      {
+        "page_start": 28,
+        "page_end": 28,
+        "section": "奖励经验"
+      }
+    ],
+    "dm_summary": "古枭井位于三猪小径南方的崎岖丘陵，任何凡达林NPC都能指路。废墟中有古老瞭望塔基座、仍流清水的水井和一顶鲜艳帐篷。红袍巫师哈姆·科斯特在此研究遗留奥秘，十二具僵尸藏在塔中，靠近塔或帐篷时会现身。若角色开口交流，科斯特会暂时召回僵尸；他不特别好战，但隐瞒来意，愿以情报换取清除飞龙突岩兽人或向阿加莎询问建塔法师之名。击败他和僵尸可夺取帐篷财物；仅查明红袍事实并回报达朗也能完成委托。",
+    "player_visible_intro": "翻过低矮山脊后，破败废墟与一座老旧瞭望塔基座出现在崎岖丘陵间。墙壁多已成土墩和瓦砾，中央仍有古井。一顶色彩鲜艳的帐篷扎在塔楼废墟中，但视野里暂时看不见人。",
+    "scene_beats": [
+      "队伍可从旧足迹或山坡峡口接近，被动察觉足够者闻到尸臭。",
+      "靠近塔楼或帐篷时，十二具僵尸从废墟中摇晃而出。",
+      "战斗或骚动会引出哈姆·科斯特；交谈可让他暂时叫回僵尸。",
+      "科斯特可提出两项需求：清除飞龙突岩兽人，或向阿加莎问塔主名。",
+      "回报达朗可完成侦查任务；击败科斯特和僵尸则取得其帐篷财物。"
+    ],
+    "rules_notes": [
+      "被动感知10或更高者在接近前可闻到塔方向的尸臭。",
+      "僵尸无法从废墟外直接看见，靠近塔楼或帐篷才会出现。",
+      "任一角色尝试对话时，科斯特会暂时召回僵尸并开始交涉。",
+      "识别刺青需DC 10智力（奥秘）；识别塞尔红袍装束需DC 10智力（历史）。",
+      "本地点无官方地图；用废墙、塔基、井和帐篷即可运行遭遇。"
+    ],
+    "checks": [
+      {
+        "id": "recognize_necromancy_mark",
+        "ability": "int",
+        "skill": "arcana",
+        "dc": 10,
+        "reason": "辨认科斯特头上的黑色刺青",
+        "resolution": "成功得知那是死灵魔法徽记，代表他的法师学派。"
+      },
+      {
+        "id": "recognize_thayan_robes",
+        "ability": "int",
+        "skill": "history",
+        "dc": 10,
+        "reason": "辨认红袍和刺青传统",
+        "resolution": "成功得知这种装束常见于遥远东方的塞尔法师。"
+      },
+      {
+        "id": "smell_undead",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "接近废墟时察觉尸臭",
+        "resolution": "被动感知10或更高的角色可闻到死尸味从塔方向传来。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "old_owl_well_zombies",
+        "monster_slug": "zombie",
+        "count": 12,
+        "faction": "enemy",
+        "trigger": "角色靠近塔楼或帐篷时从塔中出现"
+      },
+      {
+        "id": "hamun_kost",
+        "monster_slug": "evil_mage",
+        "count": 1,
+        "faction": "neutral",
+        "trigger": "战斗爆发或骚动后从帐篷中出来质问"
+      }
+    ],
+    "clues": [
+      {
+        "id": "red_wizard_at_old_owl_well",
+        "label": "红袍巫师在古枭井",
+        "description": "哈姆·科斯特，一名与死灵术有关的塞尔红袍巫师，正在古枭井扎营研究。"
+      },
+      {
+        "id": "kost_wyvern_tor_request",
+        "label": "清除飞龙突岩兽人",
+        "description": "科斯特希望飞龙突岩的兽人被清除，因为它们侦查他的营地并可能惹麻烦。"
+      },
+      {
+        "id": "kost_agatha_question",
+        "label": "科斯特想问阿加莎",
+        "description": "科斯特想知道建造古枭井塔的法师姓名，但不愿亲自冒险惹怒女妖。"
+      },
+      {
+        "id": "old_owl_tower_builder_arthindol",
+        "label": "建塔者阿辛多",
+        "description": "若队伍带来阿加莎的答案，可告知科斯特古枭井塔的建造者名为阿辛多。"
+      }
+    ],
+    "events": [
+      "old_owl_well_reported_to_daran",
+      "old_owl_well_threat_defeated"
+    ],
+    "fallbacks": [
+      {
+        "id": "talk_during_combat",
+        "condition": "战斗中角色尝试打招呼、解释或回应质问",
+        "dm_guidance": "科斯特先叫回僵尸，改为交涉；敌意再起则恢复战斗。"
+      },
+      {
+        "id": "avoid_fight_after_scouting",
+        "condition": "队伍只确认红袍与不死生物后撤离",
+        "dm_guidance": "允许带情报回达朗；未击败科斯特则不获得威胁清除奖励和宝藏。"
+      }
+    ],
+    "routing_notes": [
+      "古枭井可用侦查回报、与科斯特交易或直接清除威胁三种结果导向后续路线。"
+    ],
+    "rewards": [
+      {
+        "id": "old_owl_well_report_200_xp",
+        "type": "xp",
+        "amount": 200,
+        "scope": "party",
+        "requires": [
+          "old_owl_well_reported_to_daran"
+        ],
+        "description": "查明红袍巫师在古枭井活动并把情报告知达朗后，队伍平分200 XP。"
+      },
+      {
+        "id": "old_owl_well_threat_800_xp",
+        "type": "xp",
+        "amount": 800,
+        "scope": "party",
+        "requires": [
+          "old_owl_well_threat_defeated"
+        ],
+        "description": "击败哈姆·科斯特和他的僵尸后，队伍平分800 XP。"
+      },
+      {
+        "id": "old_owl_well_kost_treasure",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "old_owl_well_threat_defeated"
+        ],
+        "description": "哈姆·科斯特的财物：35 sp、20 ep、20 gp、5 pp、100 gp珍珠、治疗药水、黑暗术卷轴和25 gp珠宝盒。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "return_to_daran_with_report",
+        "label": "向达朗回报古枭井情报",
+        "next_node_id": "edermath_orchard",
+        "requires": [
+          "red_wizard_at_old_owl_well"
+        ],
+        "transition_kind": "switch",
+        "description": "回凡达林报告红袍巫师与不死生物。"
+      },
+      {
+        "id": "to_wyvern_tor_for_kost",
+        "label": "替科斯特处理飞龙突岩兽人",
+        "next_node_id": "wyvern_tor",
+        "requires": [
+          "kost_wyvern_tor_request"
+        ],
+        "transition_kind": "advance",
+        "description": "接受或利用科斯特的需求前往兽人营地。"
+      },
+      {
+        "id": "to_agatha_for_kost_question",
+        "label": "去问阿加莎塔主之名",
+        "next_node_id": "conyberry_agatha_lair",
+        "requires": [
+          "kost_agatha_question"
+        ],
+        "transition_kind": "switch",
+        "description": "前往女妖巢穴询问建塔法师姓名。"
+      },
+      {
+        "id": "return_to_kost_with_arthindol",
+        "label": "把阿辛多之名告诉科斯特",
+        "next_node_id": "old_owl_well",
+        "requires": [
+          "old_owl_tower_builder_arthindol"
+        ],
+        "transition_kind": "revisit",
+        "description": "带着阿加莎的答案回古枭井交涉。"
+      },
+      {
+        "id": "back_to_phandalin",
+        "label": "离开古枭井回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "休整、回报或改选其他支线。"
+      },
+      {
+        "id": "back_to_spider_web_overview",
+        "label": "回到开放式调度",
+        "next_node_id": "spider_web_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "让玩家重新选择三部分目标。"
+      }
+    ]
+  },
+  {
+    "id": "wyvern_tor",
+    "module_id": "lost_mine",
+    "title": "飞龙突岩",
+    "kind": "location",
+    "page_start": 35,
+    "page_end": 35,
+    "source_refs": [
+      {
+        "page_start": 35,
+        "page_end": 35,
+        "section": "飞龙突岩 Wyvern Tor"
+      },
+      {
+        "page_start": 35,
+        "page_end": 35,
+        "section": "兽人营地 Orc Camp"
+      },
+      {
+        "page_start": 35,
+        "page_end": 35,
+        "section": "宝藏 Treasure"
+      },
+      {
+        "page_start": 35,
+        "page_end": 35,
+        "section": "奖励经验 Awarding Experience Points"
+      }
+    ],
+    "dm_summary": "飞龙突岩是宝剑山脉东北的醒目标志，三猪小径近兔莓镇时可从南方望见。这里曾是飞龙巢穴，如今被众箭部族兽人斥候和食人魔盟友占据。首领布洛戈·咬斧者更热衷杀戮劫掠而非侦查。角色需在崎岖山丘中搜索营地；若能安静解决洞外哨兵，可突袭洞中敌人。布洛戈死后其余兽人逃跑，高格则战至死。清除营地完成哈宾镇长与哈姆·科斯特相关委托。",
+    "player_visible_intro": "南方的飞龙突岩像断齿般刺出崎岖山丘，即使相隔很远也清晰可见。随着你们靠近，荒凉坡地变得陡峭破碎，旧日飞龙巢穴的传闻被脚下碎石与冷风取代；若兽人真在这里扎营，藏身之处不会轻易显露。",
+    "scene_beats": [
+      "队伍抵达飞龙突岩外围，在数里崎岖山坡间寻找隐藏营地。",
+      "发现营地时，烟味飘来；五十码外山沟有洞口，二十码外有兽人哨兵。",
+      "若安静迅速解决哨兵，角色可尝试突袭洞中兽人与食人魔。",
+      "若被发现或行动不够安静，哨兵退入洞中警告其余敌人。",
+      "布洛戈死亡后其余兽人逃跑；食人魔高格会一直战斗到死。"
+    ],
+    "rules_notes": [
+      "搜索营地每小时由队伍领队检定一次：察觉DC15或求生DC10。",
+      "布洛戈使用兽人数据，但有30点生命值。",
+      "新版突袭：被突袭者只在先攻检定上劣势，不跳过首回合。",
+      "洞中箱子没上锁；击败营地怪物后可取得其中财物。",
+      "清除飞龙突岩同时完成镇长哈宾和古枭井哈姆·科斯特的委托。"
+    ],
+    "checks": [
+      {
+        "id": "find_orc_camp_perception",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 15,
+        "reason": "在飞龙突岩崎岖山坡间寻找隐藏的兽人营地",
+        "resolution": "队伍领队每小时可检定一次，成功发现营地。"
+      },
+      {
+        "id": "find_orc_camp_survival",
+        "ability": "wis",
+        "skill": "survival",
+        "dc": 10,
+        "reason": "追踪烟味、足迹与地形线索寻找兽人营地",
+        "resolution": "队伍领队每小时可检定一次，成功发现营地。"
+      },
+      {
+        "id": "silent_sentry_takedown",
+        "ability": "dex",
+        "skill": "stealth",
+        "reason": "安静接近并迅速解决洞外落单兽人",
+        "resolution": "按角色方案裁定；若被发现或未保持安静，哨兵退回洞中示警。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "orc_sentry",
+        "monster_slug": "orc",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "角色发现营地时，哨兵在洞口外二十码巨石旁放哨。"
+      },
+      {
+        "id": "brughor_axe_biter",
+        "monster_slug": "orc",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "洞中战斗；布洛戈拥有30点生命值。"
+      },
+      {
+        "id": "orc_raiders",
+        "monster_slug": "orc",
+        "count": 6,
+        "faction": "enemy",
+        "trigger": "洞中战斗；布洛戈死亡后剩余兽人逃跑。"
+      },
+      {
+        "id": "gog_ogre",
+        "monster_slug": "ogre",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "洞中战斗；食人魔高格会战斗到死。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "many_arrows_scouts_at_wyvern_tor",
+        "label": "众箭部族斥候",
+        "description": "飞龙突岩的兽人是众箭部族斥候，因凡达林复兴与三猪小径交通恢复而来到此地劫掠。"
+      },
+      {
+        "id": "wyvern_tor_visible_from_triboar",
+        "label": "突岩地标",
+        "description": "飞龙突岩是南方醒目标志，从三猪小径靠近兔莓镇一带可望见。"
+      }
+    ],
+    "events": [
+      "wyvern_tor_orcs_defeated"
+    ],
+    "fallbacks": [
+      {
+        "id": "camp_not_found",
+        "condition": "多次搜索失败且玩家不想继续耗时",
+        "dm_guidance": "让队伍撤回三猪小径或凡达林，之后可再按每小时检定重访。"
+      },
+      {
+        "id": "party_retreats_from_camp",
+        "condition": "发现营地后撤退或战斗中撤离",
+        "dm_guidance": "营地威胁仍存在；可从飞龙突岩外围、三猪小径或凡达林回访。"
+      }
+    ],
+    "routing_notes": [
+      "飞龙突岩通常由凡达林镇长悬赏、古枭井哈姆·科斯特请求或三猪小径旅行引到；清除后优先回凡达林或古枭井交代结果。"
+    ],
+    "rewards": [
+      {
+        "id": "wyvern_tor_monsters_1250_xp",
+        "type": "xp",
+        "amount": 1250,
+        "scope": "party",
+        "requires": [
+          "wyvern_tor_orcs_defeated"
+        ],
+        "description": "击败飞龙突岩的兽人和食人魔，完成镇长及哈姆·科斯特相关委托后，队伍平分1250 XP。"
+      },
+      {
+        "id": "wyvern_tor_brugehor_treasure",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "wyvern_tor_orcs_defeated"
+        ],
+        "description": "布洛戈团伙的箱子：750 cp、180 sp、62 ep、30 gp，以及三瓶各值10 gp的香水。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_triboar_trail",
+        "label": "返回三猪小径",
+        "next_node_id": "triboar_trail_wilderness",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "离开飞龙突岩，回到荒野旅行路线。"
+      },
+      {
+        "id": "to_phandalin_report",
+        "label": "回凡达林报告镇长",
+        "next_node_id": "phandalin",
+        "requires": [
+          "wyvern_tor_orcs_defeated"
+        ],
+        "transition_kind": "advance",
+        "description": "带着清除兽人的消息回镇交付委托。"
+      },
+      {
+        "id": "to_old_owl_well_report",
+        "label": "回古枭井告知哈姆·科斯特",
+        "next_node_id": "old_owl_well",
+        "requires": [
+          "wyvern_tor_orcs_defeated"
+        ],
+        "transition_kind": "advance",
+        "description": "向哈姆·科斯特说明兽人营地已被清除。"
+      },
+      {
+        "id": "to_spider_web_overview",
+        "label": "选择其他蜘蛛之网线索",
+        "next_node_id": "spider_web_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "离开此地，转向第三部分其他开放目标。"
+      },
+      {
+        "id": "revisit_wyvern_tor",
+        "label": "稍后回访飞龙突岩",
+        "next_node_id": "wyvern_tor",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "尚未清除营地或想再次搜索时回到此节点。"
+      }
+    ]
+  },
+  {
+    "id": "thundertree",
+    "module_id": "lost_mine",
+    "title": "雷树废墟",
+    "kind": "location",
+    "page_start": 28,
+    "page_end": 33,
+    "source_refs": [
+      {
+        "page_start": 28,
+        "page_end": 33,
+        "section": "雷树废墟 Ruins of Thundertree"
+      }
+    ],
+    "dm_summary": "雷树是霍特诺山喷发后毁灭的旧镇，废墟中仍残留灰烬僵尸、突变植物、巨蜘蛛与危险地形。德鲁伊里多斯在加固小屋中警告来者离开；他知道克拉摩堡方向，也会在队伍赶走塔楼里的幼年绿龙毒牙后透露潮音洞穴位置。镇东有龙巫教邪教徒，首领法乌里试图借绿龙上位，并可能假意结盟、把角色献给龙。此节点以章节级方式处理探索、谈判、战斗与离开路线。",
+    "player_visible_intro": "小径变成杂草丛生的旧路，坍塌石屋、藤蔓和灌木围住沉默的废镇。山坡上立着半毁石塔和民房，附近木牌写着：“危险！植物怪物和僵尸！立即折返！”空气里有荒废、腐朽与不祥的静默。",
+    "scene_beats": [
+      "进入废镇时先呈现警告木牌、坍塌建筑和山坡塔楼。",
+      "玩家可先找里多斯、搜废墟、接近龙塔或调查东侧可疑小屋。",
+      "里多斯警告植物、僵尸、蜘蛛、邪教徒与绿龙，并可指向克拉摩堡。",
+      "若赶走毒牙，里多斯兑现承诺透露潮音洞穴位置，并可能邀请入翠绿闲庭。",
+      "邪教徒可能假意合作；法乌里计划在见龙时背叛角色。"
+    ],
+    "rules_notes": [
+      "废墟内碎石、灌木和蛛网常视为困难地形；树木可提供掩护。",
+      "完好小屋木门卡死，强行打开需DC 10力量检定。",
+      "新版突袭：被突袭者只在先攻检定上劣势，不跳过首回合。",
+      "灰烬僵尸首次遭攻击时，5尺内活物需DC 10体质豁免，否则1分钟内攻击、豁免和属性检定劣势。",
+      "毒牙生命值降到一半以下会爬上塔顶飞走，而非死战到底。"
+    ],
+    "checks": [
+      {
+        "id": "force_stuck_door",
+        "ability": "str",
+        "dc": 10,
+        "reason": "强行打开雷树完好建筑中卡死的木门。"
+      },
+      {
+        "id": "spot_hidden_blights",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "发现潜伏的枯枝怪。",
+        "resolution": "用角色察觉或被动察觉对抗枯枝怪的敏捷（隐匿）。"
+      },
+      {
+        "id": "merchant_cache",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 10,
+        "reason": "彻底搜索东部小屋，在树根下发现商人钱箱。"
+      },
+      {
+        "id": "herbalist_heirloom",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 15,
+        "reason": "在药草店废墟货架下找出米尔娜家的小木盒；若米尔娜告知位置则自动成功。"
+      },
+      {
+        "id": "cultist_barriers",
+        "ability": "str",
+        "dc": 20,
+        "reason": "强行打开邪教徒小屋内栓的门；窗板为DC 15。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "twig_blights_ruins",
+        "monster_slug": "twig_blight",
+        "count": 22,
+        "faction": "enemy",
+        "trigger": "探索西侧、农舍、织布工小屋或惊动枯萎植被。"
+      },
+      {
+        "id": "ash_zombies_ruins",
+        "monster_slug": "zombie",
+        "count": 11,
+        "faction": "enemy",
+        "trigger": "进入棕马酒馆、旧铁匠铺或旧驻防岗哨。"
+      },
+      {
+        "id": "giant_spiders_store",
+        "monster_slug": "giant_spider",
+        "count": 2,
+        "faction": "enemy",
+        "trigger": "踏入商店废墟附近蛛网或接近其巢穴。"
+      },
+      {
+        "id": "venomfang_tower",
+        "monster_slug": "young_green_dragon",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "进入龙之塔、在小屋制造大噪音，或主动挑战毒牙。"
+      },
+      {
+        "id": "dragon_cultists",
+        "monster_slug": "cultist",
+        "count": 6,
+        "faction": "enemy",
+        "trigger": "闯入东侧小屋、揭穿法乌里的计划，或谈判破裂。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "reidoth_cragmaw_directions",
+        "label": "克拉摩堡方向",
+        "description": "里多斯愿意告诉角色克拉摩堡的位置，因为地精威胁自然平衡。"
+      },
+      {
+        "id": "reidoth_wave_echo_bargain",
+        "label": "潮音洞穴条件",
+        "description": "里多斯知道潮音洞穴位置，但只会在角色赶走毒牙后透露。"
+      },
+      {
+        "id": "venomfang_claims_tower",
+        "label": "毒牙占塔",
+        "description": "幼年绿龙毒牙占据山丘塔楼，巨蜘蛛尸体和刺鼻气味显示其存在。"
+      },
+      {
+        "id": "cultists_seek_dragon",
+        "label": "龙巫教意图",
+        "description": "法乌里率邪教徒追踪绿龙，想与其结盟并可能把角色当贡品。"
+      }
+    ],
+    "events": [
+      "venomfang_driven_off",
+      "thundertree_cultists_defeated",
+      "thundertree_ruin_threats_cleared",
+      "mirna_heirloom_recovered",
+      "reidoth_wave_echo_location_revealed"
+    ],
+    "fallbacks": [
+      {
+        "id": "hostile_to_reidoth",
+        "condition": "角色攻击里多斯或强行逼问。",
+        "dm_guidance": "里多斯变成灰松鼠从裂缝逃走，雷树失去安全向导。"
+      },
+      {
+        "id": "avoid_dragon",
+        "condition": "角色不愿挑战毒牙。",
+        "dm_guidance": "仍可从里多斯取得克拉摩堡方向，但潮音洞穴线索暂不兑现。"
+      }
+    ],
+    "routing_notes": [
+      "雷树的核心路线是找里多斯取得克拉摩堡方向，或赶走毒牙后推进潮音洞穴线索。"
+    ],
+    "rewards": [
+      {
+        "id": "thundertree_ruin_threats_xp",
+        "type": "xp",
+        "amount": 1500,
+        "scope": "party",
+        "requires": [
+          "thundertree_ruin_threats_cleared"
+        ],
+        "description": "清理雷树各处枯枝怪、灰烬僵尸和商店废墟巨蜘蛛后，按遭遇累计由队伍平分。"
+      },
+      {
+        "id": "venomfang_driven_off_2000_xp",
+        "type": "xp",
+        "amount": 2000,
+        "scope": "party",
+        "requires": [
+          "venomfang_driven_off"
+        ],
+        "description": "将毒牙赶走后，队伍平分2000 XP。"
+      },
+      {
+        "id": "venomfang_hoard",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "venomfang_driven_off"
+        ],
+        "description": "龙塔财宝：800 sp、150 gp、四只各值60 gp的月光石银杯、迷雾步卷轴、闪电束卷轴和+1战斧“砍伐者”。"
+      },
+      {
+        "id": "dragon_cultists_150_xp",
+        "type": "xp",
+        "amount": 150,
+        "scope": "party",
+        "requires": [
+          "thundertree_cultists_defeated"
+        ],
+        "description": "击败或赶走龙巫教邪教徒后，队伍平分150 XP。"
+      },
+      {
+        "id": "favric_dragon_tribute",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "thundertree_cultists_defeated"
+        ],
+        "description": "法乌里的贡品与随身物：三枚各值100 gp的钻石和一剂飞行药水。"
+      },
+      {
+        "id": "mirna_heirloom_necklace",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "mirna_heirloom_recovered"
+        ],
+        "description": "药草店中米尔娜家的传家宝：带上好翡翠坠饰的金项链，价值200 gp。"
+      },
+      {
+        "id": "mirna_heirloom_return_200_xp",
+        "type": "xp",
+        "amount": 200,
+        "scope": "party",
+        "requires": [
+          "mirna_heirloom_recovered"
+        ],
+        "description": "若队伍将项链归还米尔娜而非据为己有，队伍平分200 XP。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_cragmaw_castle_search",
+        "label": "按里多斯方向寻找克拉摩堡",
+        "next_node_id": "cragmaw_castle_search",
+        "requires": [
+          "reidoth_cragmaw_directions"
+        ],
+        "transition_kind": "advance",
+        "description": "离开雷树，转入克拉摩堡的寻找与入口阶段。"
+      },
+      {
+        "id": "to_spider_web_after_wave_echo",
+        "label": "带着潮音洞穴线索继续主线",
+        "next_node_id": "spider_web_overview",
+        "requires": [
+          "reidoth_wave_echo_location_revealed"
+        ],
+        "transition_kind": "advance",
+        "description": "毒牙被赶走后，里多斯透露潮音洞穴位置。"
+      },
+      {
+        "id": "return_to_phandalin",
+        "label": "返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回镇交付线索、休整或处理其他委托。"
+      },
+      {
+        "id": "to_triboar_trail_wilderness",
+        "label": "离开雷树继续荒野旅行",
+        "next_node_id": "triboar_trail_wilderness",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "转回三猪小径与北方荒野行程。"
+      },
+      {
+        "id": "revisit_thundertree",
+        "label": "稍后回访雷树废墟",
+        "next_node_id": "thundertree",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "保留未探索建筑、龙塔或邪教徒小屋供之后处理。"
+      }
+    ]
+  },
+  {
+    "id": "cragmaw_castle_search",
+    "module_id": "lost_mine",
+    "title": "寻找并潜入克拉摩堡",
+    "kind": "location",
+    "page_start": 33,
+    "page_end": 38,
+    "source_refs": [
+      {
+        "page_start": 33,
+        "page_end": 38,
+        "section": "克拉摩堡 Cragmaw Castle"
+      }
+    ],
+    "dm_summary": "克拉摩堡是古费勒姆时代的七塔废要塞，如今由格罗尔王统领的克拉摩部族占据。此节点处理玩家找到城堡后的侦查、潜入、强攻、伪装交涉与关键搜索：哨兵会报警，陷阱和破败结构会制造危险；格罗尔正与伪装成女卓尔的变形怪争夺甘德伦和潮音洞穴地图。若甘德伦与地图得救，队伍可回凡达林并转入寻找潮音洞穴。",
+    "player_visible_intro": "无冬森林深处，七座高低错落的破败塔楼挤在一起，像一顶残缺的石冠。碎裂大门、阴暗箭垛和被杂草吞没的小径显示这里并未真正废弃；若甘德伦还活着，他很可能就在这座地精堡垒里。",
+    "scene_beats": [
+      "进入城堡前先让玩家选择正门、后门、绕行侦查或伪装求见格罗尔。",
+      "若被哨兵发现或强攻，区域4、6等守卫可能被警报牵动夹击。",
+      "城堡内有陷阱大厅、暗厅怪物、枭熊塔和多处可搜宝物，但重点是王之居所。",
+      "格罗尔会用昏迷的甘德伦做人质；变形怪试图杀甘德伦并带地图逃走。",
+      "救出甘德伦并取得地图后，引导队伍护送他回凡达林，再前往潮音洞穴。"
+    ],
+    "rules_notes": [
+      "城堡白天多数区域为微光，夜晚全暗；暗厅和枭熊塔也需黑暗视觉或光源。",
+      "箭垛两端互射时，目标有四分之三掩护；外侧箭垛通常离地10尺。",
+      "突袭只让被突袭者在先攻检定上劣势，不跳过首回合或禁用行动。",
+      "伪装成黑蜘蛛或红标帮使者可绕过部分守卫；计划充分时欺瞒检定可给优势。",
+      "被拴住的普通木门可用DC15力量检定打破；后门铁门更坚固。"
+    ],
+    "checks": [
+      {
+        "id": "approach_stealth",
+        "ability": "dex",
+        "skill": "stealth",
+        "reason": "快速穿过正门前的箭垛视野",
+        "resolution": "每名角色检定，对抗地精哨兵的感知检定；失败或大张旗鼓会触发警报。"
+      },
+      {
+        "id": "disguise_deception",
+        "ability": "cha",
+        "skill": "deception",
+        "reason": "冒充黑蜘蛛、红标帮或使者求见格罗尔",
+        "resolution": "团体欺瞒对抗守卫感知；至少一名角色胜出则可暂时通过。"
+      },
+      {
+        "id": "find_hidden_canvas_entry",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 15,
+        "reason": "发现北侧被帆布和碎石掩盖的隐藏入口",
+        "resolution": "若玩家明确主动搜索城堡外隐藏入口，改为DC10感知。"
+      },
+      {
+        "id": "trapped_hall_search",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 10,
+        "reason": "主动搜索通往区域8的坍塌陷阱铜线",
+        "resolution": "被动感知20也能发现；发现后可无检定避开或解除。未发现者触发DC10敏捷豁免，失败受3d6钝击，成功减半。"
+      },
+      {
+        "id": "postern_gate_entry",
+        "ability": "dex",
+        "skill": "thieves_tools",
+        "dc": 15,
+        "reason": "从南侧后门开锁潜入",
+        "resolution": "也可用DC25力量检定击破铁门，但巨响会引来地精查看并可能报警。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "castle_goblin_sentries",
+        "monster_slug": "goblin",
+        "count": 4,
+        "faction": "enemy",
+        "trigger": "正门或箭垛附近被发现，或主动清理弓箭手岗哨"
+      },
+      {
+        "id": "castle_hobgoblin_guards",
+        "monster_slug": "hobgoblin",
+        "count": 6,
+        "faction": "enemy",
+        "trigger": "警报、营房遭袭或接近东侧警卫区域"
+      },
+      {
+        "id": "castle_grick",
+        "monster_slug": "grick",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "进入黑暗大厅且未避开卢波的宠物"
+      },
+      {
+        "id": "castle_owlbear",
+        "monster_slug": "owlbear",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "打开有警告标牌的塔楼门，或释放后在路上相遇"
+      },
+      {
+        "id": "king_grol_quarters",
+        "monster_slug": "bugbear",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "进入王之居所；另有狼斯纳尔和变形怪维耶里斯在场"
+      }
+    ],
+    "clues": [
+      {
+        "id": "hidden_north_canvas_entrance",
+        "label": "北侧隐蔽入口",
+        "description": "城堡北侧有被尘土帆布遮住的通路，可绕开正门部分岗哨。"
+      },
+      {
+        "id": "gundren_prisoner_in_castle",
+        "label": "甘德伦在王之居所",
+        "description": "甘德伦·寻岩者被拷打后昏迷，稳定在0生命值，躺在格罗尔的房间内。"
+      },
+      {
+        "id": "wave_echo_cave_map",
+        "label": "潮音洞穴地图",
+        "description": "格罗尔床垫下藏着甘德伦前往潮音洞穴的地图。"
+      },
+      {
+        "id": "black_spider_kidnapping_plot",
+        "label": "黑蜘蛛的绑架阴谋",
+        "description": "变形怪维耶里斯受黑蜘蛛派遣，要夺走地图、确认矿坑秘密并除掉甘德伦。"
+      }
+    ],
+    "events": [
+      "cragmaw_castle_location_found",
+      "grol_defeated",
+      "gundren_rescued_from_cragmaw_castle",
+      "gundren_escorted_to_phandalin",
+      "targor_dealt_with"
+    ],
+    "fallbacks": [
+      {
+        "id": "no_castle_lead_yet",
+        "condition": "玩家未掌握克拉摩堡位置却想继续主线",
+        "dm_guidance": "回到第三部分线索网络，让阿加莎、里多斯、哈姆或地精线索指向城堡。"
+      },
+      {
+        "id": "gundren_or_map_lost",
+        "condition": "甘德伦死亡或地图被维耶里斯带走",
+        "dm_guidance": "仍可通过阿加莎、里多斯或其他第三部分线索追查潮音洞穴位置。"
+      }
+    ],
+    "routing_notes": [
+      "本节点只承载找到城堡、选择进入方式、处理关键搜索与救援；详细房间可按原文临场展开。"
+    ],
+    "rewards": [
+      {
+        "id": "cragmaw_castle_grol_950_xp",
+        "type": "xp",
+        "amount": 950,
+        "scope": "party",
+        "requires": [
+          "grol_defeated"
+        ],
+        "description": "击败格罗尔王、狼斯纳尔和变形怪维耶里斯后，队伍平分950 XP。"
+      },
+      {
+        "id": "cragmaw_castle_gundren_escort_200_xp",
+        "type": "xp",
+        "amount": 200,
+        "scope": "party",
+        "requires": [
+          "gundren_escorted_to_phandalin"
+        ],
+        "description": "救出甘德伦·寻岩者并成功护送回凡达林后，队伍平分200 XP。"
+      },
+      {
+        "id": "gundren_rescue_25gp",
+        "type": "gold",
+        "amount": 25,
+        "currency": "gp",
+        "scope": "per_player",
+        "requires": [
+          "gundren_escorted_to_phandalin"
+        ],
+        "description": "甘德伦回到凡达林后，向每名角色支付25 gp作为救援谢礼。"
+      },
+      {
+        "id": "cragmaw_castle_grol_cache",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "wave_echo_cave_map"
+        ],
+        "description": "格罗尔床垫下的皮袋：220 sp、160 ep、三瓶治疗药水，以及潮音洞穴地图。"
+      },
+      {
+        "id": "cragmaw_castle_targor_500_xp",
+        "type": "xp",
+        "amount": 500,
+        "scope": "party",
+        "requires": [
+          "targor_dealt_with"
+        ],
+        "description": "击败返程小队，或说服塔戈·血剑争取继承权而非复仇后，队伍平分500 XP。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "return_to_phandalin_with_gundren",
+        "label": "护送甘德伦回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [
+          "gundren_rescued_from_cragmaw_castle"
+        ],
+        "transition_kind": "advance",
+        "description": "甘德伦请求先回镇上，再出发寻找潮音洞穴。"
+      },
+      {
+        "id": "go_to_wave_echo_via_overview",
+        "label": "依据地图转向潮音洞穴主线",
+        "next_node_id": "spider_web_overview",
+        "requires": [
+          "wave_echo_cave_map"
+        ],
+        "transition_kind": "advance",
+        "description": "地图已到手，第三部分线索网可收束到最终矿坑。"
+      },
+      {
+        "id": "continue_spider_web_search",
+        "label": "暂离城堡，继续追其他线索",
+        "next_node_id": "spider_web_overview",
+        "transition_kind": "switch",
+        "description": "队伍可改查阿加莎、古枭井、飞龙突岩或雷树等线索。",
+        "requires": []
+      },
+      {
+        "id": "fallback_to_thundertree",
+        "label": "前往雷树寻找里多斯",
+        "next_node_id": "thundertree",
+        "transition_kind": "switch",
+        "description": "若城堡线索失败或地图丢失，可改向里多斯求取情报。",
+        "requires": []
+      },
+      {
+        "id": "revisit_castle_search",
+        "label": "回访克拉摩堡继续搜查",
+        "next_node_id": "cragmaw_castle_search",
+        "transition_kind": "revisit",
+        "description": "用于清理未搜区域、寻找地图、处理返程小队或遗漏宝物。",
+        "requires": []
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_overview",
+    "module_id": "lost_mine",
+    "title": "潮音洞穴总览",
+    "kind": "stage",
+    "page_start": 39,
+    "page_end": 41,
+    "source_refs": [
+      {
+        "page_start": 39,
+        "page_end": 41,
+        "section": "第4部分：潮音洞穴"
+      },
+      {
+        "page_start": 39,
+        "page_end": 41,
+        "section": "角色等级、经验奖励、游荡怪物、通用特征物、隆隆潮浪"
+      }
+    ],
+    "dm_summary": "潮音洞穴位于凡达林以东十五里的宝剑山脉山谷深处，是凡戴尔协定中失落五百年的富矿。寻岩者兄弟近日找到入口，却被黑蜘蛛涅兹纳尔的密探跟踪；涅兹纳尔杀害守卫矿坑的兄弟，安排袭击甘德伦，并下令处理冒险者。他正寻找古代法师强化武器和工具的法术工厂，但不死生物和游荡怪物拖慢了他的探索。矿坑寒冷潮湿、黑暗、通风，潮浪般的隆隆声会引导角色深入东北方向。",
+    "player_visible_intro": "凡达林以东的山谷尽头，失落矿坑的传说终于有了实体。洞内冷湿的空气从黑暗通道中吹出，远处每隔片刻便传来雷鸣般的低沉轰响，仿佛某种巨浪正在矿坑深处拍击石岸。",
+    "scene_beats": [
+      "确认队伍进入最终地下城时的目标：复仇、救人、阻止黑蜘蛛或寻找宝物。",
+      "提醒4级为预期强度；低于4级时，后续遭遇会明显更危险。",
+      "在长时间搜索、休息或犹豫时，可少量使用游荡怪物制造压力。",
+      "反复以东北方向增强的隆隆潮浪声，引导角色向矿坑深处探索。",
+      "进入具体区域时切换到洞穴入口或相应区域群节点。"
+    ],
+    "rules_notes": [
+      "游荡怪物：长时间停留时掷d20，17–20发生；再掷d12查表决定怪物。",
+      "游荡怪物可能为蚊蝠、食尸鬼、穴居攫怪、熊地精、骷髅、僵尸或赭冻怪。",
+      "除特别说明外，矿道10尺高，房间20尺高，天然洞窟30尺高。",
+      "除特别说明外无光源；确认光源、黑暗视觉与潜行可见性。",
+      "天然洞穴常有石笋，可作为掩护；石门多为矮人体型尺度。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "black_spider_plan",
+        "label": "黑蜘蛛的计划",
+        "description": "涅兹纳尔跟踪寻岩者兄弟找到矿坑，已杀害守卫者并命令手下处理冒险者。"
+      },
+      {
+        "id": "forge_of_spells_goal",
+        "label": "法术工厂目标",
+        "description": "黑蜘蛛正在寻找古凡达林法师用来强化矮人武器和侏儒工具的法术工厂。"
+      },
+      {
+        "id": "booming_waves_direction",
+        "label": "隆隆潮浪",
+        "description": "矿中每约两分钟响起巨浪般轰鸣，声音向东北方向逐渐增强。"
+      },
+      {
+        "id": "mine_is_not_safe",
+        "label": "矿坑并不安全",
+        "description": "不死生物和危险怪物在整个矿坑游荡，没有绝对安全的区域。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "underleveled_party",
+        "condition": "队伍明显低于4级且仍要进入",
+        "dm_guidance": "直接运行，但强调危险；允许他们撤回凡达林准备。"
+      },
+      {
+        "id": "lost_momentum",
+        "condition": "玩家长时间停留或无明确路线",
+        "dm_guidance": "用隆隆潮浪或一次游荡怪物遭遇推动继续探索。"
+      }
+    ],
+    "routing_notes": [
+      "本节点是潮音洞穴运行总览；实际探索应尽快切换到入口或已抵达的区域群。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_wave_echo_cave_entrance",
+        "label": "进入潮音洞穴入口",
+        "next_node_id": "wave_echo_cave_entrance",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从总览切入矿坑入口与最初探索。"
+      },
+      {
+        "id": "to_mine_tunnels",
+        "label": "转入矿道区域",
+        "next_node_id": "wave_echo_mine_tunnels",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "用于回访或已越过入口后定位到矿道。"
+      },
+      {
+        "id": "to_old_entrance_guardrooms",
+        "label": "转入旧入口与守卫室",
+        "next_node_id": "wave_echo_old_entrance_guardrooms",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "用于角色抵达旧入口相关区域时切换。"
+      },
+      {
+        "id": "to_great_cavern",
+        "label": "转入大洞窟与黑水池",
+        "next_node_id": "wave_echo_great_cavern_dark_pool",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "用于角色进入大型天然洞窟区。"
+      },
+      {
+        "id": "to_forge_route",
+        "label": "转向法术工厂相关区域",
+        "next_node_id": "wave_echo_forge_of_spells",
+        "requires": [
+          "forge_of_spells_goal"
+        ],
+        "transition_kind": "switch",
+        "description": "当线索或探索把目标指向法术工厂时切换。"
+      },
+      {
+        "id": "to_booming_cavern",
+        "label": "追随隆隆潮浪声",
+        "next_node_id": "wave_echo_booming_cavern_streambed",
+        "requires": [
+          "booming_waves_direction"
+        ],
+        "transition_kind": "switch",
+        "description": "沿声音增强方向深入潮浪源头。"
+      },
+      {
+        "id": "to_temple_of_dumathoin",
+        "label": "转入杜马松神殿",
+        "next_node_id": "wave_echo_temple_of_dumathoin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "用于角色抵达神殿区域时切换。"
+      },
+      {
+        "id": "back_to_phandalin",
+        "label": "撤回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "离开矿坑休整、补给或处理后续事务。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_cave_entrance",
+    "module_id": "lost_mine",
+    "title": "潮音洞穴：洞穴入口",
+    "kind": "location",
+    "page_start": 44,
+    "page_end": 44,
+    "source_refs": [
+      {
+        "page_start": 44,
+        "page_end": 44,
+        "section": "1. 洞穴入口 Cave Entrance"
+      }
+    ],
+    "dm_summary": "角色无论循甘德伦地图或其他线索而来，都会先抵达藏在宝剑山脉中的天然矿道入口。洞内是寻岩者兄弟的临时营地：补给散乱、萨登·寻岩者的尸体已死至少一周，黑蜘蛛已先一步深入矿坑，南卓仍被囚于更深处。东北坍塌形成深坑，绳索通到底部矿道，分别通往西北矿道迷宫和东侧旧入口区域。",
+    "player_visible_intro": "山脉褶皱间露出一处阴冷的天然矿道。洞中石柱和石笋撑起穹顶，西侧堆着铺盖与矿工补给；在面粉、盐和工具之间，一具矮人矿工尸体静静躺着。东北方地面塌成深坑，一条麻绳垂入黑暗。",
+    "scene_beats": [
+      "进入天然洞窟，展示营地、补给、萨登尸体和东北深坑。",
+      "检查尸体可发现萨登的跑跳之靴；补给有用但无实质价值。",
+      "玩家可用绳索安全下坑，或不用绳索攀爬并承担坠落风险。",
+      "坑底矿道分叉：西北通矿道迷宫，东边通旧入口区域。",
+      "若队伍撤退，此处是离开潮音洞穴、回凡达林整备的自然出口。"
+    ],
+    "rules_notes": [
+      "不用绳索上下20尺深坑需DC 15力量（运动）。",
+      "攀爬检定结果低于10时坠落；每10尺受1d6钝击伤害并倒地。",
+      "使用系好的坚固麻绳通常不需检定，除非处于压力或干扰下。",
+      "萨登身上的跑跳之靴被涅兹纳尔忽略，需角色实际搜查尸体取得。"
+    ],
+    "checks": [
+      {
+        "id": "climb_open_pit",
+        "ability": "str",
+        "skill": "athletics",
+        "dc": 15,
+        "reason": "不用绳索攀上或爬下东北深坑",
+        "resolution": "失败且结果低于10时坠落20尺，受2d6钝击伤害并倒地；一般失败可停在原处或进退两难。"
+      }
+    ],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "sarden_dead_at_camp",
+        "label": "萨登遇害",
+        "description": "死去的矮人是甘德伦的兄弟萨登，寻岩者营地已被黑蜘蛛抢先攻破。"
+      },
+      {
+        "id": "nundro_prisoner_deeper",
+        "label": "南卓仍在矿坑深处",
+        "description": "甘德伦的另一位兄弟南卓被黑蜘蛛囚禁在更深处的区域。"
+      },
+      {
+        "id": "pit_routes_split",
+        "label": "坑底分叉",
+        "description": "东北深坑底部矿道向西北通矿道迷宫，向东通旧入口区域。"
+      }
+    ],
+    "events": [
+      "wave_echo_cave_reached"
+    ],
+    "fallbacks": [
+      {
+        "id": "retreat_to_phandalin",
+        "condition": "队伍在入口受挫或决定补给",
+        "dm_guidance": "允许沿来路撤回凡达林，之后可从本入口回访。"
+      }
+    ],
+    "routing_notes": [
+      "入口负责把队伍从地表导入潮音洞穴，并在矿道迷宫与旧入口之间分流。"
+    ],
+    "rewards": [
+      {
+        "id": "sarden_boots_of_striding_and_springing",
+        "type": "item",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "wave_echo_cave_reached"
+        ],
+        "description": "搜查萨登尸体可取得一双跑跳之靴。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_mine_tunnels",
+        "label": "下坑后走西北矿道",
+        "next_node_id": "wave_echo_mine_tunnels",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "进入古老矿道迷宫。"
+      },
+      {
+        "id": "to_old_entrance_guardrooms",
+        "label": "下坑后走东侧矿道",
+        "next_node_id": "wave_echo_old_entrance_guardrooms",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "前往旧入口与守卫室一带。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "确认地下城态势",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回到潮音洞穴总览处理通用特征或时间推进。"
+      },
+      {
+        "id": "to_phandalin",
+        "label": "撤出洞穴回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "离开最终地下城，回城休整或报告。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_mine_tunnels",
+    "module_id": "lost_mine",
+    "title": "潮音洞穴：矿道迷宫",
+    "kind": "encounter",
+    "page_start": 44,
+    "page_end": 44,
+    "source_refs": [
+      {
+        "page_start": 44,
+        "page_end": 44,
+        "section": "2. 矿道 Mine Tunnels"
+      }
+    ],
+    "dm_summary": "这片迷宫般的通路属于潮音洞穴最古老、最原始的矿场。通道交错，天花板仅约6尺高，许多支路是矿工半途放弃的死路。这里潜伏着一只耐心的赭冻怪；队伍进入后，它不会立刻暴露，而是尾随、等待有人落单或队形拉长时本能地攻击。此区本身没有重要宝藏，主要作用是消耗时间、制造迷路压力，并让玩家意识到矿坑并非只有黑蜘蛛的爪牙。",
+    "player_visible_intro": "西北矿道低矮逼仄，潮湿石壁吞没了火光。岔路一条接一条，有些只延伸数十尺便戛然而止，留下矿镐凿痕和废弃碎石。这里安静得不自然，脚步声在低顶通道间反复回荡。",
+    "scene_beats": [
+      "进入低矮交错的古老矿道，强调6尺高天花板和大量死路。",
+      "玩家探索岔路时，赭冻怪在暗处尾随而非马上开战。",
+      "若有人落单、队伍拖长或停留过久，赭冻怪选择机会攻击。",
+      "确认死路只是不完整采掘点，不隐藏关键剧情或宝藏。",
+      "离开时通常需折返回入口深坑，再改走东侧旧入口路线。"
+    ],
+    "rules_notes": [
+      "赭冻怪以尾随和伏击落单者为主；按实际队形决定攻击目标。",
+      "低矮矿道对高大角色的叙事压迫明显，但原文未给固定机械惩罚。",
+      "大量死路可消耗探索时间；游荡怪物与隆隆潮浪由总览节点处理。",
+      "若发生突袭，被突袭者只在先攻检定上劣势，不跳过首回合。"
+    ],
+    "checks": [
+      {
+        "id": "notice_stalking_jelly",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "察觉尾随队伍的赭冻怪",
+        "resolution": "使用角色的观察方式与赭冻怪潜伏状况裁定；原文未给固定DC。"
+      },
+      {
+        "id": "navigate_dead_ends",
+        "ability": "wis",
+        "skill": "survival",
+        "reason": "在交错矿道和死路间维持方向感",
+        "resolution": "若队伍标记路线或谨慎制图通常可返回；失败主要导致耗时或回到已走过的岔路。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "ochre_jelly_stalker",
+        "monster_slug": "ochre-jelly",
+        "count": 1,
+        "faction": "hazard",
+        "trigger": "队伍进入矿道迷宫后尾随，等待落单或停留过久时攻击。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "mine_tunnels_dead_ends",
+        "label": "废弃死路",
+        "description": "这些死路是矿工放弃挖掘后留下的，不指向隐藏目标或宝藏。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "lost_but_not_blocked",
+        "condition": "玩家在迷宫中迷失或反复试错",
+        "dm_guidance": "用耗时、回到熟悉岔路或遭遇赭冻怪推进，不把路线彻底锁死。"
+      }
+    ],
+    "routing_notes": [
+      "矿道迷宫是入口西北侧的危险支路，通常最终折返入口深坑再转向旧入口。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "back_to_cave_entrance",
+        "label": "折返回入口深坑",
+        "next_node_id": "wave_echo_cave_entrance",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到洞穴入口，可改走东侧矿道或撤离。"
+      },
+      {
+        "id": "to_old_entrance_via_pit",
+        "label": "回坑底后转向东侧矿道",
+        "next_node_id": "wave_echo_old_entrance_guardrooms",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "经入口深坑的东侧通道前往旧入口区域。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "处理地下城时间与通用事件",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "用于游荡怪物、环境特征或整体路线判断。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_old_entrance_guardrooms",
+    "module_id": "lost_mine",
+    "title": "旧入口、旧警卫室与试金师办公室",
+    "kind": "location",
+    "page_start": 41,
+    "page_end": 42,
+    "source_refs": [
+      {
+        "page_start": 41,
+        "page_end": 42,
+        "section": "3. 旧入口 Old Entrance"
+      },
+      {
+        "page_start": 41,
+        "page_end": 42,
+        "section": "4. 旧警卫室 Old Guardroom"
+      },
+      {
+        "page_start": 41,
+        "page_end": 42,
+        "section": "5. 试金师办公室 Assayers’ Office"
+      }
+    ],
+    "dm_summary": "这片区域包含潮音洞穴被塌方封死的原始南入口、被兽人攻陷的警卫室，以及试金师办公室。旧入口洞窟遍布矮人与兽人遗骨，天花板潜伏着饥饿蚊蝠；警卫室内的尸骨会在活物进入时重组为骷髅；办公室保留矿坑结算痕迹，并有一个上锁铁保险箱，内有遗留钱币。南侧旧入口无法作为出口，玩家通常需回到矿道或继续转入邻近废墟。",
+    "player_visible_intro": "前方天然洞窟高阔阴冷，墙上粗浅雕刻着矮人与侏儒矿工劳作的场景。地面散落着腐朽护甲中的矮人与兽人骸骨，几盏未点燃的大黄铜提灯靠在岩壁边。更深处还能看见碎石、塌顶和一间像办公室的废室。",
+    "scene_beats": [
+      "进入旧入口时，描述原始入口已因古老塌方被封死。",
+      "若角色查看地面骸骨，天花板上的蚊蝠趁机俯冲攻击。",
+      "活体进入旧警卫室后，骨骸重组为九只骷髅并战斗至毁灭。",
+      "试金师办公室的纸张一碰即碎，懂矮人语者可辨出重量与支出记录。",
+      "柜台后的上锁铁保险箱可被打开，取得旧日遗留钱币。"
+    ],
+    "rules_notes": [
+      "未观察天花板者是否察觉蚊蝠，以被动察觉对抗蚊蝠一次共用隐匿检定。",
+      "被突袭者只在先攻检定上有劣势，不失去首回合、动作或反应。",
+      "旧警卫室骷髅由房内遗骨形成，任何活体进入即触发。",
+      "试金师办公室的古纸张被碰触会崩解，只能在崩解前辨认零碎内容。",
+      "南侧旧入口被塌方掩埋，不作为可通行出口。"
+    ],
+    "checks": [
+      {
+        "id": "notice_stirges",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "察觉天花板上的蚊蝠",
+        "resolution": "未主动观察天花板者，用被动察觉对抗蚊蝠共用的一次敏捷（隐匿）检定；失败者先攻劣势。"
+      },
+      {
+        "id": "open_assayers_safe",
+        "ability": "dex",
+        "skill": "thieves_tools",
+        "dc": 20,
+        "reason": "打开柜台后的上锁铁保险箱",
+        "resolution": "成功后可取得保险箱内的钱币。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "old_entrance_stirges",
+        "monster_slug": "stirge",
+        "count": 10,
+        "faction": "enemy",
+        "trigger": "角色在旧入口停留或查看地面骸骨时俯冲攻击"
+      },
+      {
+        "id": "guardroom_skeletons",
+        "monster_slug": "skeleton",
+        "count": 9,
+        "faction": "enemy",
+        "trigger": "任何活体生物进入旧警卫室"
+      }
+    ],
+    "clues": [
+      {
+        "id": "old_entrance_south_blocked",
+        "label": "旧入口塌方",
+        "description": "潮音洞穴原本的南侧入口已在数百年前塌方掩埋，不能从这里离开。"
+      },
+      {
+        "id": "assayers_records",
+        "label": "试金师记录",
+        "description": "懂矮人语者可从碎纸上看出这里曾记录矿石重量与支出。"
+      }
+    ],
+    "events": [
+      "assayers_safe_opened"
+    ],
+    "fallbacks": [
+      {
+        "id": "blocked_south_exit",
+        "condition": "玩家试图从旧入口南侧离开矿坑",
+        "dm_guidance": "说明塌方彻底封死道路，引导其改走矿道或其他相邻区域。"
+      },
+      {
+        "id": "retreat_from_undead_or_stirges",
+        "condition": "玩家从战斗中撤退",
+        "dm_guidance": "允许他们退回已探索通路，敌人是否追击按场面距离裁定。"
+      }
+    ],
+    "routing_notes": [
+      "此区域是矿道旁的危险侧翼，提供宝藏与战斗，但南侧旧入口不可通行。"
+    ],
+    "rewards": [
+      {
+        "id": "assayers_safe_coin_cache",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "assayers_safe_opened"
+        ],
+        "description": "试金师办公室保险箱内的钱币：600 cp、180 sp、90 ep 和60 gp。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_mine_tunnels",
+        "label": "返回矿道",
+        "next_node_id": "wave_echo_mine_tunnels",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "从旧入口区域回到相邻矿道继续探索。"
+      },
+      {
+        "id": "to_barracks_storeroom_fungi",
+        "label": "深入邻近废墟",
+        "next_node_id": "wave_echo_barracks_storeroom_fungi",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从警卫室一带继续前往相邻的兵营、储藏室与真菌洞区。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "重新确认潮音洞穴态势",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到地下城总览以处理路线、噪声或通用特征。"
+      },
+      {
+        "id": "retreat_to_phandalin",
+        "label": "撤出矿坑回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "玩家决定离开潮音洞穴并返回城镇休整。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_barracks_storeroom_fungi",
+    "module_id": "lost_mine",
+    "title": "南部营房、荒废储物间与真菌洞窟",
+    "kind": "location",
+    "page_start": 6,
+    "page_end": 8,
+    "source_refs": [
+      {
+        "page_start": 6,
+        "page_end": 6,
+        "section": "南部营房 South Barracks"
+      },
+      {
+        "page_start": 7,
+        "page_end": 7,
+        "section": "荒废的储物间 Ruined Storeroom"
+      },
+      {
+        "page_start": 8,
+        "page_end": 8,
+        "section": "真菌洞窟 Fungi Cavern"
+      }
+    ],
+    "dm_summary": "这片相邻区域由旧矿工营房、安全储物间和发光真菌洞窟组成。南部营房里有三只从附近群落游荡来的食尸鬼，正在啃咬矮人与兽人的旧骨骸，察觉门内声响可提前预警。荒废储物间虽破败，但门可从内栓住，是少见的安全休息点。真菌洞窟被绿色磷光照亮，地面真菌在被穿越时释放毒气；涅兹纳尔怀疑魔法工作间就在附近，却不愿冒险清理这里。",
+    "player_visible_intro": "旧石床沿墙排列，中央锈蚀火盆里残留老煤。矮人与兽人的骨骸散落其间，几道灰白身影伏在尸骨旁啃咬。更深处，破桶和塌墙后的储物间通向一片泛着绿色磷光、铺满怪异真菌的洞窟。",
+    "scene_beats": [
+      "半开门外聆听者可先听见营房内细微嘎吱与碎裂声。",
+      "三只食尸鬼渴望新鲜血肉，一旦发现活物便立即攻击。",
+      "储物间可从内部栓门，没有怪物会主动来此，是安全休息点。",
+      "穿越真菌洞窟会触发毒气，停留越久越危险。",
+      "真菌洞窟暗示涅兹纳尔怀疑魔法工作间在附近但被阻碍。"
+    ],
+    "rules_notes": [
+      "被突袭者只在先攻检定上有劣势，不跳过首回合。",
+      "绿色磷光真菌足以照亮整个洞窟，无需光源或黑暗视觉。",
+      "真菌毒气触发后1分钟消散；消散前活体生物在洞内回合结束时重复豁免。",
+      "储物间门可从内部栓紧，适合作为短休或临时避难处。"
+    ],
+    "checks": [
+      {
+        "id": "hear_ghouls",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 10,
+        "reason": "在半开门外聆听营房动静",
+        "resolution": "成功听见细微嘎吱声和碎裂声，可预判里面有生物活动。"
+      },
+      {
+        "id": "fungi_poison_gas",
+        "ability": "con",
+        "skill": "save",
+        "dc": 11,
+        "reason": "穿越或停留在真菌洞窟时抵抗毒气",
+        "resolution": "失败受3d6毒素伤害并中毒10分钟；毒气消散前在洞内回合结束时再次豁免。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "south_barracks_ghouls",
+        "monster_slug": "ghoul",
+        "count": 3,
+        "faction": "enemy",
+        "trigger": "角色进入南部营房或被食尸鬼发现活物时"
+      }
+    ],
+    "clues": [
+      {
+        "id": "forge_suspected_near_fungi",
+        "label": "魔法工作间可能在附近",
+        "description": "涅兹纳尔怀疑矿坑的魔法工作间就在真菌洞窟附近，但不愿冒险处理这里的怪物。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "avoid_fungi_gas",
+        "condition": "角色不愿穿越真菌洞窟",
+        "dm_guidance": "允许他们改走相邻矿道或退回安全储物间休整。"
+      },
+      {
+        "id": "retreat_to_safe_storeroom",
+        "condition": "战斗或毒气后队伍状态危险",
+        "dm_guidance": "储物间可从内栓门，作为改变路线或休息的合理落点。"
+      }
+    ],
+    "routing_notes": [
+      "本区域连接旧矿区与更深洞穴，同时提供一次危险遭遇和一个安全休息点。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_mine_tunnels",
+        "label": "退回矿道",
+        "next_node_id": "wave_echo_mine_tunnels",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "返回潮音洞穴较开放的矿道区域。"
+      },
+      {
+        "id": "to_old_entrance_guardrooms",
+        "label": "返回旧入口与守卫室",
+        "next_node_id": "wave_echo_old_entrance_guardrooms",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回到旧入口一带继续探索或撤退。"
+      },
+      {
+        "id": "to_great_cavern",
+        "label": "穿过真菌洞窟深入",
+        "next_node_id": "wave_echo_great_cavern_dark_pool",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "冒着毒气风险前往更深处的大洞窟。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "重新确认洞穴路线",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到地下城总览以处理改道、游荡或整体路线。"
+      },
+      {
+        "id": "retreat_to_phandalin",
+        "label": "撤回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "离开潮音洞穴，回镇上休整或报告。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_great_cavern_dark_pool",
+    "module_id": "lost_mine",
+    "title": "大洞窟与黑水池",
+    "kind": "location",
+    "page_start": 42,
+    "page_end": 42,
+    "source_refs": [
+      {
+        "page_start": 42,
+        "page_end": 42,
+        "section": "9. 大洞窟 Great Cavern"
+      },
+      {
+        "page_start": 42,
+        "page_end": 42,
+        "section": "10. 黑水池 Dark Pool"
+      }
+    ],
+    "dm_summary": "这片区域把旧矿坑的公共大厅和一处幽暗水池连在一起。大洞窟由十尺高悬崖分成高低平台，满地是矮人、侏儒、兽人和食人魔的旧战场遗骸；七只饥饿食尸鬼潜伏在西侧高地阴影中，会被光源或声响吸引并死战。黑水池看似静止，池底有一具古凡达林人类法师遗骸，藏有戒指和魔法飞弹魔杖；东北浅水支流可作为绕路通向更深处。",
+    "player_visible_intro": "前方洞窟忽然开阔，石阶连接着高低不一的平台。低处散落着旧桌、火盆和成堆古老遗骸，空气阴冷而潮湿。另一侧的黑水池平静得近乎死寂，破碎薄贝壳躺在岸边，鱼腥味在狭窄水道间徘徊。",
+    "scene_beats": [
+      "进入大洞窟时，先强调高低平台、旧战场遗骸和阴影中的危险感。",
+      "若队伍带光或发出明显声响，西侧高地的食尸鬼迅速下扑。",
+      "玩家可利用石阶、悬崖和桌火盆布置站位，也可能被摔落到低处。",
+      "探索黑水池会发现池底法师骨骸及其财物，东北浅流可通往更深区域。",
+      "南侧与相邻矿区相接，东侧阶梯可继续靠近北部营房。"
+    ],
+    "rules_notes": [
+      "大洞窟悬崖高10尺；攀爬需DC 12力量（运动）。",
+      "攀爬失败或被击落者受1d6钝击伤害，并在落地时倒地。",
+      "食尸鬼会注意光源或声响，饥饿且战斗到被摧毁。",
+      "黑水池中央约20尺深；东北支流约3尺深，水面距顶仅2到3尺。",
+      "近距离或下水搜索即可发现池底骨骸；不需要固定DC。"
+    ],
+    "checks": [
+      {
+        "id": "climb_cavern_ledge",
+        "ability": "str",
+        "skill": "athletics",
+        "dc": 12,
+        "reason": "攀上或越过大洞窟十尺高悬崖",
+        "resolution": "失败者跌落，受1d6钝击伤害并倒地。"
+      },
+      {
+        "id": "find_pool_skeleton",
+        "ability": "wis",
+        "skill": "perception",
+        "reason": "搜索黑水池底",
+        "resolution": "角色实际检查或下水时，可发现离岸10尺、水下10尺处的旧法师骨骸。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "great_cavern_ghouls",
+        "monster_slug": "ghoul",
+        "count": 7,
+        "faction": "enemy",
+        "trigger": "队伍进入、带光、制造声响或靠近西侧高地阴影"
+      }
+    ],
+    "clues": [
+      {
+        "id": "dark_pool_skeleton_treasure",
+        "label": "池底法师遗骸",
+        "description": "黑水池底的古凡达林人类法师骨骸仍握着魔法飞弹魔杖，并戴着两枚铂金戒指。"
+      },
+      {
+        "id": "dark_pool_stream_route",
+        "label": "东北浅水绕路",
+        "description": "黑水池东北的三尺深支流可让角色沿水道前往隆隆洞窟与旧河床方向。"
+      }
+    ],
+    "events": [
+      "dark_pool_treasure_recovered"
+    ],
+    "fallbacks": [
+      {
+        "id": "avoid_ghoul_fight",
+        "condition": "队伍刻意无光、安静并避开西侧高地",
+        "dm_guidance": "允许他们绕过或延后遭遇；食尸鬼仍会被后续声响吸引。"
+      },
+      {
+        "id": "retreat_from_cavern",
+        "condition": "队伍伤势过重并撤离本区",
+        "dm_guidance": "保留未解决的食尸鬼和未取宝藏，路线回到已探索矿区或洞穴总览。"
+      }
+    ],
+    "routing_notes": [
+      "此区是潮音洞穴中部枢纽：可向西南回旧矿区，向东到北部营房，或借浅水支流绕向隆隆洞窟。"
+    ],
+    "rewards": [
+      {
+        "id": "dark_pool_skeleton_treasure_cache",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "dark_pool_treasure_recovered"
+        ],
+        "description": "池底法师遗骸上的两枚铂金戒指，每枚价值75 gp；另有一把魔法飞弹魔杖。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_barracks_storeroom_fungi",
+        "label": "返回旧营房与菌类洞窟方向",
+        "next_node_id": "wave_echo_barracks_storeroom_fungi",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "沿已开通的矿道回到南侧或西南侧相邻区域。"
+      },
+      {
+        "id": "to_north_barracks",
+        "label": "登上东侧阶梯去北部营房",
+        "next_node_id": "wave_echo_north_barracks",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从黑水池东侧阶梯接近被熊地精据守的营房门。"
+      },
+      {
+        "id": "to_booming_cavern_streambed",
+        "label": "沿东北浅水支流前进",
+        "next_node_id": "wave_echo_booming_cavern_streambed",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "借三尺深支流进入隆隆洞窟和旧河床方向。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "暂停探索并回到洞穴总览",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "用于重新定位潮音洞穴路线、通用特征或游荡怪物。"
+      },
+      {
+        "id": "retreat_to_phandalin",
+        "label": "撤出矿坑返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "队伍离开潮音洞穴休整、补给或汇报。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_north_barracks",
+    "module_id": "lost_mine",
+    "title": "北部营房",
+    "kind": "encounter",
+    "page_start": 42,
+    "page_end": 43,
+    "source_refs": [
+      {
+        "page_start": 42,
+        "page_end": 43,
+        "section": "11. 北部营房 North Barracks"
+      }
+    ],
+    "dm_summary": "北部营房是涅兹纳尔在潮音洞穴中的前线据点。五只忠诚于黑蜘蛛的熊地精住在这里，负责挡住食尸鬼、僵尸和其他不死生物，避免它们威胁区域19的主人。东门从里面栓住，门边可听见带地精腔调的饥饿抱怨；若从西侧进入，则会看到对面门被旧木桌临时路障堵住。击败或绕过熊地精后，队伍可在东侧返回黑水池，或向西深入冶炼洞窟。",
+    "player_visible_intro": "这间旧矿工营房里，石床沿墙排列，中央铁火盆散发光亮与热气。空气里混着汗臭、烟味和野兽般的呼吸声。若你们靠近东门，门闩沉重地卡在内侧，里面传来粗哑嗓音，用地精口音抱怨饥饿。",
+    "scene_beats": [
+      "从东门接近时，门被内侧栓住；聆听可先发现里面有粗哑声音。",
+      "强行破门、绕路从西侧进入或制造动静，都会引出五只熊地精应战。",
+      "熊地精守在这里为黑蜘蛛阻挡不死生物，不会轻易放弃据点。",
+      "若从西侧进入，强调另一扇门被旧木桌路障挡住，显示其防线用途。",
+      "搜刮最大只熊地精可取得钱币和一瓶活力药水。"
+    ],
+    "rules_notes": [
+      "东门从房间内侧栓住；强行打开需DC 20力量检定。",
+      "门边聆听需DC 10感知（察觉），成功可听见饥饿的地精腔调粗声。",
+      "房间中央铁火盆提供照明与热量，可作为场景物件但非特殊宝藏。",
+      "西侧进入时，对面门被剩余木桌组成的路障挡住。"
+    ],
+    "checks": [
+      {
+        "id": "force_east_door",
+        "ability": "str",
+        "dc": 20,
+        "reason": "强行打开从内侧栓住的东门",
+        "resolution": "成功则破门进入；失败会制造足够声响，让熊地精准备应战。"
+      },
+      {
+        "id": "listen_at_barracks_door",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 10,
+        "reason": "在东门边聆听房内动静",
+        "resolution": "成功听见粗哑声音用地精腔调诉说饥饿。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "north_barracks_bugbears",
+        "monster_slug": "bugbear",
+        "count": 5,
+        "faction": "enemy",
+        "trigger": "队伍破门、从西侧进入、制造明显声响或直接进入营房"
+      }
+    ],
+    "clues": [
+      {
+        "id": "bugbears_serve_nezznar",
+        "label": "黑蜘蛛前线",
+        "description": "这些熊地精是涅兹纳尔的忠诚手下，守在这里阻挡不死生物接近区域19的主人。"
+      },
+      {
+        "id": "north_barracks_barricade",
+        "label": "临时路障",
+        "description": "旧木桌堵住门口，说明熊地精把这里改成防线，而非普通住宿处。"
+      }
+    ],
+    "events": [
+      "north_barracks_bugbears_defeated",
+      "north_barracks_treasure_recovered"
+    ],
+    "fallbacks": [
+      {
+        "id": "enter_from_west",
+        "condition": "队伍先从冶炼洞窟方向进入",
+        "dm_guidance": "改用西侧进入描述，熊地精仍在房内，东侧门显示为被路障挡住。"
+      },
+      {
+        "id": "bypass_barracks",
+        "condition": "队伍不想破门或正面交战",
+        "dm_guidance": "允许他们回黑水池或从其他已知通路绕行，熊地精据点保持存在。"
+      }
+    ],
+    "routing_notes": [
+      "此区是黑水池与冶炼洞窟之间的武装门槛，也提示黑蜘蛛在更深处有防线。"
+    ],
+    "rewards": [
+      {
+        "id": "north_barracks_bugbear_pouch",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "north_barracks_treasure_recovered"
+        ],
+        "description": "最大只熊地精的腰包装有15 cp、13 ep，以及一瓶活力药水。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_great_cavern_dark_pool",
+        "label": "经东门返回黑水池",
+        "next_node_id": "wave_echo_great_cavern_dark_pool",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到黑水池、大洞窟及其相邻路线。"
+      },
+      {
+        "id": "to_smelter_cavern",
+        "label": "向西进入冶炼洞窟",
+        "next_node_id": "wave_echo_smelter_cavern",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "越过熊地精防线，继续向矿坑深处推进。"
+      },
+      {
+        "id": "to_booming_cavern_streambed",
+        "label": "绕回水道路线",
+        "next_node_id": "wave_echo_booming_cavern_streambed",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "不穿过营房防线，改走黑水池东北支流方向。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "回到洞穴总览重新定位",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "用于处理路线梳理、休整判断或潮音洞穴通用规则。"
+      },
+      {
+        "id": "retreat_to_phandalin",
+        "label": "撤出矿坑返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "队伍离开潮音洞穴，回镇上休整或补给。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_smelter_cavern",
+    "module_id": "lost_mine",
+    "title": "冶炼洞窟",
+    "kind": "location",
+    "page_start": 50,
+    "page_end": 51,
+    "source_refs": [
+      {
+        "page_start": 50,
+        "page_end": 51,
+        "section": "12. 冶炼洞窟 Smelter Cavern"
+      }
+    ],
+    "dm_summary": "这是潮音洞穴旧采矿作业的核心：冷却的高炉、机械风箱、干涸水渠、矿车和煤堆仍在，显示矮人曾在此熔炼贵金属。房间中散落着矮人与兽人的干尸，其中八具矮人尸体会作为僵尸起身，另有一个燃焰之颅执行古老命令，阻止入侵者通过。涅兹纳尔尚未解决这里的不死守卫，因此通往法术工厂的路线仍被此处危险牵制。干涸渠道可作为低矮绕路，连接北侧或东侧相邻区域。",
+    "player_visible_intro": "前方大洞窟里矗立着冰冷高炉和沉默的机械风箱，干涸水渠切开地面，矿车与煤堆散落四周。十几具披甲干尸横陈在地，一颗被绿色火焰包围的颅骨悬浮在尸体上方。",
+    "scene_beats": [
+      "进入后先呈现高炉、水车、干渠和三处出口，强调这是旧矿坑核心。",
+      "活物踏入房间时，八具矮人僵尸起身，燃焰之颅阻止通行。",
+      "玩家可正面清剿、快速穿越，或利用干涸渠道绕向北侧或东侧。",
+      "僵尸不会追逐离开本区域超过一轮的目标，可让撤退成为有效选择。",
+      "若玩家调查环境，可得知此处阻碍涅兹纳尔前往法术工厂。"
+    ],
+    "rules_notes": [
+      "被突袭者只在先攻检定上获得劣势，不跳过首回合。",
+      "渠道底部低于地面5尺，进出不需检定；离开本房后渠顶仅5尺高。",
+      "僵尸会追逐踏入房间的活体，但目标离开本区域超过一轮后停止追逐。",
+      "燃焰之颅较有智能，执行阻止入侵者通过的古老命令。"
+    ],
+    "checks": [],
+    "encounters": [
+      {
+        "id": "smelter_zombies",
+        "monster_slug": "zombie",
+        "count": 8,
+        "faction": "enemy",
+        "trigger": "任何活体生物踏入冶炼洞窟。"
+      },
+      {
+        "id": "smelter_flameskull",
+        "monster_slug": "flameskull",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "入侵者试图通过或深入冶炼洞窟。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "nezznar_blocked_by_undead",
+        "label": "黑蜘蛛受阻",
+        "description": "涅兹纳尔尚未通过此处，因为不死守卫挡住了通往法术工厂的路线。"
+      },
+      {
+        "id": "smelter_channel_bypass",
+        "label": "干渠绕路",
+        "description": "干涸渠道可从冶炼洞窟通往北边或东边相邻区域，但离开本房后空间低矮。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "retreat_from_smelter",
+        "condition": "队伍被不死生物压制或选择撤退",
+        "dm_guidance": "让僵尸在目标离区一轮后停止追逐，保留改走其他相邻区域的机会。"
+      }
+    ],
+    "routing_notes": [
+      "冶炼洞窟是通往明亮洞窟与北侧旧水路的危险枢纽，可战斗、穿越或绕行。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_starry_cavern",
+        "label": "向东进入明亮洞窟",
+        "next_node_id": "wave_echo_starry_cavern",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "穿过东侧出口或干渠前往星光般的巨大洞窟。"
+      },
+      {
+        "id": "to_north_barracks",
+        "label": "向西回到北部兵营",
+        "next_node_id": "wave_echo_north_barracks",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "从西侧出口退回相邻兵营区域。"
+      },
+      {
+        "id": "to_great_cavern",
+        "label": "向南回到大洞窟",
+        "next_node_id": "wave_echo_great_cavern_dark_pool",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "经南侧出口返回黑水池所在的大洞窟。"
+      },
+      {
+        "id": "to_booming_or_streambed",
+        "label": "沿干渠向北探索",
+        "next_node_id": "wave_echo_booming_cavern_streambed",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "利用旧引水渠前往北侧旧水路与隆隆声方向。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "暂停探索并核对地下城路线",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回到地下城总览处理游荡、休整或路线选择。"
+      },
+      {
+        "id": "retreat_to_phandalin",
+        "label": "撤出矿坑返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "队伍放弃当前推进，离开潮音洞穴休整。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_starry_cavern",
+    "module_id": "lost_mine",
+    "title": "明亮的洞窟",
+    "kind": "location",
+    "page_start": 51,
+    "page_end": 51,
+    "source_refs": [
+      {
+        "page_start": 51,
+        "page_end": 51,
+        "section": "13. 明亮的洞窟 Starry Cavern"
+      }
+    ],
+    "dm_summary": "巨大洞窟的天花板布满闪亮矿物，吸光后如夜空般微明，但这些矿物没有魔法和价值。地面有被坠石压碎的骷髅和断裂岩层，显示数百年前兽人与佣兵法师攻陷矿坑时曾爆发毁灭性法术战。洞窟内有两座按人类比例建造的受损石楼，南侧通向法师居所，北侧通向法术工厂；奥秘熟练者或侦测魔法可感到魔法灵光，越靠近北侧建筑越强。",
+    "player_visible_intro": "洞窟豁然开阔，天顶矿物反射出星空般微光。碎石压碎的骷髅散落地面，两座焦黑、坍塌的石制建筑矗立其间，断崖将洞窟分成两半，短阶连接上下。",
+    "scene_beats": [
+      "进入时强调星光般天顶、焦黑石楼、碎骨与断崖，营造大战遗迹感。",
+      "玩家可调查天顶矿物；它们美丽但无魔法灵光且无价值。",
+      "奥秘熟练者或施放侦测魔法会感到北侧建筑方向魔法更强。",
+      "队伍可向北进入法术工厂，向南探查法师居所，或向西回冶炼洞窟。",
+      "此处本身无遭遇，但会把玩家自然导向黑蜘蛛目标所在的核心区域。"
+    ],
+    "rules_notes": [
+      "天顶矿物会吸收并释放光线，形成星空效果，但不是魔法物品。",
+      "有奥秘技能熟练的角色可直接察觉微妙魔法灵光；侦测魔法同样有效。",
+      "魔法灵光越靠近北侧建筑越强，指向法术工厂。"
+    ],
+    "checks": [
+      {
+        "id": "sense_forge_aura",
+        "ability": "int",
+        "skill": "arcana",
+        "reason": "辨认洞窟中的微妙魔法灵光",
+        "resolution": "拥有奥秘熟练项的角色自动感觉到；侦测魔法也可得到相同结果。"
+      }
+    ],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "forge_magic_aura",
+        "label": "法术工厂灵光",
+        "description": "洞窟中的魔法灵光越靠近北侧建筑越强，暗示法术工厂就在该方向。"
+      },
+      {
+        "id": "old_spell_battle_scars",
+        "label": "古代法术战痕",
+        "description": "坍塌建筑、焦黑墙体和碎骨显示矿坑毁灭于兽人与佣兵法师的大战。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "missed_forge_hint",
+        "condition": "队伍未调查灵光且路线犹豫",
+        "dm_guidance": "用北侧建筑更强的奇异压迫感或微光变化，引导他们选择入口。"
+      }
+    ],
+    "routing_notes": [
+      "明亮洞窟是冶炼洞窟、法师居所与法术工厂之间的核心分岔点。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_smelter_cavern",
+        "label": "向西回冶炼洞窟",
+        "next_node_id": "wave_echo_smelter_cavern",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "返回不死守卫盘踞的冶炼核心。"
+      },
+      {
+        "id": "to_wizards_quarters",
+        "label": "进入南侧石楼",
+        "next_node_id": "wave_echo_wizards_quarters",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "探查受损的法师居所。"
+      },
+      {
+        "id": "to_forge_of_spells",
+        "label": "进入北侧石楼",
+        "next_node_id": "wave_echo_forge_of_spells",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "顺着增强的魔法灵光前往法术工厂。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "暂停探索并核对地下城路线",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回到地下城总览处理路线、休整或全局事件。"
+      },
+      {
+        "id": "retreat_to_phandalin",
+        "label": "撤出矿坑返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "队伍离开潮音洞穴，返回城镇休整或汇报。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_wizards_quarters",
+    "module_id": "lost_mine",
+    "title": "法师的居所",
+    "kind": "location",
+    "page_start": 43,
+    "page_end": 44,
+    "source_refs": [
+      {
+        "page_start": 43,
+        "page_end": 44,
+        "section": "14. 法师的居所 Wizard’s Quarters"
+      }
+    ],
+    "dm_summary": "这里是通往法术工厂的法师客房，曾被古代法术爆炸烧毁。缚灵墨梅斯克盘踞于此，守着生前的焦黑铁箱与书架残卷。活物踏入后它从地板下浮现，若无人交涉便攻击。角色可用有价值的魔法物品、卷轴、法术书或奥秘知识换取活命，但仍需说服它认可价值；它不会放弃木管，也可能要求队伍除掉法术工厂的观察者眼魔。",
+    "player_visible_intro": "破损的门挂在部分融化的铁铰链上。房内满是尘土、灰烬和被火熏黑的墙壁，破天花板下堆着碎石。烧焦的桌椅、书柜与床散落各处，一只焦黑铁箱静静放在床脚。",
+    "scene_beats": [
+      "若门未开，搬开或砸开需力量检定；进入后墨梅斯克现身。",
+      "不交涉或触碰宝箱时，缚灵以宝物被侵犯为由攻击。",
+      "献上魔法或奥秘礼物并说服它，可换取暂时放行与阅读书籍。",
+      "墨梅斯克可能指向法术工厂，要求除掉那里的观察者眼魔。",
+      "取得铁箱或书中地图后，可转入法术工厂或回到星光洞窟路线。"
+    ],
+    "rules_notes": [
+      "墨梅斯克是彻底邪恶的缚灵；谈判只避免眼前攻击，不会使其友善。",
+      "它不会自愿交出木管，且会试图藏起书中的秘密地图。",
+      "若角色拿走宝藏，需先解决、骗过或承受墨梅斯克的反应。"
+    ],
+    "checks": [
+      {
+        "id": "force_broken_door",
+        "ability": "str",
+        "dc": 15,
+        "reason": "搬开或砸开破损、铰链半熔的门。"
+      },
+      {
+        "id": "mormesk_bargain",
+        "ability": "cha",
+        "skill": "persuasion",
+        "dc": 10,
+        "reason": "说服墨梅斯克承认献礼的价值。"
+      },
+      {
+        "id": "find_hidden_map",
+        "ability": "int",
+        "skill": "investigation",
+        "dc": 12,
+        "reason": "在魔法保存的书册封皮中找出隐藏地图。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "mormesk_wraith",
+        "monster_slug": "wraith",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "活体进入、拒绝交涉、威胁它或夺取宝物时。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "mormesk_wants_spectator_gone",
+        "label": "缚灵的要求",
+        "description": "墨梅斯克想赶走或杀掉法术工厂里的观察者眼魔，并指向区域15。"
+      },
+      {
+        "id": "hidden_old_map",
+        "label": "书中旧地图",
+        "description": "一张藏在书封内的旧地图可作为本冒险后的下一处地城线索。"
+      }
+    ],
+    "events": [
+      "mormesk_treasure_access"
+    ],
+    "fallbacks": [
+      {
+        "id": "bargain_without_fight",
+        "condition": "队伍不想战斗但有可献出的魔法或奥秘物品",
+        "dm_guidance": "用魅力游说检定决定墨梅斯克是否暂时放行。"
+      },
+      {
+        "id": "bypass_to_forge",
+        "condition": "队伍放弃宝箱与书籍，只想离开",
+        "dm_guidance": "墨梅斯克可在威胁后让他们去处理观察者眼魔。"
+      }
+    ],
+    "routing_notes": [
+      "本区是法术工厂前的危险社交/宝藏节点，也能把队伍明确引向观察者眼魔。"
+    ],
+    "rewards": [
+      {
+        "id": "mormesk_chest_treasure",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "mormesk_treasure_access"
+        ],
+        "description": "焦黑铁箱：1100 cp、160 sp、50 ep、三枚各值100 gp的钻石、一个值150 gp的铂金丝装饰木管。"
+      },
+      {
+        "id": "mormesk_hidden_map",
+        "type": "item",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "hidden_old_map"
+        ],
+        "description": "藏在书封内的旧地图，可引向主持人自创的后续地城。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_forge_of_spells",
+        "label": "前往法术工厂",
+        "next_node_id": "wave_echo_forge_of_spells",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "穿过相邻通道进入绿焰所在的工作间。"
+      },
+      {
+        "id": "to_starry_cavern",
+        "label": "退回星光洞窟",
+        "next_node_id": "wave_echo_starry_cavern",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "离开客房，回到可改道的洞窟区域。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "重新定位潮音洞穴",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "玩家迷路、撤退或需要总览路线时使用。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_forge_of_spells",
+    "module_id": "lost_mine",
+    "title": "法术工厂",
+    "kind": "location",
+    "page_start": 44,
+    "page_end": 44,
+    "source_refs": [
+      {
+        "page_start": 44,
+        "page_end": 44,
+        "section": "15. 法术工厂 Forge of Spells"
+      }
+    ],
+    "dm_summary": "这里是凡戴尔协定时代用来强化矮人与侏儒制品的核心工坊。古代法术战斗毁坏了墙面与工作台，唯有石座上的绿焰火盆仍在闪烁。一个被召唤守卫魔法物品的观察者眼魔盘踞于此，它已因矿坑灾变而认知错乱，自认工厂仍在运作。若队伍试图带走物品它会攻击；若被说服雇佣已解除，或因目盲而确信职责结束，它会返回家园位面。",
+    "player_visible_intro": "大型工坊被火焰与法术摧残，角落工作台烧成焦黑，石墙灰泥剥落。房间中央的石基座上，一只小火盆燃着神秘绿焰。绿焰后方，一个四眼柄的球状生物悬浮着，声音直接在你们脑中响起：“你好。”",
+    "scene_beats": [
+      "进入主工坊后，观察者眼魔先交流，认定自己仍在守卫工厂。",
+      "角色可欺瞒它：他们是矿坑主人派来解除契约的法师。",
+      "若队伍拿取受守护物品或攻击，观察者眼魔立刻开战。",
+      "调查绿焰可知它是洞窟魔力源头，但只能临时强化装备。",
+      "解决守卫后，队伍可取得光明使者、龙之守护并继续探索或撤离。"
+    ],
+    "rules_notes": [
+      "观察者眼魔若因任何原因目盲，会消失回到家园位面。",
+      "绿焰火盆无法从法术工厂移走。",
+      "非魔法武器或护甲在绿火中浸沐1分钟，变为+1魔法物品，持续1d12小时。",
+      "光明使者是+1硬头锤，可如火炬发光；发光时对不死生物额外造成1d6光耀伤害。",
+      "龙之守护是+1胸甲，使穿戴者对龙族吐息豁免具有优势。"
+    ],
+    "checks": [
+      {
+        "id": "force_north_door",
+        "ability": "str",
+        "dc": 15,
+        "reason": "强行打开北侧烧焦破碎、铰链半熔的门。"
+      },
+      {
+        "id": "dismiss_spectator_deception",
+        "ability": "cha",
+        "skill": "deception",
+        "dc": 15,
+        "reason": "欺骗观察者眼魔相信队伍获授权解除它的雇佣契约。"
+      },
+      {
+        "id": "identify_green_flame",
+        "ability": "int",
+        "skill": "arcana",
+        "dc": 15,
+        "reason": "辨识绿焰火盆是洞窟魔力的源头及其现有限制。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "forge_spectator",
+        "monster_slug": "spectator",
+        "count": 1,
+        "faction": "guardian",
+        "trigger": "队伍试图拿走工坊物品、攻击它，或谈判失败后继续冒犯守卫职责。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "green_flame_source",
+        "label": "绿焰源头",
+        "description": "绿焰火盆是洞窟魔力源头，但永久强化力量已随岁月衰退。"
+      },
+      {
+        "id": "spectator_contract_loophole",
+        "label": "守卫契约破绽",
+        "description": "观察者眼魔相信自己仍受雇守卫工厂，可被欺骗为契约已解除。"
+      },
+      {
+        "id": "forge_treasure_location",
+        "label": "最后守护物",
+        "description": "东南角工作台上放着观察者眼魔奉命看守的光明使者与龙之守护。"
+      }
+    ],
+    "events": [
+      "forge_of_spells_secured"
+    ],
+    "fallbacks": [
+      {
+        "id": "avoid_guardian_by_deception",
+        "condition": "队伍不想与观察者眼魔战斗",
+        "dm_guidance": "允许用解除雇佣契约的谎言使它离开。"
+      },
+      {
+        "id": "temporary_power_before_withdrawal",
+        "condition": "队伍准备撤出洞穴但已控制工坊",
+        "dm_guidance": "提醒可用绿焰临时强化非魔法武器或护甲。"
+      }
+    ],
+    "routing_notes": [
+      "本区是潮音洞穴的核心收益节点；解决观察者眼魔后可回访相邻区域或带着魔法物品撤离。"
+    ],
+    "rewards": [
+      {
+        "id": "lightbringer_item",
+        "type": "item",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "forge_of_spells_secured"
+        ],
+        "description": "光明使者：为洛山达牧师订制的+1硬头锤，可发出火炬般光亮，发光时对不死生物额外造成1d6光耀伤害。"
+      },
+      {
+        "id": "dragonguard_item",
+        "type": "item",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "forge_of_spells_secured"
+        ],
+        "description": "龙之守护：带金龙纹样的+1胸甲，使穿戴者对龙族吐息攻击的豁免检定具有优势。"
+      },
+      {
+        "id": "green_flame_temporary_enchantment",
+        "type": "item",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "green_flame_source"
+        ],
+        "description": "绿焰火盆可将一件非魔法武器或护甲临时变为+1魔法物品，持续1d12小时；火盆本身不能移走。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_wizards_quarters",
+        "label": "前往法师居所",
+        "next_node_id": "wave_echo_wizards_quarters",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "经北侧破损门返回墨梅斯克盘踞的客房。"
+      },
+      {
+        "id": "to_starry_cavern",
+        "label": "穿过西侧双开门",
+        "next_node_id": "wave_echo_starry_cavern",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "从微开的西门离开工坊，转入相邻洞窟路线。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "重新定位潮音洞穴",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "需要总览、撤退或改走其他矿区路线时使用。"
+      },
+      {
+        "id": "return_to_phandalin",
+        "label": "带着发现返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [
+          "forge_of_spells_secured"
+        ],
+        "transition_kind": "advance",
+        "description": "控制法术工厂并取得关键物品后，队伍可选择离开矿坑。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_booming_cavern_streambed",
+    "module_id": "lost_mine",
+    "title": "轰鸣洞窟与古老河床",
+    "kind": "location",
+    "page_start": 44,
+    "page_end": 45,
+    "source_refs": [
+      {
+        "page_start": 44,
+        "page_end": 45,
+        "section": "16. 轰鸣洞窟 Booming Cavern"
+      },
+      {
+        "page_start": 45,
+        "page_end": 45,
+        "section": "17. 古老河床 Old Streambed"
+      }
+    ],
+    "dm_summary": "这里把潮音洞穴的名称具象化：狭窄岩台俯瞰注满汹涌水流的洞窟，周期性浪潮撞击岩壁，发出贯穿矿坑的轰鸣。南墙岩台高出常态水面15尺，但每两分钟水位会暴涨10尺，约一分钟后退回。旁边四尺高、满是圆石的古老河床曾是水道，后来被矮人改道，又因地震干涸，可作为绕开冶炼厂不死生物、通往崩塌洞窟的隐蔽路线；涅兹纳尔并未发现此路。",
+    "player_visible_intro": "前方传来震耳的潮浪回声。狭窄岩台下，是一座被深水填满的大洞窟；每隔片刻，水道中涌入的浪潮便抬高水面，重重拍在岩壁上。另一侧，一条低矮、干涸、铺满圆石的旧河床向黑暗中延伸。",
+    "scene_beats": [
+      "进入时先强调潮浪轰鸣、湿滑岩台和周期性涨水。",
+      "玩家若研究旧河床，可确认它能通往崩塌洞窟。",
+      "旧河床低矮多石，适合绕行，但行动不舒适且视线受限。",
+      "若队伍避开冶炼厂，可用旧河床绕过区域12的不死生物。",
+      "继续前进会抵达崩塌洞窟，那里有黑蜘蛛仆从活动。"
+    ],
+    "rules_notes": [
+      "轰鸣洞窟水深约20尺，浪潮每2分钟涌入，使水位升高10尺。",
+      "涨水约1分钟后退回常态；站位靠近水面者可能被迫撤离或冒险攀爬。",
+      "南墙岩台常态下高出水面15尺，涨水时仅高出约5尺。",
+      "古老河床仅4尺高，布满圆石和鹅卵石，按狭窄低矮通道处理。"
+    ],
+    "checks": [],
+    "encounters": [],
+    "clues": [
+      {
+        "id": "old_streambed_bypass",
+        "label": "旧河床绕路",
+        "description": "干涸旧河床可绕开冶炼厂的不死生物，并通往崩塌洞窟。"
+      },
+      {
+        "id": "nezznar_missed_streambed",
+        "label": "黑蜘蛛未发现此路",
+        "description": "涅兹纳尔没有发现旧河床的绕行价值，敌人通常不预期队伍从此处出现。"
+      }
+    ],
+    "events": [],
+    "fallbacks": [
+      {
+        "id": "water_hazard_retreat",
+        "condition": "玩家不愿冒涨水风险",
+        "dm_guidance": "允许他们退回相邻区域，或改走旧河床绕行。"
+      }
+    ],
+    "routing_notes": [
+      "本区域是潮浪危险场景，也是从冶炼厂一侧绕入崩塌洞窟的低矮通路。"
+    ],
+    "rewards": [],
+    "exits": [
+      {
+        "id": "to_collapsed_cavern",
+        "label": "沿古老河床前往崩塌洞窟",
+        "next_node_id": "wave_echo_collapsed_cavern",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "穿过低矮旧河床，抵达区域18。"
+      },
+      {
+        "id": "to_smelter_cavern",
+        "label": "返回冶炼厂方向",
+        "next_node_id": "wave_echo_smelter_cavern",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到水车与不死生物所在的相邻区域。"
+      },
+      {
+        "id": "to_great_cavern",
+        "label": "回到大洞窟水道方向",
+        "next_node_id": "wave_echo_great_cavern_dark_pool",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "沿水流源头方向回到更大的洞窟区域。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "重新评估矿坑路线",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "暂停局部探索，回到地下城总览。"
+      },
+      {
+        "id": "retreat_to_phandalin",
+        "label": "撤出矿坑返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "队伍选择离开潮音洞穴休整。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_collapsed_cavern",
+    "module_id": "lost_mine",
+    "title": "崩塌的洞窟",
+    "kind": "encounter",
+    "page_start": 45,
+    "page_end": 45,
+    "source_refs": [
+      {
+        "page_start": 45,
+        "page_end": 45,
+        "section": "18. 崩塌的洞窟 Collapsed Cavern"
+      }
+    ],
+    "dm_summary": "崩塌洞窟东半部被一条20尺深裂谷占据，水流从西墙涌出后跌入裂谷再向北流。涅兹纳尔的占卜指出裂谷底有贵重宝物，因此三只熊地精在此清理碎石，由伪装成卓尔男性的变形怪维哈拉克监督。西侧守卫会警戒不死生物或入侵者，裂谷底的熊地精可沿绳索爬上加入战斗。若两只熊地精被杀，维哈拉克会撤往区域19警告涅兹纳尔。",
+    "player_visible_intro": "洞窟东侧裂开一道宽阔干裂谷，西墙涌出的水流坠入谷底后向北消失。几条绳索被铁桩固定在裂谷边，垂向下方。碎石间有魁梧的熊地精在劳作，一名卓尔男子模样的监督者冷眼看守。",
+    "scene_beats": [
+      "进入时展示裂谷、绳索、水流和敌人分工。",
+      "若玩家交涉或潜行，维哈拉克会维持卓尔伪装观察局势。",
+      "战斗爆发后，谷底熊地精沿绳索爬上支援主洞窟。",
+      "两只熊地精被杀后，维哈拉克撤往区域19警告涅兹纳尔。",
+      "搜索裂谷底可能找到矮人遗骸和食人魔力量护手。"
+    ],
+    "rules_notes": [
+      "裂谷深20尺；使用绳索上下通常无需检定。",
+      "不用绳索攀爬裂谷需DC 10力量（运动）检定。",
+      "攀爬失败且差值为5或更高会坠落，每10尺受1d6钝击伤害并倒地。",
+      "寻找裂谷底遗骸每名生物每小时只能尝试一次察觉检定。",
+      "维哈拉克当前外表是卓尔男性，但本体为变形怪。"
+    ],
+    "checks": [
+      {
+        "id": "climb_rift_without_rope",
+        "ability": "str",
+        "skill": "athletics",
+        "dc": 10,
+        "reason": "不用绳索攀爬20尺深裂谷",
+        "resolution": "失败仍可能受阻；若失败差值达到5或更高，则坠落受伤并倒地。"
+      },
+      {
+        "id": "find_dwarf_skeleton",
+        "ability": "wis",
+        "skill": "perception",
+        "dc": 20,
+        "reason": "在裂谷底巨石下寻找碎裂矮人骸骨",
+        "resolution": "成功发现遗骸与其佩戴的食人魔力量护手；每名生物每小时仅可尝试一次。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "collapsed_cavern_bugbears",
+        "monster_slug": "bugbear",
+        "count": 3,
+        "faction": "enemy",
+        "trigger": "队伍进入、被发现、干扰清理或爆发战斗时。"
+      },
+      {
+        "id": "vhalak_doppelganger",
+        "monster_slug": "doppelganger",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "维哈拉克以卓尔男性外貌监督熊地精，敌对局势中参战或撤退。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "nezznar_divined_rift_treasure",
+        "label": "占卜指向裂谷宝藏",
+        "description": "黑蜘蛛的占卜显示崩塌裂谷底部有贵重宝藏。"
+      },
+      {
+        "id": "vhalak_oversees_search",
+        "label": "维哈拉克监督搜寻",
+        "description": "名叫维哈拉克的变形怪伪装成卓尔男性，在此监督熊地精清理碎石。"
+      },
+      {
+        "id": "route_to_area19",
+        "label": "通向黑蜘蛛所在方向",
+        "description": "维哈拉克若脱身，会撤往区域19警告涅兹纳尔，说明前方接近其核心据点。"
+      }
+    ],
+    "events": [
+      "vhalak_warns_nezznar",
+      "ogre_gauntlets_found"
+    ],
+    "fallbacks": [
+      {
+        "id": "vhalak_escape",
+        "condition": "两只熊地精被杀且维哈拉克仍能行动",
+        "dm_guidance": "让维哈拉克撤往区域19，并标记警告涅兹纳尔。"
+      },
+      {
+        "id": "missed_gauntlets",
+        "condition": "队伍未搜索或多次失败",
+        "dm_guidance": "宝物继续埋在裂谷底；玩家可稍后返回再花时间寻找。"
+      }
+    ],
+    "routing_notes": [
+      "本区域连接旧河床与区域19，是黑蜘蛛势力的前哨和隐藏宝物点。"
+    ],
+    "rewards": [
+      {
+        "id": "ogre_power_gauntlets",
+        "type": "item",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "ogre_gauntlets_found"
+        ],
+        "description": "裂谷底巨石下的碎裂矮人骸骨佩戴着食人魔力量护手。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_booming_cavern_streambed",
+        "label": "沿旧河床返回轰鸣洞窟",
+        "next_node_id": "wave_echo_booming_cavern_streambed",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "经低矮干河床返回区域16/17。"
+      },
+      {
+        "id": "to_temple_of_dumathoin",
+        "label": "继续前往区域19",
+        "next_node_id": "wave_echo_temple_of_dumathoin",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "追击或继续深入，接近涅兹纳尔所在方向。"
+      },
+      {
+        "id": "to_smelter_cavern",
+        "label": "回到冶炼厂方向",
+        "next_node_id": "wave_echo_smelter_cavern",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "从相邻通路返回区域12一带。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "重新评估矿坑路线",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "暂停局部探索，回到地下城总览。"
+      },
+      {
+        "id": "retreat_to_phandalin",
+        "label": "撤出矿坑返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "队伍选择离开潮音洞穴休整。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_temple_of_dumathoin",
+    "module_id": "lost_mine",
+    "title": "杜马松的神庙",
+    "kind": "encounter",
+    "page_start": 45,
+    "page_end": 46,
+    "source_refs": [
+      {
+        "page_start": 45,
+        "page_end": 46,
+        "section": "19. 杜马松的神庙"
+      }
+    ],
+    "dm_summary": "这座矮人矿坑之神杜马松的大厅已被黑蜘蛛涅兹纳尔改作总部。破损石柱、巨大矮人神像、营地与堆满地图笔记的桌子构成战场。涅兹纳尔会先试探、交谈或欺骗，承认自己利用克拉摩地精和红标帮隐藏潮音洞穴；一旦开战，他让巨蜘蛛用蛛网控场，自己隐形后伺机施法。若被活捉并送交凡达林或修达，可获得双倍反派经验。神像眼睛是玻璃赝品且有塌方陷阱。",
+    "player_visible_intro": "破损的大理石柱沿墙排列，北端一尊九尺高的矮人神像端坐宝座，石锤横放膝上。尘土被清到一旁，神像前搭着营地，铺盖、包裹和火坑围成一圈，西侧桌面散着纸张与地图。",
+    "scene_beats": [
+      "进入时确认神庙居住者是否已警觉；未警觉则描述涅兹纳尔、熊地精与桌面。",
+      "涅兹纳尔可短暂交谈、套取身份与目标，并承认黑蜘蛛身份和幕后操纵。",
+      "战斗中巨蜘蛛先躲柱后并用蛛网束缚，涅兹纳尔常先隐形再加入。",
+      "若区域18敌人尚未处理，战斗声会在三轮后引来它们支援。",
+      "制服或杀死涅兹纳尔后，桌上地图、钥匙和宝袋指向祭司居所与后续收尾。"
+    ],
+    "rules_notes": [
+      "新版突袭：被突袭者只在先攻检定有劣势，不跳过首回合。",
+      "涅兹纳尔可能承诺投降或合作，但原文明确他会在角色失去利用价值后背叛。",
+      "有宗教熟练的角色可认出杜马松，无需检定。",
+      "撬下任一神像眼睛会触发塌方，房内所有生物都需豁免。",
+      "活捉涅兹纳尔并送交修达或凡达林镇长后，奖励双倍该反派经验。"
+    ],
+    "checks": [
+      {
+        "id": "inspect_statue_eyes",
+        "ability": "int",
+        "skill": "investigation",
+        "dc": 15,
+        "reason": "近看神像眼睛是否真为宝石",
+        "resolution": "成功发现祖母绿只是精巧玻璃赝品。"
+      },
+      {
+        "id": "pry_statue_eye",
+        "ability": "str",
+        "dc": 10,
+        "reason": "从神像上撬下玻璃眼睛",
+        "resolution": "成功撬下任一眼睛后立刻触发塌方。"
+      },
+      {
+        "id": "ceiling_collapse_save",
+        "ability": "dex",
+        "dc": 15,
+        "reason": "躲避塌落天花板",
+        "resolution": "失败受4d10钝击伤害并倒地；成功伤害减半。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "nezznar",
+        "monster_slug": "nezznar_the_black_spider",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "角色进入神庙或与其谈判破裂。"
+      },
+      {
+        "id": "bugbear_bodyguards",
+        "monster_slug": "bugbear",
+        "count": 2,
+        "faction": "enemy",
+        "trigger": "守在桌边保护涅兹纳尔。"
+      },
+      {
+        "id": "giant_spiders",
+        "monster_slug": "giant_spider",
+        "count": 4,
+        "faction": "enemy",
+        "trigger": "感觉到麻烦时躲柱后，战斗中先用蛛网。"
+      },
+      {
+        "id": "area18_reinforcement",
+        "monster_slug": "doppelganger",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "若区域18变形怪撤回此处，伪装成南卓做人质。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "nezznar_black_spider_confession",
+        "label": "黑蜘蛛的幕后操纵",
+        "description": "涅兹纳尔承认自己就是黑蜘蛛，并利用克拉摩地精和红标帮维护潮音洞穴的秘密。"
+      },
+      {
+        "id": "nezznar_exploration_notes",
+        "label": "探索地图与笔记",
+        "description": "桌上地图和笔记显示涅兹纳尔目前探索矿坑、寻找法术工厂的进度。"
+      },
+      {
+        "id": "priests_quarters_key",
+        "label": "铁砧柄钥匙",
+        "description": "涅兹纳尔随身铁钥匙可打开通往祭司居所的门。"
+      },
+      {
+        "id": "statue_eyes_trap",
+        "label": "神像眼睛陷阱",
+        "description": "神像眼睛是玻璃赝品，受防护魔法保护；撬下会导致柱子碎裂和天花板塌方。"
+      }
+    ],
+    "events": [
+      "nezznar_defeated",
+      "nezznar_captured_and_delivered"
+    ],
+    "fallbacks": [
+      {
+        "id": "false_nundro_hostage",
+        "condition": "区域18变形怪撤退到神庙",
+        "dm_guidance": "让它伪装成南卓做人质，涅兹纳尔借此逼迫队伍投降。"
+      },
+      {
+        "id": "nezznar_bargain",
+        "condition": "角色愿意谈判或暂时合作",
+        "dm_guidance": "可让涅兹纳尔提供合作或投降承诺，但保留其背叛意图。"
+      }
+    ],
+    "routing_notes": [
+      "此处是黑蜘蛛决战与祭司居所钥匙来源；处理后可转向南卓牢房、回溯区域18或离开矿坑。"
+    ],
+    "rewards": [
+      {
+        "id": "nezznar_capture_double_xp",
+        "type": "xp",
+        "amount": 900,
+        "scope": "party",
+        "requires": [
+          "nezznar_captured_and_delivered"
+        ],
+        "description": "活捉涅兹纳尔并送交修达或凡达林镇长后，队伍获得双倍该反派经验。"
+      },
+      {
+        "id": "nezznar_carried_items",
+        "type": "item",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "nezznar_defeated"
+        ],
+        "description": "涅兹纳尔随身物品：一瓶治疗药水、一根蜘蛛法杖，以及可开祭司居所门的铁砧柄铁钥匙。"
+      },
+      {
+        "id": "nezznar_treasure_bag",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "nezznar_defeated"
+        ],
+        "description": "桌上黑皮袋：190 ep、130 gp、15 pp、九枚各值10 gp的小宝石、一个100 gp铂金矮人麦酒杯。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "to_priests_quarters",
+        "label": "打开通往祭司居所的门",
+        "next_node_id": "wave_echo_priests_quarters_conclusion",
+        "requires": [],
+        "transition_kind": "advance",
+        "description": "用钥匙或开锁进入区域20。"
+      },
+      {
+        "id": "back_to_collapsed_cavern",
+        "label": "退回相邻洞窟",
+        "next_node_id": "wave_echo_collapsed_cavern",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到区域18方向处理未清威胁或改道。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "重新审视矿坑路线",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "回到潮音洞穴总览调整探索顺序。"
+      },
+      {
+        "id": "deliver_nezznar_to_phandalin",
+        "label": "押送涅兹纳尔去凡达林",
+        "next_node_id": "phandalin",
+        "requires": [
+          "nezznar_captured_and_delivered"
+        ],
+        "transition_kind": "switch",
+        "description": "送交镇长或修达后结算双倍经验。"
+      }
+    ]
+  },
+  {
+    "id": "wave_echo_priests_quarters_conclusion",
+    "module_id": "lost_mine",
+    "title": "祭司的居所与结局",
+    "kind": "location",
+    "page_start": 46,
+    "page_end": 46,
+    "source_refs": [
+      {
+        "page_start": 46,
+        "page_end": 46,
+        "section": "20. 祭司的居所"
+      },
+      {
+        "page_start": 46,
+        "page_end": 46,
+        "section": "结局"
+      }
+    ],
+    "dm_summary": "祭司居所的门上锁，涅兹纳尔持有钥匙；若角色在房内行动不隐蔽，神庙中的黑蜘蛛会注意并派巨蜘蛛探查。这里原本属于杜马松祭司，如今被用作牢房，南卓·寻岩者被绑在地上、昏迷且状况很差。获救后他非常感激，会跟随队伍但不比角色更了解矿坑布局。若涅兹纳尔和手下已被解决，此处可作为安全舒适的休息点。最终若黑蜘蛛阴谋瓦解、洞穴重开，甘德伦和南卓会给队伍矿坑10%收益。",
+    "player_visible_intro": "门后是一间积尘的旧居所，墙上帘幕灰暗下垂，床和火盆仍留在角落。冰冷石地板上，一个状况很糟的矮人被绳索捆住，昏迷不醒地倒在那里，显然已被囚禁和审问多日。",
+    "scene_beats": [
+      "若无钥匙，角色需开锁才能进入；粗暴或吵闹会惊动神庙方向的敌人。",
+      "南卓被绑在地上且昏迷，获救后感激队伍并可随行。",
+      "南卓无法提供更多矿坑布局情报，不应成为解谜或导航捷径。",
+      "涅兹纳尔已被解决后，此房可作为继续探索前的安全休息点。",
+      "收束结局时，说明矿坑重开、凡达林繁荣，以及队伍获得10%矿坑收益。"
+    ],
+    "rules_notes": [
+      "门锁可用涅兹纳尔的铁钥匙打开，或用盗贼工具进行检定。",
+      "若角色未保持隐匿，房内动静会吸引区域19注意，涅兹纳尔会派巨蜘蛛查看。",
+      "南卓是矮人平民；原文说明他不会比角色知道更多矿坑布局。",
+      "南卓被救出并在冒险中存活时，队伍平分200 XP。",
+      "冒险结束后角色通常应到达5级，可继续留在凡达林或踏上新冒险。"
+    ],
+    "checks": [
+      {
+        "id": "open_locked_door",
+        "ability": "dex",
+        "skill": "thieves_tools",
+        "dc": 15,
+        "reason": "不用钥匙打开祭司居所的锁门",
+        "resolution": "成功则开门；失败可继续尝试，但噪声可能引来神庙敌人。"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "spider_probe",
+        "monster_slug": "giant_spider",
+        "count": 1,
+        "faction": "enemy",
+        "trigger": "若神庙敌人仍在且角色在祭司居所内制造明显动静。"
+      }
+    ],
+    "clues": [
+      {
+        "id": "nundro_found_alive",
+        "label": "南卓仍活着",
+        "description": "南卓·寻岩者被涅兹纳尔囚禁审问，但仍可被救出。"
+      },
+      {
+        "id": "nundro_knows_little",
+        "label": "南卓情报有限",
+        "description": "南卓不比角色知道更多矿坑布局，不能直接指出未知区域。"
+      },
+      {
+        "id": "safe_rest_after_nezznar",
+        "label": "神庙清理后的休息点",
+        "description": "若涅兹纳尔和手下已解决，祭司居所可作为安全舒适的休息地。"
+      },
+      {
+        "id": "mine_share_promise",
+        "label": "矿坑收益承诺",
+        "description": "冒险成功后，甘德伦和南卓愿以矿坑10%收益感谢队伍。"
+      }
+    ],
+    "events": [
+      "nundro_rescued_and_survived",
+      "wave_echo_cave_resolved"
+    ],
+    "fallbacks": [
+      {
+        "id": "no_key_entry",
+        "condition": "角色未取得涅兹纳尔钥匙",
+        "dm_guidance": "允许按DC 15盗贼工具开锁；失败或破门可触发神庙警觉。"
+      },
+      {
+        "id": "conclusion_not_ready",
+        "condition": "黑蜘蛛或矿坑核心威胁尚未解决",
+        "dm_guidance": "先只处理南卓营救与休息点，结局收益等到洞穴解决后再结算。"
+      }
+    ],
+    "routing_notes": [
+      "此处负责南卓营救、休息点与最终结局；若未决战，应回到神庙或矿坑总览继续处理。"
+    ],
+    "rewards": [
+      {
+        "id": "nundro_rescue_200_xp",
+        "type": "xp",
+        "amount": 200,
+        "scope": "party",
+        "requires": [
+          "nundro_rescued_and_survived"
+        ],
+        "description": "南卓被救出并在冒险中存活，队伍平分200 XP。"
+      },
+      {
+        "id": "wave_echo_mine_ten_percent_share",
+        "type": "treasure",
+        "amount": 1,
+        "scope": "party",
+        "requires": [
+          "wave_echo_cave_resolved"
+        ],
+        "description": "矿坑重开后，甘德伦和南卓提供队伍10%的矿坑收益。"
+      }
+    ],
+    "exits": [
+      {
+        "id": "back_to_temple",
+        "label": "返回杜马松神庙",
+        "next_node_id": "wave_echo_temple_of_dumathoin",
+        "requires": [],
+        "transition_kind": "revisit",
+        "description": "回到区域19处理涅兹纳尔或搜查总部。"
+      },
+      {
+        "id": "to_wave_echo_overview",
+        "label": "继续探索潮音洞穴",
+        "next_node_id": "wave_echo_overview",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "若矿坑尚未解决，回到总览选择其他区域。"
+      },
+      {
+        "id": "conclude_to_phandalin",
+        "label": "带着幸存者返回凡达林",
+        "next_node_id": "phandalin",
+        "requires": [
+          "wave_echo_cave_resolved"
+        ],
+        "transition_kind": "switch",
+        "description": "洞穴解决后返回凡达林，叙述矿坑重开与欢迎。"
+      },
+      {
+        "id": "toward_forge_if_unsecured",
+        "label": "前往法术工厂方向",
+        "next_node_id": "wave_echo_forge_of_spells",
+        "requires": [],
+        "transition_kind": "switch",
+        "description": "若法术工厂尚未处理，转去完成矿坑核心目标。"
+      }
+    ]
+  }
+]

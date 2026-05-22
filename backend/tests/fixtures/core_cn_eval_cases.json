@@ -1,0 +1,72 @@
+[
+  {
+    "id": "phb_fireball_still_works",
+    "query": "火球术的范围、豁免和伤害是多少？",
+    "expected_terms": ["火球术", "敏捷豁免", "8d6"],
+    "expected_category": "spells",
+    "expected_top_titles": ["火球术"]
+  },
+  {
+    "id": "dmg_feywild_memory_loss",
+    "query": "妖精荒野的记忆丧失选用规则怎么判？",
+    "expected_terms": ["妖精荒野", "记忆", "DC10"],
+    "expected_category": "planes",
+    "expected_top_titles": [["记忆丧失", "选用规则：妖精荒野魔法"]]
+  },
+  {
+    "id": "dmg_shadowfell_despair",
+    "query": "堕影冥界绝望规则会造成什么影响？",
+    "expected_terms": ["堕影冥界", "绝望", "豁免"],
+    "expected_category": "planes",
+    "expected_top_titles": [["堕影冥界绝望", "堕影冥界"]]
+  },
+  {
+    "id": "dmg_magic_item_rarity",
+    "query": "魔法物品稀有度和角色等级大概怎么对应？",
+    "expected_terms": ["魔法物品", "稀有度", "等级"],
+    "expected_category": "magic_items",
+    "expected_top_titles": [["魔法物品稀有度", "魔法物品", "稀有度"]]
+  },
+  {
+    "id": "dmg_treasure_hoard",
+    "query": "如何为怪物宝藏生成财宝堆？",
+    "expected_terms": ["宝藏", "财宝", "挑战等级"],
+    "expected_category": "treasure",
+    "expected_top_titles": [["宝藏", "财宝"]]
+  },
+  {
+    "id": "dmg_flanking_optional_rule",
+    "query": "夹击这个选用规则会给攻击什么好处？",
+    "expected_terms": ["夹击", "优势", "攻击"],
+    "expected_category": "rules_options",
+    "expected_top_titles": ["夹击"]
+  },
+  {
+    "id": "mm_aboleth_stat_block",
+    "query": "底栖魔鱼的挑战等级、AC 和 HP 是多少？",
+    "expected_terms": ["底栖魔鱼", "AC", ["HP", "生命值"], "挑战等级"],
+    "expected_category": "monsters",
+    "expected_top_titles": ["底栖魔鱼"]
+  },
+  {
+    "id": "mm_banshee_wail",
+    "query": "女妖的哀嚎能力怎么让生物生命值归零？",
+    "expected_terms": ["女妖", "哀嚎", "生命值"],
+    "expected_category": "monsters",
+    "expected_top_titles": ["女妖"]
+  },
+  {
+    "id": "mm_adult_brass_dragon_breath",
+    "query": "成年黄铜龙的火焰吐息和催眠吐息分别是什么范围？",
+    "expected_terms": ["成年黄铜龙", "火焰吐息", "催眠吐息"],
+    "expected_category": "monsters",
+    "expected_top_titles": ["成年黄铜龙"]
+  },
+  {
+    "id": "mm_balor_death_throes",
+    "query": "巴洛炎魔死亡时的焚身爆造成多少伤害？",
+    "expected_terms": ["巴洛炎魔", "焚身爆", "20d6"],
+    "expected_category": "monsters",
+    "expected_top_titles": ["巴洛炎魔"]
+  }
+]

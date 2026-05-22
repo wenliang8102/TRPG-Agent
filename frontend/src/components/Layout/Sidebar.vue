@@ -31,12 +31,8 @@
 import { 
   Home, 
   MessageCircle, 
-  Hash, 
-  Star,
   BookOpen,
-  Sword,
-  Trophy,
-  BarChart3,
+  ScrollText,
   Settings,
   User,
   type LucideIcon
@@ -62,14 +58,10 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'welcome', label: '欢迎', icon: Home },
-  { id: 'chat', label: '聊天助手', icon: MessageCircle },
-  { id: 'page1', label: '1', icon: Hash },
-  { id: 'page2', label: '2', icon: Star },
-  { id: 'page3', label: '3', icon: BookOpen },
-  { id: 'page4', label: '4', icon: Sword },
-  { id: 'page5', label: '5', icon: Trophy },
-  { id: 'page6', label: '6', icon: BarChart3 },
-  { id: 'page7', label: '设置', icon: Settings },
+  { id: 'chat', label: '聊天', icon: MessageCircle },
+  { id: 'history', label: '历史', icon: ScrollText },
+  { id: 'rules', label: '规则', icon: BookOpen },
+  { id: 'settings', label: '设置', icon: Settings },
   { id: 'profile', label: '用户', icon: User },
 ]
 </script>
@@ -125,7 +117,7 @@ const navItems: NavItem[] = [
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 0px;
 }
 
 .sidebar-nav::-webkit-scrollbar {
@@ -138,7 +130,7 @@ const navItems: NavItem[] = [
 
 .sidebar-nav::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  border-radius: 0px;
 }
 
 /* 确保折叠时侧边栏仍然保持玻璃质感 */
@@ -151,15 +143,22 @@ const navItems: NavItem[] = [
 .nav-btn {
   background: transparent !important;
   transition: all 0.2s;
+  width: 100%;
+  border-radius: 0 ;
 }
 
 .nav-btn:hover {
   background: rgba(255, 255, 255, 0.08) !important;
   backdrop-filter: blur(4px);
+  width: 100%;
+  border-radius: 0;
 }
 
+
 .nav-btn.active {
-  background: rgba(66, 184, 131, 0.2) !important;
-  border-left: 2px solid #42b883;
+  background: rgba(255, 255, 255, 0.1) !important;   /* 极淡透明白色背景 */
+  border-left: 2px solid rgba(255, 255, 255, 0.8);   /* 左边框改为亮白 */
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);     /* 可选：极淡外发光，增强白光感 */
 }
+
 </style>

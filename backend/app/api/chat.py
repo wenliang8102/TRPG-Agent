@@ -6,12 +6,13 @@ import sqlite3
 from typing import Optional
 from uuid import uuid4
 
+import psycopg
 from fastapi import HTTPException, Query
 from fastapi import APIRouter
 from fastapi import status
 from fastapi.responses import StreamingResponse
 
-from app.api.schemas import ChatRequest, ChatResponse
+from app.api.schemas import ChatRequest, ChatResponse, EndCombatTurnRequest
 from app.services.chat_session_service import get_chat_session_service
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -49,6 +50,7 @@ async def chat(payload: ChatRequest) -> ChatResponse:
             message=payload.message,
             session_id=payload.session_id,
             resume_action=payload.resume_action,
+            reaction_response=payload.reaction_response,
         )
 
         return ChatResponse(
@@ -58,8 +60,10 @@ async def chat(payload: ChatRequest) -> ChatResponse:
             pending_action=result.get("pending_action"),
             player=result.get("player"),
             combat=result.get("combat"),
+            space=result.get("space"),
+            adventure=result.get("adventure"),
         )
-    except sqlite3.Error as exc:
+    except (sqlite3.Error, psycopg.Error) as exc:
         _raise_chat_http_error(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             code="memory_unavailable",
@@ -103,6 +107,7 @@ async def chat_stream(payload: ChatRequest) -> StreamingResponse:
                 message=payload.message,
                 session_id=payload.session_id,
                 resume_action=payload.resume_action,
+                reaction_response=payload.reaction_response,
             ):
                 yield event
         except Exception as exc:
@@ -132,3 +137,56 @@ async def chat_history(
     """从 checkpointer 恢复最近的对话历史。"""
     service = await _resolve_chat_session_service()
     return await service.get_history(session_id, limit)
+
+
+@router.post("/combat/end-turn")
+async def end_combat_turn(payload: EndCombatTurnRequest) -> dict:
+    """玩家/友方回合结束按钮：直接推进回合，不经过主 Agent。"""
+    try:
+        service = await _resolve_chat_session_service()
+        return await service.end_player_controlled_turn(
+            session_id=payload.session_id,
+            actor_id=payload.actor_id,
+        )
+    except ValueError as exc:
+        _raise_chat_http_error(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="invalid_end_turn",
+            message=str(exc),
+            exc=exc,
+        )
+    except Exception as exc:
+        _raise_chat_http_error(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            code="unexpected_error",
+            message=f"Unexpected backend error: {type(exc).__name__}: {exc}",
+            exc=exc,
+        )
+
+
+@router.post("/combat/end-turn/stream")
+async def end_combat_turn_stream(payload: EndCombatTurnRequest) -> StreamingResponse:
+    """玩家/友方结束回合按钮的流式版本；后续怪物回合逐段推送。"""
+
+    async def event_generator():
+        try:
+            service = await _resolve_chat_session_service()
+            async for event in service.end_player_controlled_turn_stream(
+                session_id=payload.session_id,
+                actor_id=payload.actor_id,
+            ):
+                yield event
+        except Exception as exc:
+            logger.exception("end turn SSE stream error: %s", exc)
+            error_data = json.dumps({"message": str(exc)}, ensure_ascii=False)
+            yield f"event: error\ndata: {error_data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

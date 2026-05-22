@@ -1,12 +1,29 @@
+<!-- frontend/src/components/Chat/ChatMessage.vue -->
 <template>
-  <!-- 调试消息 -->
-  <div v-if="message.type === 'tool'" v-show="debugMode" class="tool-message-wrapper">
-    <div class="tool-badge">TOOL</div>
-    <pre class="tool-content">{{ message.content }}</pre>
+  <!-- loading 简化版（无头像） -->
+  <div v-if="message.type === 'loading'" class="message-wrapper assistant loading no-avatar">
+    <div class="message-bubble loading-bubble medieval">
+      <div class="rune-spinner">◈</div>
+      <span class="loading-text">预言正在编织...</span>
+    </div>
   </div>
 
+  <!-- tool 消息（仅调试模式显示） -->
+  <div v-else-if="message.type === 'tool'">
+    <div v-if="debugMode" class="tool-message-wrapper">
+      <div class="tool-badge">TOOL</div>
+      <pre class="tool-content">{{ message.content }}</pre>
+    </div>
+  </div>
+
+  <DiceRollCard
+    v-else-if="message.type === 'dice_roll' && diceRoll"
+    :roll="diceRoll"
+    class="message-dice-card"
+  />
+
   <!-- 普通消息 -->
-  <div v-else :class="['message-wrapper', message.role]">
+  <div v-else :class="['message-wrapper', message.role]" @pointerdown="handleMessagePointerDown">
     <div class="avatar">
       <img v-if="avatarUrl" :src="avatarUrl" :alt="displayName" />
       <div v-else class="avatar-placeholder">{{ avatarIcon }}</div>
@@ -16,7 +33,7 @@
         <span class="display-name">{{ displayName }}</span>
         <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
       </div>
-      <div class="message-bubble" :class="{ 'combat-bubble': message.type === 'combat_action' }" @click="handleMessageClick">
+      <div class="message-bubble" :class="{ 'combat-bubble': message.type === 'combat_action' }">
         <div v-if="message.content" class="message-text" v-html="renderedContent"></div>
         <HpBar
           v-for="(hpc, i) in hpChanges"
@@ -32,10 +49,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, watch, onUnmounted } from 'vue'
+import { computed, inject, watch, onUnmounted, reactive, ref, type ComputedRef } from 'vue'
 import { marked } from 'marked'
 import type { ChatMessage } from '../../Services_/chatService'
-import HpBar from './HpBar.vue'
+import HpBar from './SideCharacterPanel/HpBar.vue'
+import DiceRollCard from '../Dice3D/DiceRollCard.vue'
 import { adaptLLMOutput } from '../../composables/markdownAdapter'
 import { useTypewriter } from '../../composables/useTypewriter'
 
@@ -46,18 +64,38 @@ marked.setOptions({
 
 const props = defineProps<{
   message: ChatMessage
+  scrollToBottom?: () => void
+}>()
+
+const emit = defineEmits<{
+  (e: 'firstChar'): void
 }>()
 
 const debugMode = inject<boolean>('debugMode', false)
+const globalSkipOutputAnimation = inject<ComputedRef<boolean>>('skipOutputAnimation', computed(() => false))
 
-const hpChanges = computed(() => props.message.metadata?.hp_changes ?? [])
-const avatarUrl = computed(() => props.message.avatar ?? undefined)
+const globalHpCache = reactive<Record<string, number>>({})
 
-const displayName = computed(() => {
-  if (props.message.displayName) return props.message.displayName
-  return props.message.role === 'user' ? '我' : 'TRPG 助手'
+const hpChanges = computed(() => {
+  const rawChanges = props.message.metadata?.hp_changes ?? []
+  return rawChanges.map((change: any) => {
+    const key = change.id || change.name
+    const cachedOld = globalHpCache[key]
+    const oldHp = change.old_hp !== undefined && change.old_hp !== change.new_hp
+      ? change.old_hp
+      : (cachedOld !== undefined ? cachedOld : change.new_hp)
+    globalHpCache[key] = change.new_hp
+    return { ...change, old_hp: oldHp }
+  })
 })
 
+const diceRoll = computed(() => props.message.metadata?.dice_roll)
+
+const avatarUrl = computed(() => props.message.avatar ?? undefined)
+const displayName = computed(() => {
+  if (props.message.displayName) return props.message.displayName
+  return props.message.role === 'user' ? '我' : '奥秘之桌'
+})
 const avatarIcon = computed(() => props.message.role === 'user' ? '👤' : '🤖')
 
 const formatTime = (timestamp?: string | number) => {
@@ -66,43 +104,50 @@ const formatTime = (timestamp?: string | number) => {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 }
 
-// 预处理内容（列表适配 + 关键词高亮）
 const rawProcessedContent = computed(() => {
   if (!props.message.content) return ''
   return adaptLLMOutput(props.message.content)
 })
 
 const isUser = props.message.role === 'user'
-const isHistory = props.message.isHistory === true   // 判断是否为历史消息
+const isHistory = props.message.isHistory === true
+const skipAnimation = computed(() => isUser || isHistory || globalSkipOutputAnimation.value)
 
-// 只有用户消息或历史消息才跳过动画
-const skipAnimation = computed(() => isUser || isHistory)
+// 用于确保 firstChar 只触发一次
+const hasEmittedFirstChar = ref(false)
 
-// 打字机效果（注意：不再依赖 props.isStreaming）
-const { displayText, skip, cleanup, reset, flush } = useTypewriter(
+const onTypewriterChar = () => {
+  props.scrollToBottom?.()
+  if (!hasEmittedFirstChar.value) {
+    hasEmittedFirstChar.value = true
+    emit('firstChar')
+  }
+}
+
+const { displayText, skip, cleanup, reset } = useTypewriter(
   rawProcessedContent,
-  35,        // 毫秒/字符，可调整速度
+  35,
   undefined,
-  skipAnimation
+  skipAnimation,
+  onTypewriterChar
 )
 
-// 监听消息内容变化，检测新消息开始（可选，用于重置状态）
 watch(() => props.message.content, (newContent, oldContent) => {
-  // 如果内容长度突然变短（新消息覆盖），重置打字机
   if (oldContent && newContent.length < oldContent.length) {
     reset()
+    hasEmittedFirstChar.value = false // 重置标志，新消息重新触发
   }
 }, { immediate: false })
 
-// 渲染内容：历史消息或用户消息直接显示完整内容，否则显示打字机效果
 const renderedContent = computed(() => {
   const content = skipAnimation.value ? rawProcessedContent.value : displayText.value
   if (!content) return ''
   return marked.parse(content, { async: false }) as string
 })
 
-// 点击消息跳过动画（仅当动画播放时有效）
-const handleMessageClick = () => {
+// 在指针按下瞬间触发跳过，避免流式渲染期间 DOM 位移导致 click 丢失。
+const handleMessagePointerDown = (event: PointerEvent) => {
+  if (event.button !== 0) return
   if (!skipAnimation.value) {
     skip()
   }
@@ -112,6 +157,7 @@ onUnmounted(() => {
   cleanup()
 })
 </script>
+
 
 <style scoped>
 /* 保持原有样式不变，只添加淡入动画 */
@@ -207,14 +253,15 @@ onUnmounted(() => {
 }
 
 .display-name {
-  font-size: 14px;
+  font-size: calc(14px * var(--chat-font-scale, 100) / 100);
   font-weight: 600;
   color: #e5e5ea;
 }
 
 .timestamp {
-  font-size: 11px;
+  font-size: calc(11px * var(--chat-font-scale, 100) / 100);
   color: #6c6c70;
+  display: none; 
 }
 
 .message-bubble {
@@ -233,7 +280,7 @@ onUnmounted(() => {
 .message-text {
   margin: 0;
   line-height: 1.5;
-  font-size: 14px;
+  font-size: calc(14px * var(--chat-font-scale, 100) / 100);
   color: #e5e5ea;
   word-break: break-word;
 }
@@ -352,7 +399,7 @@ onUnmounted(() => {
 }
 .tool-badge {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: calc(10px * var(--chat-font-scale, 100) / 100);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -362,7 +409,7 @@ onUnmounted(() => {
 }
 .tool-content {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--chat-font-scale, 100) / 100);
   font-family: 'Courier New', monospace;
   color: #8e8e93;
   white-space: pre-wrap;
@@ -388,4 +435,42 @@ onUnmounted(() => {
   text-shadow: 0 0 5px rgba(184, 138, 68, 0.5);
   letter-spacing: 1px;
 }
+
+
+/* ========== 中世纪加载动画（方案B：旋转符文） ========== */
+.loading-bubble.medieval {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent !important;          /* 完全透明背景 */
+  border: none !important;                     /* 移除边框 */
+  box-shadow: none !important;                 /* 移除阴影 */
+  min-width: auto;
+  padding: 8px 0;
+}
+
+/* 旋转的符文 */
+.rune-spinner {
+  font-size: 24px;
+  line-height: 1;
+  color: #c9a87b;                              /* 古铜金色 */
+  text-shadow: 0 0 10px #b88a44, 0 0 20px rgba(184, 138, 68, 0.5);
+  animation: rune-spin 2.5s linear infinite;   /* 慢速旋转，更有仪式感 */
+}
+
+@keyframes rune-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 中世纪风格文字 */
+.loading-text {
+  font-family: 'Cinzel', 'MedievalSharp', 'UnifrakturMaguntia', serif;
+  font-size: calc(14px * var(--chat-font-scale, 100) / 100);
+  font-style: italic;
+  color: #d4c5a9;                              /* 羊皮纸浅金色 */
+  letter-spacing: 2px;
+  text-shadow: 0 0 6px rgba(184, 138, 68, 0.6);
+}
+
 </style>

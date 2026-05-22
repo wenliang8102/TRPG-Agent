@@ -11,6 +11,10 @@ const setStoredSessionId = (sessionId: string) => {
   localStorage.setItem(SESSION_STORAGE_KEY, sessionId)
 }
 
+const clearStoredSessionId = () => {
+  localStorage.removeItem(SESSION_STORAGE_KEY)
+}
+
 export function useChatSession() {
   const sessionId = ref<string | null>(getStoredSessionId())
 
@@ -21,5 +25,10 @@ export function useChatSession() {
     }
   }
 
-  return { sessionId, updateSessionId }
+  const clearSessionId = () => {
+    sessionId.value = null
+    clearStoredSessionId()
+  }
+
+  return { sessionId, updateSessionId, clearSessionId }
 }

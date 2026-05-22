@@ -18,13 +18,14 @@ class _FlakySessionService:
         message: str | None = None,
         session_id: str | None = None,
         resume_action: str | None = None,
+        reaction_response: dict | None = None,
     ) -> dict:
         self.counter += 1
         if self.counter % self.fail_every == 0:
             raise RuntimeError("upstream timeout")
 
         return {
-            "reply": f"ok:{message or resume_action}",
+            "reply": f"ok:{message or reaction_response or resume_action}",
             "plan": None,
             "session_id": session_id or "reliability-session",
             "pending_action": None,

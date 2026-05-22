@@ -7,10 +7,10 @@ function highlightKeywords(text: string): string {
   // 2. 删除所有的 · 字符
   result = result.replace(/·/g, '');
 
-  // 3. 匹配 数字. 后面的所有内容（直到行尾）并高亮
-  //    支持数字后跟 . 、． 、、，可选空格，然后捕获剩余所有字符
+  // 3. 匹配 数字. 或 字母. 后面的所有内容（直到行尾）并高亮
+  //    支持数字或单个字母后跟 . 、． 、、 、) 、） ，可选空格，然后捕获剩余所有字符
   const patterns: [RegExp, string][] = [
-    [/(\d+[\.．、])\s*(.+)$/gm, '$1<span class="rpg-keyword-yellow">$2</span>'],
+    [/(\d+|[A-Za-z])([\.．、\)）])\s*(.+)$/gm, '$1$2<span class="rpg-keyword-yellow">$3</span>'],
   ];
 
   for (const [regex, replacement] of patterns) {
@@ -67,7 +67,7 @@ export function adaptLLMOutput(text: string): string {
 }
 
 // ==================== 辅助函数：HTML 转义 ====================
-function escapeHtml(str: string): string {
+export function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

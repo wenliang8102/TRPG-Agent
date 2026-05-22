@@ -59,7 +59,7 @@ const onSubmit = () => {
   padding: 0 12px;
   color: #e5e5ea;
   font-family: 'Cinzel', serif;
-  font-size: 14px;
+  font-size: calc(14px * var(--chat-font-scale, 100) / 100);
   transition: all 0.2s;
 }
 
@@ -73,7 +73,7 @@ const onSubmit = () => {
 .input-row input::placeholder {
   color: #8e8e93;
   font-family: 'Cinzel', serif;
-  font-size: 12px;
+  font-size: calc(12px * var(--chat-font-scale, 100) / 100);
 }
 
 /* 按钮样式：无色半透明背景 + 中世纪渐变金色文字 */
@@ -86,7 +86,7 @@ const onSubmit = () => {
   cursor: pointer;
   font-family: 'Cinzel', 'UnifrakturMaguntia', 'MedievalSharp', 'Germania One', serif;
   font-weight: 600;
-  font-size: 14px;
+  font-size: calc(14px * var(--chat-font-scale, 100) / 100);
   letter-spacing: 1.5px;
   text-transform: uppercase;
   transition: all 0.2s;

@@ -101,9 +101,9 @@
 
 .nav-btn.active {
   background: rgba(66, 184, 131, 0.12) !important;
-  color: #42b883;
+  color: rgba(210, 180, 140, 0.55);;
   box-shadow: 0 2px 8px rgba(66, 184, 131, 0.08);
-  border-left: 2px solid #42b883;
+  border-left: 2px solid  rgba(210, 180, 140, 0.55);;
 }
 
 /* 折叠时按钮居中 */
@@ -142,16 +142,16 @@
 }
 
 .nav-btn:last-child.active {
-  border: 0.5px solid rgba(66, 184, 131, 0.4);
+  border: 0.5px solid rgba(210, 180, 140, 0.55);;
   background: rgba(66, 184, 131, 0.1) !important;
-  color: #42b883;
+  color:  rgba(210, 180, 140, 0.55);
 }
 
 .sidebar.collapsed .nav-btn:last-child {
   margin-left: 0;
   margin-right: 0;
   width: 100%;
-  justify-content: center;
+  justify-content: center
 }
 
 .sidebar.collapsed .nav-btn:last-child:hover {

@@ -1,0 +1,37 @@
+# 角色状态调整技能
+
+当玩家或战斗单位的客观状态需要变化时使用本技能。先确认用户确实要求执行变化；如果只是询问规则或可能后果，不要调用执行类工具。
+
+## 入口工具
+
+统一使用 `modify_character_state`，状态效果不再提供独立旧工具入口。
+
+经验、升级、法师奥术传承、战士武术范型属于 `character_progression` 技能。需要成长流程时，调用 `modify_character_state(action="help", payload={"topic": "progression"})` 查看说明。
+
+## 动作速查
+
+- 普通数值调整：`action="update"`，传 `target_id` 与 `changes`。
+- 施加状态：`action="apply_condition"`，传 `payload={"target_id": 目标ID, "condition_id": 状态ID}`，可选 `source_id`、`duration`。
+- 移除状态：`action="remove_condition"`，传 `payload={"target_id": 目标ID, "condition_id": 状态ID}`。
+- 记录死亡豁免：先调用 `request_dice_roll(reason="死亡豁免", formula="1d20")`，再调用 `modify_character_state(action="record_death_save", payload={"roll_total": raw_roll})`。
+- 稳定伤势：`modify_character_state(action="stabilize", target_id="player")`。
+- 复活玩家：`modify_character_state(action="revive", target_id="player", payload={"hp": 1})`。
+
+## 常用 `changes`
+
+- 伤害或治疗：`{"hp_delta": -5}` 或 `{"hp_delta": 5}`。
+- 直接设置 HP：`{"set_hp": 8}`。
+- 调整 AC：`{"ac": 16}`。
+- 调整速度：`{"speed": 20}`。
+- 调整能力值：`{"abilities": {"str": 16}}`。
+- 调整资源：`{"resource_delta": {"spell_slot_lv1": -1}}`。
+- 恢复资源到上限：`{"set_resource": {"spell_slot_lv1": "max"}}`。
+
+## 使用原则
+
+- HP 变化优先用 `hp_delta`，让工具处理边界。
+- 法术位消耗通常由 `cast_spell` 自动处理；只有长休、剧情奖励、特殊恢复时才用本技能手动调整资源。
+- 玩家 0 HP 不等于游戏结束；死亡豁免由 LLM 调用骰子工具后写回状态，治疗或复活会清空死亡豁免计数。
+- HUD 中 `resources` 和 `death_saves` 是当前事实；旧聊天记录里的“剩余法术位”可能已经过期。
+- 战斗中的攻击、施法、回合推进仍使用战斗工具；本技能只负责无法由专门工具自动处理的状态变更。
+- 如果需要知道目标 ID，先从 HUD 读取；HUD 不足时再用 `inspect_unit`。

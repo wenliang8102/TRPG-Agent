@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: trpg_agent
+      POSTGRES_USER: trpg
+      POSTGRES_PASSWORD: trpg
+    ports:
+      - "5432:5432"
+    volumes:
+      - trpg_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  trpg_postgres_data:

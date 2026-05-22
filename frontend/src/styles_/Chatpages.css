@@ -9,6 +9,7 @@
 
 /* 左侧聊天区 */
 .chat-main {
+  --chat-font-scale: 100;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -40,7 +41,7 @@
 
 .chat-header h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: calc(20px * var(--chat-font-scale) / 100);
   font-weight: 600;
   color: #ffffff;
 }
@@ -49,6 +50,7 @@
 .message-list {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;   /* 关键：flex 子项溢出控制 */
   padding: 0 24px;
 }
 
@@ -57,6 +59,7 @@
 .message-text {
   font-family: 'Cinzel', 'Georgia', serif;
   color: #eeddbb;
+  font-size: calc(14px * var(--chat-font-scale) / 100);
 }
 .message-text h1, .message-text h2, .message-text h3 {
   font-family: 'Cinzel', 'UnifrakturMaguntia', serif;
@@ -91,7 +94,7 @@
 .error-text {
   color: #ff6b6b;
   margin: 8px 24px;
-  font-size: 13px;
+  font-size: calc(13px * var(--chat-font-scale) / 100);
 }
 
 /* 头部按钮区域 */
@@ -106,7 +109,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 14px;
+  font-size: calc(14px * var(--chat-font-scale) / 100);
   cursor: pointer;
   opacity: 0.5;
   transition: all 0.2s;
@@ -120,28 +123,103 @@
   opacity: 0.8;
 }
 
-/* 下一回合按钮栏 */
-.next-turn-bar {
-  padding: 8px 16px;
-  text-align: center;
-}
-.next-turn-btn {
-  padding: 8px 28px;
-  background: #42b883;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
+.session-action-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #e5e5ea;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  opacity: 0.72;
 }
-.next-turn-btn:hover:not(:disabled) {
-  background: #38a373;
+
+.session-action-btn:hover:not(:disabled) {
+  opacity: 1;
+  border-color: rgba(66, 184, 131, 0.5);
+  background: rgba(66, 184, 131, 0.12);
 }
-.next-turn-btn:disabled {
-  opacity: 0.5;
+
+.session-action-btn.danger:hover:not(:disabled) {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.14);
+  color: #ff8a8a;
+}
+
+.session-action-btn:disabled {
   cursor: not-allowed;
+  opacity: 0.32;
+}
+
+/* 玩家/友方回合结束栏 */
+.end-turn-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 8px 24px 10px;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid rgba(223, 190, 128, 0.16);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(24, 21, 19, 0.92) 0%, rgba(16, 15, 15, 0.92) 100%);
+  box-shadow:
+    inset 0 12px 18px -18px rgba(255, 248, 235, 0.12),
+    0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+.end-turn-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #efe4cf;
+}
+
+.end-turn-label {
+  color: #c6a06e;
+  font-size: calc(10px * var(--chat-font-scale) / 100);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.end-turn-copy strong {
+  color: #f2e7d2;
+  font-size: calc(13px * var(--chat-font-scale) / 100);
+  font-weight: 650;
+}
+
+.end-turn-direct-btn {
+  min-width: 112px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(239, 68, 68, 0.26);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(127, 29, 29, 0.94) 0%, rgba(69, 10, 10, 0.96) 100%);
+  color: #ffe3e3;
+  font-size: calc(13px * var(--chat-font-scale) / 100);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.end-turn-direct-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(248, 113, 113, 0.42);
+  box-shadow: 0 10px 22px rgba(127, 29, 29, 0.24);
+}
+
+.end-turn-direct-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 /* ==================== 拖拽条 - 纯金丝细线 + 灵动流动光晕 ==================== */

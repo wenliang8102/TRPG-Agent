@@ -1,0 +1,62 @@
+[
+  {
+    "id": "dwarf_darkvision",
+    "query": "矮人的黑暗视觉在昏暗光照和黑暗中分别怎么看？",
+    "expected_terms": ["矮人特质", "黑暗视觉", ["昏暗光照", "微光光照"], "60 尺"],
+    "expected_category": "species"
+  },
+  {
+    "id": "fighter_action_surge",
+    "query": "战士的动作如潮怎么恢复？",
+    "expected_terms": ["动作如潮", ["额外动作", "额外的动作"], "休息"],
+    "expected_category": "classes"
+  },
+  {
+    "id": "rogue_sneak_attack",
+    "query": "游荡者偷袭什么时候能触发？",
+    "expected_terms": ["偷袭", "优势", ["额外伤害", "额外1d6"]],
+    "expected_category": "classes"
+  },
+  {
+    "id": "fireball",
+    "query": "火球术的范围、豁免和伤害是多少？",
+    "expected_terms": ["火球术", "敏捷豁免", "8d6"],
+    "expected_category": "spells"
+  },
+  {
+    "id": "concentration_damage",
+    "query": "专注法术受到伤害时怎么维持？",
+    "expected_terms": ["专注", "体质豁免", "伤害"],
+    "expected_category": "spellcasting"
+  },
+  {
+    "id": "long_rest",
+    "query": "长休后生命值和生命骰怎么恢复？",
+    "expected_terms": ["长休", "生命值", "生命骰"],
+    "expected_category": "adventuring"
+  },
+  {
+    "id": "opportunity_attack",
+    "query": "借机攻击什么时候能发动？",
+    "expected_terms": ["借机攻击", "反应", "触及"],
+    "expected_category": "combat"
+  },
+  {
+    "id": "armor_class",
+    "query": "穿护甲时护甲等级怎么计算？",
+    "expected_terms": ["护甲等级", "AC", "护甲"],
+    "expected_category": "equipment"
+  },
+  {
+    "id": "grappled_condition",
+    "query": "被擒抱后速度会怎样？",
+    "expected_terms": ["擒抱", "速度", "0"],
+    "expected_category": "conditions"
+  },
+  {
+    "id": "bardic_inspiration",
+    "query": "吟游激励给出的骰子怎么用？",
+    "expected_terms": [["吟游激励", "诗人激励"], "d6", "检定"],
+    "expected_category": "classes"
+  }
+]

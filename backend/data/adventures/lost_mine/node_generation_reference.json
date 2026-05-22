@@ -1,0 +1,440 @@
+{
+  "module_id": "lost_mine",
+  "purpose": "Lost Mine slim canonical 节点生成契约。脚本和 LLM 生成时共同参考，避免每批输出临时命名后再人工清洗。",
+  "scopes": {
+    "trial": [
+      "adventure_hook_meet_me_in_phandalin",
+      "goblin_ambush",
+      "goblin_trail_to_cragmaw_hideout",
+      "cragmaw_hideout_entrance",
+      "cragmaw_hideout_goblin_blind"
+    ],
+    "hideout": [
+      "adventure_hook_meet_me_in_phandalin",
+      "goblin_ambush",
+      "goblin_trail_to_cragmaw_hideout",
+      "cragmaw_hideout_entrance",
+      "cragmaw_hideout_goblin_blind",
+      "cragmaw_hideout_kennel",
+      "cragmaw_hideout_steep_passage",
+      "cragmaw_hideout_overpass",
+      "cragmaw_hideout_goblin_den",
+      "cragmaw_hideout_twin_pools",
+      "cragmaw_hideout_klarg_cave",
+      "cragmaw_hideout_aftermath"
+    ],
+    "phandalin_town": [
+      "phandalin",
+      "stonehill_inn",
+      "barthen_provisions",
+      "lionshield_coster",
+      "edermath_orchard",
+      "miners_exchange",
+      "alderleaf_farm",
+      "shrine_of_luck",
+      "townmasters_hall",
+      "sleeping_giant_redbrand_ruffians",
+      "tresendar_manor_approach"
+    ],
+    "spider_web": [
+      "spider_web_overview",
+      "triboar_trail_wilderness",
+      "old_owl_well",
+      "wyvern_tor",
+      "conyberry_agatha_lair",
+      "thundertree",
+      "cragmaw_castle_search"
+    ],
+    "wave_echo_cave": [
+      "wave_echo_overview",
+      "wave_echo_cave_entrance",
+      "wave_echo_mine_tunnels",
+      "wave_echo_old_entrance_guardrooms",
+      "wave_echo_barracks_storeroom_fungi",
+      "wave_echo_great_cavern_dark_pool",
+      "wave_echo_north_barracks",
+      "wave_echo_smelter_cavern",
+      "wave_echo_starry_cavern",
+      "wave_echo_wizards_quarters",
+      "wave_echo_forge_of_spells",
+      "wave_echo_booming_cavern_streambed",
+      "wave_echo_collapsed_cavern",
+      "wave_echo_temple_of_dumathoin",
+      "wave_echo_priests_quarters_conclusion"
+    ]
+  },
+  "node_aliases": {
+    "kennel": "cragmaw_hideout_kennel",
+    "steep_passage": "cragmaw_hideout_steep_passage",
+    "cragmaw_hideout_cave_mouth": "cragmaw_hideout_entrance",
+    "cragmaw_hideout_cave_entrance": "cragmaw_hideout_entrance",
+    "cragmaw_hideout": "cragmaw_hideout_entrance",
+    "triboar_trail_goblin_ambush": "goblin_ambush",
+    "goblin_ambush_site": "goblin_ambush",
+    "phandalin_arrival": "phandalin",
+    "phandalin_town": "phandalin",
+    "barthen's_provisions": "barthen_provisions",
+    "barthens_provisions": "barthen_provisions",
+    "stonehill": "stonehill_inn",
+    "lionshield": "lionshield_coster",
+    "edermath": "edermath_orchard",
+    "phandalin_miners_exchange": "miners_exchange",
+    "miner_exchange": "miners_exchange",
+    "alderleaf": "alderleaf_farm",
+    "shrine": "shrine_of_luck",
+    "townmaster_hall": "townmasters_hall",
+    "sleeping_giant": "sleeping_giant_redbrand_ruffians",
+    "redbrand_ruffians": "sleeping_giant_redbrand_ruffians",
+    "tresendar_manor": "tresendar_manor_approach",
+    "redbrand_hideout": "redbrand_hideout_entrance",
+    "spider_web": "spider_web_overview",
+    "part_3_spider_web": "spider_web_overview",
+    "triboar_trail": "triboar_trail_wilderness",
+    "triboar_trail_wilderness": "triboar_trail_wilderness",
+    "conyberry": "conyberry_agatha_lair",
+    "agatha_lair": "conyberry_agatha_lair",
+    "conyberry_and_agathas_lair": "conyberry_agatha_lair",
+    "old_owl_trouble": "old_owl_well",
+    "old_owl_well": "old_owl_well",
+    "orc_trouble": "wyvern_tor",
+    "wyvern_tor": "wyvern_tor",
+    "ruins_of_thundertree": "thundertree",
+    "thundertree": "thundertree",
+    "cragmaw_castle": "cragmaw_castle_search",
+    "cragmaw_castle_search": "cragmaw_castle_search",
+    "wave_echo_cave": "wave_echo_overview",
+    "wave_echo": "wave_echo_overview",
+    "cave_entrance": "wave_echo_cave_entrance",
+    "wave_echo_cave_entrance": "wave_echo_cave_entrance",
+    "mine_tunnels": "wave_echo_mine_tunnels",
+    "old_entrance": "wave_echo_old_entrance_guardrooms",
+    "old_guardroom": "wave_echo_old_entrance_guardrooms",
+    "assayers_office": "wave_echo_old_entrance_guardrooms",
+    "south_barracks": "wave_echo_barracks_storeroom_fungi",
+    "ruined_storeroom": "wave_echo_barracks_storeroom_fungi",
+    "fungi_cavern": "wave_echo_barracks_storeroom_fungi",
+    "great_cavern": "wave_echo_great_cavern_dark_pool",
+    "dark_pool": "wave_echo_great_cavern_dark_pool",
+    "north_barracks": "wave_echo_north_barracks",
+    "smelter_cavern": "wave_echo_smelter_cavern",
+    "starry_cavern": "wave_echo_starry_cavern",
+    "wizards_quarters": "wave_echo_wizards_quarters",
+    "forge_of_spells": "wave_echo_forge_of_spells",
+    "booming_cavern": "wave_echo_booming_cavern_streambed",
+    "old_streambed": "wave_echo_booming_cavern_streambed",
+    "collapsed_cavern": "wave_echo_collapsed_cavern",
+    "temple_of_dumathoin": "wave_echo_temple_of_dumathoin",
+    "priests_quarters": "wave_echo_priests_quarters_conclusion",
+    "conclusion": "wave_echo_priests_quarters_conclusion"
+  },
+  "id_aliases": {
+    "ambush_goblins_defeated": "goblin_ambush_resolved",
+    "hideout_found": "reach_cragmaw_hideout",
+    "trail_to_hideout": "goblin_trail",
+    "xp_first_milestone": "goblin_ambush_hideout_75_xp",
+    "first_milestone_xp": "goblin_ambush_hideout_75_xp",
+    "hideout_cleared": "cragmaw_hideout_milestone_complete",
+    "klarg_defeated": "cragmaw_hideout_milestone_complete",
+    "cragmaw_hideout_cleared": "cragmaw_hideout_milestone_complete",
+    "xp_cragmaw_hideout_milestone": "cragmaw_hideout_milestone_275_xp",
+    "cragmaw_hideout_275_xp": "cragmaw_hideout_milestone_275_xp",
+    "agatha_question_answered": "agatha_bowgentle_info_obtained",
+    "bowgentle_info_obtained": "agatha_bowgentle_info_obtained",
+    "old_owl_well_reported": "old_owl_well_reported_to_daran",
+    "old_owl_well_info_reported": "old_owl_well_reported_to_daran",
+    "hamun_kost_defeated": "old_owl_well_threat_defeated",
+    "orc_camp_defeated": "wyvern_tor_orcs_defeated",
+    "wyvern_tor_cleared": "wyvern_tor_orcs_defeated",
+    "cragmaw_castle_found": "cragmaw_castle_location_found",
+    "black_spider_defeated": "nezznar_defeated",
+    "black_spider_captured": "nezznar_captured_and_delivered",
+    "nezznar_captured": "nezznar_captured_and_delivered",
+    "nundro_rescued": "nundro_rescued_and_survived",
+    "forge_found": "forge_of_spells_secured",
+    "wave_echo_cleared": "wave_echo_cave_resolved"
+  },
+  "event_owners": {
+    "goblin_ambush_resolved": "goblin_ambush",
+    "reach_cragmaw_hideout": "cragmaw_hideout_entrance",
+    "klarg_treasure_found": "cragmaw_hideout_klarg_cave",
+    "phandalin_supplies_delivered": "barthen_provisions",
+    "lionshield_goods_returned": "lionshield_coster",
+    "redbrand_ruffians_defeated": "sleeping_giant_redbrand_ruffians",
+    "agatha_bowgentle_info_obtained": "conyberry_agatha_lair",
+    "old_owl_well_reported_to_daran": "old_owl_well",
+    "old_owl_well_threat_defeated": "old_owl_well",
+    "wyvern_tor_orcs_defeated": "wyvern_tor",
+    "cragmaw_castle_location_found": "cragmaw_castle_search",
+    "wave_echo_cave_reached": "wave_echo_cave_entrance",
+    "forge_of_spells_secured": "wave_echo_forge_of_spells",
+    "nezznar_defeated": "wave_echo_temple_of_dumathoin",
+    "nezznar_captured_and_delivered": "wave_echo_temple_of_dumathoin",
+    "nundro_rescued_and_survived": "wave_echo_priests_quarters_conclusion",
+    "wave_echo_cave_resolved": "wave_echo_priests_quarters_conclusion"
+  },
+  "external_completion_events": [
+    "glasstaff_letters_delivered_to_halia",
+    "cragmaw_castle_threat_ended",
+    "redbrand_threat_ended"
+  ],
+  "reward_owners": {
+    "goblin_ambush_hideout_75_xp": "cragmaw_hideout_entrance",
+    "cragmaw_hideout_milestone_275_xp": "cragmaw_hideout_klarg_cave",
+    "klarg_treasure_cache": "cragmaw_hideout_klarg_cave",
+    "phandalin_delivery_10gp": "barthen_provisions",
+    "lionshield_recovered_goods_50gp": "lionshield_coster",
+    "halia_glassstaff_letter_100gp": "miners_exchange",
+    "halia_glasstaff_letters_100gp": "miners_exchange",
+    "sildar_cragmaw_castle_500gp": "townmasters_hall",
+    "cragmaw_castle_500gp": "townmasters_hall",
+    "sildar_iarno_reward_200gp": "townmasters_hall",
+    "redbrand_threat_200gp": "townmasters_hall",
+    "townmaster_orc_bounty_100gp": "townmasters_hall",
+    "wyvern_tor_orcs_100gp": "townmasters_hall",
+    "redbrand_ruffians_400_xp": "sleeping_giant_redbrand_ruffians",
+    "agatha_answer_200_xp": "conyberry_agatha_lair",
+    "old_owl_well_report_200_xp": "old_owl_well",
+    "old_owl_well_threat_800_xp": "old_owl_well",
+    "old_owl_well_kost_treasure": "old_owl_well",
+    "wyvern_tor_monsters_1250_xp": "wyvern_tor",
+    "wyvern_tor_brugehor_treasure": "wyvern_tor"
+  },
+  "canonical_rewards": {
+    "goblin_ambush_hideout_75_xp": {
+      "id": "goblin_ambush_hideout_75_xp",
+      "type": "xp",
+      "amount": 75,
+      "scope": "per_player",
+      "requires": [
+        "goblin_ambush_resolved",
+        "reach_cragmaw_hideout"
+      ],
+      "description": "打败伏击地精并发现或抵达克拉摩窝点后，每名玩家获得75 XP。"
+    },
+    "cragmaw_hideout_milestone_275_xp": {
+      "id": "cragmaw_hideout_milestone_275_xp",
+      "type": "xp",
+      "amount": 275,
+      "scope": "per_player",
+      "requires": [
+        "cragmaw_hideout_milestone_complete"
+      ],
+      "description": "击败或驱逐克拉格及其盟友，完成克拉摩窝点核心目标后获得。"
+    },
+    "klarg_treasure_cache": {
+      "id": "klarg_treasure_cache",
+      "type": "treasure",
+      "amount": 1,
+      "scope": "party",
+      "requires": [
+        "klarg_treasure_found"
+      ],
+      "description": "克拉格的小金库：600 cp、110 sp、两瓶治疗药水和一只镶金珠眼的翡翠青蛙。"
+    },
+    "phandalin_delivery_10gp": {
+      "id": "phandalin_delivery_10gp",
+      "type": "gold",
+      "amount": 10,
+      "currency": "gp",
+      "scope": "per_player",
+      "requires": [
+        "phandalin_supplies_delivered"
+      ],
+      "description": "把开局护送的补给货车交到巴森补给后，每名玩家获得10 gp报酬。"
+    },
+    "lionshield_recovered_goods_50gp": {
+      "id": "lionshield_recovered_goods_50gp",
+      "type": "gold",
+      "amount": 50,
+      "currency": "gp",
+      "scope": "party",
+      "requires": [
+        "lionshield_goods_returned"
+      ],
+      "description": "归还或告知克拉摩窝点中狮盾货物的位置后，莱妮支付50 gp。"
+    },
+    "redbrand_ruffians_400_xp": {
+      "id": "redbrand_ruffians_400_xp",
+      "type": "xp",
+      "amount": 400,
+      "scope": "party",
+      "requires": [
+        "redbrand_ruffians_defeated"
+      ],
+      "description": "击败沉睡巨人或街面冲突中的四名红标帮恶霸后，队伍平分400 XP。"
+    },
+    "agatha_answer_200_xp": {
+      "id": "agatha_answer_200_xp",
+      "type": "xp",
+      "amount": 200,
+      "scope": "party",
+      "requires": [
+        "agatha_bowgentle_info_obtained"
+      ],
+      "description": "成功说服女妖阿加莎并得到一个问题的回答后，队伍平分200 XP。"
+    },
+    "old_owl_well_report_200_xp": {
+      "id": "old_owl_well_report_200_xp",
+      "type": "xp",
+      "amount": 200,
+      "scope": "party",
+      "requires": [
+        "old_owl_well_reported_to_daran"
+      ],
+      "description": "查明红袍巫师在古枭井活动并把情报告知达朗后，队伍平分200 XP。"
+    },
+    "old_owl_well_threat_800_xp": {
+      "id": "old_owl_well_threat_800_xp",
+      "type": "xp",
+      "amount": 800,
+      "scope": "party",
+      "requires": [
+        "old_owl_well_threat_defeated"
+      ],
+      "description": "击败哈姆·科斯特和他的僵尸后，队伍平分800 XP。"
+    },
+    "old_owl_well_kost_treasure": {
+      "id": "old_owl_well_kost_treasure",
+      "type": "treasure",
+      "amount": 1,
+      "scope": "party",
+      "requires": [
+        "old_owl_well_threat_defeated"
+      ],
+      "description": "哈姆·科斯特的财物：35 sp、20 ep、20 gp、5 pp、100 gp珍珠、治疗药水、黑暗术卷轴和25 gp珠宝盒。"
+    },
+    "wyvern_tor_monsters_1250_xp": {
+      "id": "wyvern_tor_monsters_1250_xp",
+      "type": "xp",
+      "amount": 1250,
+      "scope": "party",
+      "requires": [
+        "wyvern_tor_orcs_defeated"
+      ],
+      "description": "击败飞龙突岩的兽人和食人魔，完成镇长及哈姆·科斯特相关委托后，队伍平分1250 XP。"
+    },
+    "wyvern_tor_brugehor_treasure": {
+      "id": "wyvern_tor_brugehor_treasure",
+      "type": "treasure",
+      "amount": 1,
+      "scope": "party",
+      "requires": [
+        "wyvern_tor_orcs_defeated"
+      ],
+      "description": "布洛戈团伙的箱子：750 cp、180 sp、62 ep、30 gp，以及三瓶各值10 gp的香水。"
+    }
+  },
+  "external_targets": [
+    "phandalin",
+    "cragmaw_hideout_kennel",
+    "cragmaw_hideout_steep_passage",
+    "cragmaw_castle",
+    "redbrand_hideout_entrance",
+    "old_owl_well",
+    "wyvern_tor",
+    "conyberry_agatha_lair",
+    "thundertree",
+    "spider_web_overview",
+    "triboar_trail_wilderness",
+    "cragmaw_castle_search",
+    "wave_echo_overview",
+    "wave_echo_cave_entrance",
+    "wave_echo_mine_tunnels",
+    "wave_echo_old_entrance_guardrooms",
+    "wave_echo_barracks_storeroom_fungi",
+    "wave_echo_great_cavern_dark_pool",
+    "wave_echo_north_barracks",
+    "wave_echo_smelter_cavern",
+    "wave_echo_starry_cavern",
+    "wave_echo_wizards_quarters",
+    "wave_echo_forge_of_spells",
+    "wave_echo_booming_cavern_streambed",
+    "wave_echo_collapsed_cavern",
+    "wave_echo_temple_of_dumathoin",
+    "wave_echo_priests_quarters_conclusion"
+  ],
+  "stale_return_rules": [
+    {
+      "when_active_prefixes": [
+        "spider_web_",
+        "triboar_trail_",
+        "old_owl_well",
+        "wyvern_tor",
+        "conyberry_agatha_lair",
+        "thundertree",
+        "cragmaw_castle"
+      ],
+      "hide_node_ids": [
+        "adventure_hook_meet_me_in_phandalin",
+        "goblin_ambush",
+        "goblin_trail_to_cragmaw_hideout",
+        "cragmaw_hideout_entrance",
+        "cragmaw_hideout_goblin_blind",
+        "cragmaw_hideout_kennel",
+        "cragmaw_hideout_steep_passage",
+        "cragmaw_hideout_overpass",
+        "cragmaw_hideout_goblin_den",
+        "cragmaw_hideout_twin_pools",
+        "cragmaw_hideout_klarg_cave",
+        "cragmaw_hideout_aftermath"
+      ],
+      "keep_node_ids": [
+        "phandalin",
+        "barthen_provisions",
+        "lionshield_coster",
+        "stonehill_inn",
+        "townmasters_hall",
+        "miners_exchange",
+        "alderleaf_farm",
+        "shrine_of_luck",
+        "edermath_orchard"
+      ],
+      "reason": "进入第三部分后，开局伏击与窝点房间级节点通常已成为旧阶段内容；保留凡达林枢纽和任务委托点。"
+    },
+    {
+      "when_active_prefixes": [
+        "wave_echo_"
+      ],
+      "hide_node_ids": [
+        "adventure_hook_meet_me_in_phandalin",
+        "goblin_ambush",
+        "goblin_trail_to_cragmaw_hideout",
+        "cragmaw_hideout_entrance",
+        "cragmaw_hideout_goblin_blind",
+        "cragmaw_hideout_kennel",
+        "cragmaw_hideout_steep_passage",
+        "cragmaw_hideout_overpass",
+        "cragmaw_hideout_goblin_den",
+        "cragmaw_hideout_twin_pools",
+        "cragmaw_hideout_klarg_cave",
+        "cragmaw_hideout_aftermath",
+        "spider_web_overview",
+        "triboar_trail_wilderness",
+        "old_owl_well",
+        "wyvern_tor",
+        "conyberry_agatha_lair",
+        "thundertree",
+        "cragmaw_castle_search"
+      ],
+      "keep_node_ids": [
+        "phandalin",
+        "barthen_provisions",
+        "lionshield_coster",
+        "stonehill_inn",
+        "townmasters_hall",
+        "miners_exchange",
+        "alderleaf_farm",
+        "shrine_of_luck",
+        "edermath_orchard"
+      ],
+      "reason": "进入最终地城后，早期章节和第三部分支线通常已成为旧阶段内容；保留凡达林作为汇报、休整和结局枢纽。"
+    }
+  ],
+  "notes_for_llm": [
+    "先使用 scopes 中列出的节点 ID；不要临时创造同义节点 ID。",
+    "事件只在 event_owners 指定的归属节点写入。external_completion_events 是后续章节完成条件，只能作为 reward.requires，不要在当前接任务节点 events 中写入。",
+    "奖励只写在 reward_owners 指定的归属节点。canonical_rewards 中已有的奖励必须原样使用。",
+    "出口目标优先使用本 scope 或既有节点；后续章节未生成时，只能使用 external_targets 中的占位 ID。",
+    "第四部分潮音洞穴优先使用 wave_echo_cave scope 中的节点 ID；区域群内部用 scene_beats/rules_notes 表达房间差异，不要临时拆出未声明节点。"
+  ]
+}

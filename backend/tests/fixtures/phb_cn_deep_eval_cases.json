@@ -1,0 +1,226 @@
+[
+  {
+    "id": "proficiency_bonus_applications",
+    "query": "熟练加值会加在哪些检定或攻击上？",
+    "expected_terms": ["熟练加值", "攻击检定", "豁免"],
+    "expected_category": "character_creation",
+    "expected_top_titles": ["熟练加值"]
+  },
+  {
+    "id": "advantage_disadvantage_rule",
+    "query": "优势和劣势同时存在时怎么掷 d20？",
+    "expected_terms": ["优势", "劣势", "d20"],
+    "expected_category": "ability_checks",
+    "expected_top_titles": ["优势与劣势"]
+  },
+  {
+    "id": "contest_rule",
+    "query": "两个人互相抢东西这种对抗检定怎么判？",
+    "expected_terms": ["对抗", "属性检定", "成功"],
+    "expected_category": "ability_checks",
+    "expected_top_titles": ["对抗"]
+  },
+  {
+    "id": "background_ideal_bond_flaw",
+    "query": "背景里的理想、牵绊和缺点分别是什么？",
+    "expected_terms": ["理想", "牵绊", "缺点"],
+    "expected_category": "backgrounds",
+    "expected_top_titles": [["理想", "牵绊", "缺点"]]
+  },
+  {
+    "id": "multiclass_prerequisites",
+    "query": "兼职新职业需要满足什么属性先决条件？",
+    "expected_terms": ["兼职", "先决条件", "属性值"],
+    "expected_category": "character_options",
+    "expected_top_titles": ["先决条件"]
+  },
+  {
+    "id": "feat_optional_rule",
+    "query": "专长是怎么替代属性值提升的？",
+    "expected_terms": ["专长", "属性值提升", "选择"],
+    "expected_category": "character_options",
+    "expected_top_titles": ["专长"]
+  },
+  {
+    "id": "weapon_properties_ammunition_loading",
+    "query": "武器的弹药和装填属性分别怎么限制攻击？",
+    "expected_terms": ["弹药", "装填", "攻击"],
+    "expected_category": "equipment",
+    "expected_top_titles": [["武器属性", "武器"]]
+  },
+  {
+    "id": "armor_strength_requirement",
+    "query": "护甲表里的力量要求不满足会怎样？",
+    "expected_terms": ["护甲表", "力量", "速度"],
+    "expected_category": "equipment",
+    "expected_top_titles": [["护甲表", "护甲与盾牌"]]
+  },
+  {
+    "id": "travel_pace_stealth_perception",
+    "query": "快速旅行和慢速旅行对被动察觉、隐匿有什么影响？",
+    "expected_terms": ["旅行步调", "被动感知", "隐匿"],
+    "expected_category": "adventuring",
+    "expected_top_titles": [["旅行步调", "隐匿"]]
+  },
+  {
+    "id": "suffocating_rule",
+    "query": "角色开始窒息后还能撑几轮？",
+    "expected_terms": ["窒息", "体质调整值", "生命值降为0"],
+    "expected_category": "adventuring",
+    "expected_top_titles": ["窒息"]
+  },
+  {
+    "id": "surprise_rule",
+    "query": "战斗开始时突袭是怎么判定的？",
+    "expected_terms": ["突袭", "先攻", "回合"],
+    "expected_category": "combat",
+    "expected_top_titles": ["突袭"]
+  },
+  {
+    "id": "bonus_action_rule",
+    "query": "附赠动作什么时候能用？每回合能用几次？",
+    "expected_terms": ["附赠动作", ["只能执行一次", "执行一个附赠动作"], "特殊能力"],
+    "expected_category": "combat",
+    "expected_top_titles": ["附赠动作"]
+  },
+  {
+    "id": "ready_action_reaction",
+    "query": "准备动作触发后是不是用反应执行？",
+    "expected_terms": [["准备", "预备"], "反应", "触发"],
+    "expected_category": "combat",
+    "expected_top_titles": [["准备", "预备"]]
+  },
+  {
+    "id": "cover_bonus",
+    "query": "半身掩护和四分之三掩护分别给多少 AC 加值？",
+    "expected_terms": ["半身掩护", "四分之三掩护", "AC"],
+    "expected_category": "combat",
+    "expected_top_titles": ["掩护"]
+  },
+  {
+    "id": "grapple_shove_rule",
+    "query": "擒抱和推撞是怎么替代攻击动作里的攻击的？",
+    "expected_terms": ["擒抱", "推撞", "攻击动作"],
+    "expected_category": "combat",
+    "expected_top_titles": [["擒抱", "推撞"]]
+  },
+  {
+    "id": "death_saving_throw",
+    "query": "生命值为 0 后死亡豁免怎么累计成功和失败？",
+    "expected_terms": ["死亡豁免", "成功", "失败"],
+    "expected_category": "combat",
+    "expected_top_titles": ["死亡豁免"]
+  },
+  {
+    "id": "spell_components",
+    "query": "施法的言语、姿势和材料成分分别有什么要求？",
+    "expected_terms": ["言语", "姿势", "材料"],
+    "expected_category": "spellcasting",
+    "expected_top_titles": [["法术成分", "言语", "姿势", "材料"]]
+  },
+  {
+    "id": "spell_range_self_touch",
+    "query": "法术距离为自身或触及时目标怎么处理？",
+    "expected_terms": ["施法距离", "自身", "触及"],
+    "expected_category": "spellcasting",
+    "expected_top_titles": [["施法距离", "以自身为目标", "目标"]]
+  },
+  {
+    "id": "spell_area_sphere_cone",
+    "query": "法术范围里的锥状和球状区域怎么确定？",
+    "expected_terms": ["锥状", "球状", ["效应区域", "效应范围"]],
+    "expected_category": "spellcasting",
+    "expected_top_titles": [["效应区域", "效应范围", "锥状", "球状"]]
+  },
+  {
+    "id": "casting_reaction_spell",
+    "query": "反应施法是在什么时候施展？",
+    "expected_terms": ["反应", "施法时间", ["回应", "应对"]],
+    "expected_category": "spellcasting",
+    "expected_top_titles": ["反应"]
+  },
+  {
+    "id": "magic_missile",
+    "query": "魔法飞弹会自动命中吗？升环会增加什么？",
+    "expected_terms": ["魔法飞弹", ["自动命中", "命中"], "升环"],
+    "expected_category": "spells",
+    "expected_top_titles": ["魔法飞弹"]
+  },
+  {
+    "id": "shield_spell",
+    "query": "护盾术给多少 AC，能挡魔法飞弹吗？",
+    "expected_terms": ["护盾术", "+5", "魔法飞弹"],
+    "expected_category": "spells",
+    "expected_top_titles": ["护盾术"]
+  },
+  {
+    "id": "counterspell",
+    "query": "反制法术面对高环法术时要做什么属性检定？",
+    "expected_terms": [["反制法术", "法术反制"], "属性检定", "10＋目标法术的环阶"],
+    "expected_category": "spells",
+    "expected_top_titles": [["反制法术", "法术反制"]]
+  },
+  {
+    "id": "polymorph",
+    "query": "变形术把目标变成野兽时 CR 和等级有什么限制？",
+    "expected_terms": ["变形术", "挑战等级", "等级"],
+    "expected_category": "spells",
+    "expected_top_titles": ["变形术"]
+  },
+  {
+    "id": "blinded_condition",
+    "query": "目盲状态会怎样影响攻击检定？",
+    "expected_terms": ["目盲", "攻击检定", "劣势"],
+    "expected_category": "conditions",
+    "expected_top_titles": ["目盲"]
+  },
+  {
+    "id": "invisible_condition",
+    "query": "隐形状态下别人攻击你和你攻击别人分别有什么影响？",
+    "expected_terms": ["隐形", "攻击检定", "劣势"],
+    "expected_category": "conditions",
+    "expected_top_titles": ["隐形"]
+  },
+  {
+    "id": "prone_condition",
+    "query": "倒地状态下攻击和被攻击有什么影响？",
+    "expected_terms": ["倒地", "攻击检定", "劣势"],
+    "expected_category": "conditions",
+    "expected_top_titles": ["倒地"]
+  },
+  {
+    "id": "paralyzed_condition",
+    "query": "麻痹状态会让攻击自动重击吗？",
+    "expected_terms": ["麻痹", "重击", ["5尺", "5 尺"]],
+    "expected_category": "conditions",
+    "expected_top_titles": ["麻痹"]
+  },
+  {
+    "id": "cleric_channel_divinity",
+    "query": "牧师的引导神力什么时候恢复？",
+    "expected_terms": ["引导神力", "短休", "长休"],
+    "expected_category": "classes",
+    "expected_top_titles": ["引导神力"]
+  },
+  {
+    "id": "wizard_arcane_recovery",
+    "query": "法师的奥术回想能恢复多少法术位？",
+    "expected_terms": [["奥法恢复", "奥术回想"], "法术位", "法师等级的一半"],
+    "expected_category": "classes",
+    "expected_top_titles": [["奥法恢复", "奥术回想"]]
+  },
+  {
+    "id": "warlock_invocations",
+    "query": "魔能祈唤什么时候可以替换一个已知祈唤？",
+    "expected_terms": ["魔能祈唤", "替换", ["术士等级", "邪术师等级"]],
+    "expected_category": "classes",
+    "expected_top_titles": ["魔能祈唤"]
+  },
+  {
+    "id": "monk_martial_arts",
+    "query": "武僧的武艺什么时候能用附赠动作徒手打击？",
+    "expected_terms": ["武艺", "附赠动作", "徒手打击"],
+    "expected_category": "classes",
+    "expected_top_titles": ["武艺"]
+  }
+]
