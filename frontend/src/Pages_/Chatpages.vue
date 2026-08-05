@@ -80,11 +80,22 @@
           </button>
         </div>
 
+        <div ref="suggestionsRegionRef" class="reply-suggestions-region">
+          <ReplySuggestions
+            :suggestions="replySuggestions"
+            :loading="suggestionsLoading"
+            :disabled="isSending || pendingAction !== null"
+            @select="selectReplySuggestion"
+            @refresh="refreshReplySuggestions"
+          />
+        </div>
+
         <ChatInput
+          v-model="inputText"
           :disabled="isSending || pendingAction !== null"
           button-text="发送"
           placeholder="输入内容并回车发送..."
-          @send="sendTextMessage"
+          @send="sendPlayerMessage"
         />
       </div>
     </div>
@@ -107,7 +118,7 @@
         :dead-units="deadUnitsState"
         :active-ally-id="activeCombatAllyId"
         :send-tactical-move-request="sendTacticalMoveRequest"
-        :send-combat-action-request="sendTextMessage"
+        :send-combat-action-request="sendPlayerMessage"
         :end-combat-turn-request="endCombatTurn"
         @selected-unit-change="handleSelectedUnitChange"
         @request-action-sheet="handleRequestActionSheet"
@@ -135,6 +146,7 @@ import { Plus, Trash2 } from 'lucide-vue-next'
 import ActionAvailabilityNotice from '../components/Chat/ActionAvailabilityNotice.vue'
 import ChatMessage from '../components/Chat/ChatMessage.vue'
 import ChatInput from '../components/Chat/ChatInput.vue'
+import ReplySuggestions from '../components/Chat/ReplySuggestions.vue'
 import ActionPanel from '../components/Chat/ActionPanel.vue'
 import CharacterSidebar from '../components/Chat/SideCharacterPanel/CharacterSidebar.vue'
 import { useActionAvailabilityNotice } from '../composables/useActionAvailabilityNotice'
@@ -152,6 +164,7 @@ import '../styles_/Chatpages.css'
 // 右侧面板状态
 const containerRef = ref<HTMLElement | null>(null)
 const messageListRef = ref<HTMLElement | null>(null)
+const suggestionsRegionRef = ref<HTMLElement | null>(null)
 const characterSidebarRef = ref<InstanceType<typeof CharacterSidebar> | null>(null)
 const rightWidth = ref(25)
 const showToggleBtn = ref(false)
@@ -203,6 +216,75 @@ const {
 provide('debugMode', debugMode)
 provide('skipOutputAnimation', computed(() => appSettings.value.skipOutputAnimation))
 
+const inputText = ref('')
+const replySuggestions = ref<string[]>([])
+const suggestionsLoading = ref(false)
+const showReplySuggestions = computed(() => suggestionsLoading.value || replySuggestions.value.length > 0)
+let suggestionRequestId = 0
+let suggestionAbortController: AbortController | null = null
+let suggestionsResizeObserver: ResizeObserver | null = null
+let keepSuggestionsBottomAnchored = false
+
+// 中文注释：候选是短命界面状态；新回合或状态约束变化时必须立刻作废旧请求。
+const clearReplySuggestions = () => {
+  suggestionRequestId += 1
+  suggestionAbortController?.abort()
+  suggestionAbortController = null
+  replySuggestions.value = []
+  suggestionsLoading.value = false
+}
+
+const hasActiveCombat = () => {
+  const participants = combatState.value?.participants
+  return !!(participants && typeof participants === 'object' && Object.keys(participants).length > 0)
+}
+
+const isPlayerControlledCombatTurn = () => {
+  if (!hasActiveCombat()) return true
+  const currentActorId = String(combatState.value?.current_actor_id || '')
+  const playerId = String(playerState.value?.id || '')
+  if (currentActorId && currentActorId === playerId) return true
+  return combatState.value?.participants?.[currentActorId]?.side === 'ally'
+}
+
+const requestReplySuggestions = async (targetSessionId: string) => {
+  if (!targetSessionId || pendingAction.value || !isPlayerControlledCombatTurn()) {
+    clearReplySuggestions()
+    return
+  }
+
+  suggestionAbortController?.abort()
+  const requestId = ++suggestionRequestId
+  const controller = new AbortController()
+  suggestionAbortController = controller
+  replySuggestions.value = []
+  suggestionsLoading.value = true
+
+  try {
+    const suggestions = await chatService.fetchReplySuggestions(targetSessionId, controller.signal)
+    if (requestId === suggestionRequestId && targetSessionId === sessionId.value) {
+      replySuggestions.value = suggestions
+    }
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      console.warn('Reply suggestion generation failed:', error)
+    }
+  } finally {
+    if (requestId === suggestionRequestId) {
+      suggestionsLoading.value = false
+      suggestionAbortController = null
+    }
+  }
+}
+
+const selectReplySuggestion = (suggestion: string) => {
+  inputText.value = suggestion
+}
+
+const refreshReplySuggestions = () => {
+  if (sessionId.value) void requestReplySuggestions(sessionId.value)
+}
+
 // 右侧侧栏始终保持角色信息视图，左侧是否切到战斗时间线由页面壳统一决定。
 watch(combatState, () => {
   if (characterSidebarRef.value) {
@@ -230,11 +312,17 @@ const { sendTextMessage, confirmDiceRoll, respondToPlayerDeath, respondToReactio
   clearError,
   pendingAction,
   startLoading,
-  stopLoading
+  stopLoading,
+  requestReplySuggestions
 )
 
+const sendPlayerMessage = async (message: string, options?: { silent?: boolean }) => {
+  clearReplySuggestions()
+  await sendTextMessage(message, options)
+}
+
 // 中文注释：战术移动仍然复用文本消息通道，但这类结构化请求不应显示在聊天列表里。
-const sendTacticalMoveRequest = (message: string) => sendTextMessage(message, { silent: true })
+const sendTacticalMoveRequest = (message: string) => sendPlayerMessage(message, { silent: true })
 
 // 把顶部提示条的判断完全收口到 composable，聊天页只做挂载和数据透传。
 const {
@@ -253,6 +341,10 @@ const isCombatActive = computed(() => {
   if (!combat || typeof combat !== 'object') return false
   const participants = combat.participants
   return !!(participants && typeof participants === 'object' && Object.keys(participants).length > 0)
+})
+
+watch([pendingAction, isCombatActive], ([action, combatActive]) => {
+  if (action || (combatActive && !isPlayerControlledCombatTurn())) clearReplySuggestions()
 })
 
 const playerUnitId = computed(() => {
@@ -291,6 +383,7 @@ const endCombatTurn = async (actorId: string) => {
     return
   }
   clearError()
+  clearReplySuggestions()
   setSending(true)
   try {
     await chatService.endCombatTurnStream({
@@ -322,6 +415,7 @@ const endCombatTurn = async (actorId: string) => {
       onDone: (sid) => {
         if (sid) updateSessionId(sid)
         setSending(false)
+        if (sid) void requestReplySuggestions(sid)
       },
       onError: (message) => {
         setError(message)
@@ -372,6 +466,13 @@ const scrollToBottom = () => {
 // 监听消息变化自动滚动
 watch(messages, scrollToBottom, { deep: true })
 
+// 候选区展开前记住用户是否停留在底部，避免布局收缩后再判断造成误判。
+watch(showReplySuggestions, (visible) => {
+  keepSuggestionsBottomAnchored = visible
+    && appSettings.value.autoScrollChat
+    && !autoScrollDisabled.value
+})
+
 watch(
   [isCombatActive, playerState, combatState, spaceState, sceneUnitsState, selectedUnit, combatActionSheetRequestId],
   ([combatActive, player, combat, space, sceneUnits, target, requestId]) => {
@@ -390,7 +491,7 @@ watch(
             if (preferredTarget) selectedUnit.value = preferredTarget
             characterSidebarRef.value?.openCombatActionPanel(preferredTarget ?? undefined)
           },
-          sendCombatActionRequest: sendTextMessage,
+          sendCombatActionRequest: sendPlayerMessage,
           endCombatTurnRequest: endCombatTurn,
           onActionNotice: handleActionNotice,
         },
@@ -425,6 +526,9 @@ const hydrateCurrentSession = async () => {
     if ((history as any).space) setSpaceState((history as any).space)
     if ((history as any).scene_units) setSceneUnitsState((history as any).scene_units)
     if ((history as any).dead_units) setDeadUnitsState((history as any).dead_units)
+    if (history.messages.at(-1)?.role === 'assistant') {
+      void requestReplySuggestions(sessionId.value)
+    }
   } catch {
     clearSessionId()
   }
@@ -434,6 +538,8 @@ const startNewSession = async () => {
   try {
     const session = await createSession()
     updateSessionId(session.id)
+    clearReplySuggestions()
+    inputText.value = ''
     resetChatState()
     clearError()
   } catch (error) {
@@ -447,6 +553,8 @@ const deleteCurrentSession = async () => {
   try {
     await deleteSessionApi(sessionId.value)
     clearSessionId()
+    clearReplySuggestions()
+    inputText.value = ''
     resetChatState()
     clearError()
   } catch (error) {
@@ -458,6 +566,14 @@ onMounted(async () => {
   document.addEventListener('mousemove', handleMouseMove)
   window.addEventListener('storage', handleSettingsStorage)
   window.addEventListener(APP_SETTINGS_UPDATED_EVENT, handleSettingsUpdated as EventListener)
+
+  // 高度动画的每一帧都维持消息底部锚点，让候选项自然把最新回复向上推。
+  suggestionsResizeObserver = new ResizeObserver(() => {
+    if (!keepSuggestionsBottomAnchored || autoScrollDisabled.value) return
+    const messageList = messageListRef.value
+    if (messageList) messageList.scrollTop = messageList.scrollHeight
+  })
+  if (suggestionsRegionRef.value) suggestionsResizeObserver.observe(suggestionsRegionRef.value)
 
   const pendingSessionId = sessionStorage.getItem('pending_session_id')
   if (pendingSessionId) {
@@ -473,6 +589,8 @@ onUnmounted(() => {
   window.removeEventListener('storage', handleSettingsStorage)
   window.removeEventListener(APP_SETTINGS_UPDATED_EVENT, handleSettingsUpdated as EventListener)
   if (manualActionNoticeTimer) clearTimeout(manualActionNoticeTimer)
+  suggestionsResizeObserver?.disconnect()
+  clearReplySuggestions()
   publishLeftRailState(defaultLeftRailState())
 })
 

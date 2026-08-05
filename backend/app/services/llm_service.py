@@ -1,15 +1,17 @@
 """LLM service with LangChain ChatOpenAI and native tool-calling support."""
 
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar
 
 from openai import APITimeoutError, APIConnectionError, BadRequestError
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from app.config.settings import settings
 
 
 LLMMode = Literal["narrative", "combat"]
+StructuredOutput = TypeVar("StructuredOutput", bound=BaseModel)
 
 
 class LLMService:
@@ -107,6 +109,27 @@ class LLMService:
         except APIConnectionError as exc:
             raise RuntimeError(
                 "LLM connection failed. Please verify OPENAI_BASE_URL and network connectivity."
+            ) from exc
+
+    # 中文注释：界面派生数据使用官方结构化输出，避免把 JSON 解析规则散落到各业务服务。
+    async def ainvoke_structured(
+        self,
+        messages: list[BaseMessage],
+        schema: type[StructuredOutput],
+    ) -> StructuredOutput:
+        try:
+            runnable = self._client.with_structured_output(schema, method="function_calling")
+            return await runnable.ainvoke(messages)
+        except BadRequestError as exc:
+            raise ValueError(f"LLM structured output bad request: {exc}") from exc
+        except APITimeoutError as exc:
+            raise RuntimeError(
+                f"LLM structured output timed out after {settings.llm_timeout_seconds}s. "
+                "Please check OPENAI_BASE_URL/network/model service status."
+            ) from exc
+        except APIConnectionError as exc:
+            raise RuntimeError(
+                "LLM structured output connection failed. Please verify OPENAI_BASE_URL and network connectivity."
             ) from exc
 
     # 中文注释：摘要/裁定必须走无工具、低温度的独立调用；保留字符串接口兼容既有调用方。

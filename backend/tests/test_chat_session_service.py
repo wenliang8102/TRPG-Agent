@@ -77,6 +77,11 @@ def _noop_director():
     return FakeAdventureDirector()
 
 
+class FakeReplySuggestionService:
+    def __init__(self):
+        self.generate = AsyncMock(return_value=["我检查路面。", "我询问同伴。", "我躲到树后观察。"])
+
+
 class ChatSessionServiceTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self._touch_session_patcher = patch(
@@ -137,6 +142,126 @@ class ChatSessionServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("s1", graph.last_config["configurable"]["thread_id"])
         self.assertEqual(80, graph.last_config["recursion_limit"])
         self.assertEqual("查一下北京", graph.last_input["messages"][0].content)
+
+    async def test_reply_suggestions_receive_only_visible_conversation(self):
+        graph = FakeGraph({})
+        graph.values = {
+            "phase": "exploration",
+            "messages": [
+                HumanMessage(content="[系统:冒险节点帧]隐藏出口是密道。"),
+                HumanMessage(content="我观察道路。"),
+                AIMessage(content="泥地上留着几枚新鲜脚印。", tool_calls=[]),
+            ],
+            "player": {"name": "温良", "role_class": "法师", "level": 2},
+            "adventure": {"secret_exit": "密道"},
+        }
+        suggestion_service = FakeReplySuggestionService()
+        service = ChatSessionService(
+            graph=graph,
+            adventure_director=_noop_director(),
+            reply_suggestion_service=suggestion_service,
+        )
+
+        suggestions = await service.get_reply_suggestions("suggestion-demo")
+
+        self.assertEqual(["我检查路面。", "我询问同伴。", "我躲到树后观察。"], suggestions)
+        suggestion_service.generate.assert_awaited_once_with(
+            conversation=[
+                {"role": "user", "content": "我观察道路。"},
+                {"role": "assistant", "content": "泥地上留着几枚新鲜脚印。"},
+            ],
+            player_identity={"name": "温良", "role_class": "法师", "level": "2"},
+            combat_context=None,
+        )
+
+    async def test_reply_suggestions_are_disabled_during_enemy_turn(self):
+        graph = FakeGraph({})
+        graph.values = {
+            "phase": "combat",
+            "messages": [AIMessage(content="地精举起了短弓。", tool_calls=[])],
+            "player": {"id": "player_hero", "name": "英雄", "hp": 12},
+            "combat": {
+                "current_actor_id": "goblin_1",
+                "participants": {
+                    "goblin_1": {"id": "goblin_1", "name": "地精", "side": "enemy", "hp": 7},
+                },
+            },
+        }
+        suggestion_service = FakeReplySuggestionService()
+        service = ChatSessionService(
+            graph=graph,
+            adventure_director=_noop_director(),
+            reply_suggestion_service=suggestion_service,
+        )
+
+        suggestions = await service.get_reply_suggestions("combat-suggestion-demo")
+
+        self.assertEqual([], suggestions)
+        suggestion_service.generate.assert_not_awaited()
+
+    async def test_reply_suggestions_include_public_player_turn_combat_context(self):
+        graph = FakeGraph({})
+        graph.values = {
+            "phase": "combat",
+            "messages": [
+                HumanMessage(content="我拔出长剑。"),
+                AIMessage(content="地精正守在二十五尺外。", tool_calls=[]),
+            ],
+            "player": {
+                "id": "player_hero",
+                "name": "英雄",
+                "role_class": "战士",
+                "level": 2,
+                "side": "player",
+                "hp": 12,
+                "max_hp": 12,
+                "action_available": True,
+                "bonus_action_available": True,
+                "reaction_available": True,
+                "movement_left": 30,
+                "weapons": [{"name": "长剑", "weapon_type": "melee", "reach_feet": 5}],
+                "resources": {"second_wind": 1},
+                "inventory": [{"id": "healing_potion", "name": "治疗药水", "quantity": 1}],
+            },
+            "combat": {
+                "round": 1,
+                "current_actor_id": "player_hero",
+                "participants": {
+                    "goblin_1": {
+                        "id": "goblin_1",
+                        "name": "地精",
+                        "side": "enemy",
+                        "hp": 7,
+                        "max_hp": 7,
+                        "attacks": [{"name": "弯刀"}],
+                    },
+                },
+            },
+            "space": {
+                "active_map_id": "road",
+                "maps": {"road": {"id": "road", "name": "林间道路", "width": 100, "height": 100}},
+                "placements": {
+                    "player_hero": {"unit_id": "player_hero", "map_id": "road", "position": {"x": 10, "y": 10}},
+                    "goblin_1": {"unit_id": "goblin_1", "map_id": "road", "position": {"x": 35, "y": 10}},
+                },
+            },
+        }
+        suggestion_service = FakeReplySuggestionService()
+        service = ChatSessionService(
+            graph=graph,
+            adventure_director=_noop_director(),
+            reply_suggestion_service=suggestion_service,
+        )
+
+        suggestions = await service.get_reply_suggestions("player-turn-suggestion-demo")
+
+        self.assertEqual(["我检查路面。", "我询问同伴。", "我躲到树后观察。"], suggestions)
+        combat_context = suggestion_service.generate.await_args.kwargs["combat_context"]
+        self.assertEqual("player_hero", combat_context["current_actor"]["id"])
+        self.assertTrue(combat_context["current_actor"]["action_available"])
+        self.assertEqual([{"name": "长剑", "weapon_type": "melee", "reach_feet": 5}], combat_context["current_actor"]["attacks"])
+        self.assertEqual(25.0, combat_context["distances_feet"]["goblin_1"])
+        self.assertNotIn("attacks", combat_context["visible_units"][0])
 
     async def test_process_turn_clears_hot_episodic_context_before_graph_run(self):
         graph = FakeGraph({"messages": [AIMessage(content="继续推进。", tool_calls=[])]})

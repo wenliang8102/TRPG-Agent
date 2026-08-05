@@ -33,6 +33,14 @@ class ChatResponse(BaseModel):
     adventure: Optional[AdventureState] = Field(default=None, description="Adventure module progress")
 
 
+class ReplySuggestionsRequest(BaseModel):
+    session_id: str = Field(min_length=1, description="Conversation session id")
+
+
+class ReplySuggestionsResponse(BaseModel):
+    suggestions: list[str] = Field(description="Player reply candidates for the latest assistant turn")
+
+
 class CreateSessionRequest(BaseModel):
     title: Optional[str] = Field(default=None, description="Optional session title")
 

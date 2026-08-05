@@ -13,19 +13,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-
 const props = defineProps<{
   disabled: boolean
   buttonText?: string
   placeholder?: string
 }>()
 
+const text = defineModel<string>({ default: '' })
+
 const emit = defineEmits<{
   send: [text: string]
 }>()
-
-const text = ref('')
 
 const onSubmit = () => {
   const content = text.value.trim()

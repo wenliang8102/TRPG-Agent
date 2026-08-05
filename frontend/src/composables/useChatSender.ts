@@ -34,7 +34,8 @@ export function useChatSender(
   clearError: () => void,
   pendingActionRef: Ref<any>,
   startLoading?: () => void,
-  stopLoading?: () => void
+  stopLoading?: () => void,
+  onTurnDone?: (sessionId: string) => void
 ) {
   const streamRequest = async (params: {
     session_id: string | null
@@ -93,6 +94,7 @@ export function useChatSender(
           stopLoadingOnce() // 兜底：防止 loading 一直显示（如空消息时）
           if (sid) updateSessionId(sid)
           setSending(false)
+          if (sid) onTurnDone?.(sid)
         },
         onError: (msg) => {
           stopLoadingOnce()

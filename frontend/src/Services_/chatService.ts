@@ -313,6 +313,32 @@ export const chatService = {
     return { messages: [], player: null, combat: null }
   },
 
+  // 回复候选是可丢弃的界面派生数据，不进入主消息流。
+  async fetchReplySuggestions(sessionId: string, signal?: AbortSignal): Promise<string[]> {
+    const response = await fetch('/api/chat/suggestions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId }),
+      signal,
+    })
+    if (!response.ok) {
+      let parsed: { message: string; code?: string; requestId?: string } = { message: '' }
+      try {
+        parsed = parseErrorPayload(await response.json())
+      } catch {
+        parsed = { message: '' }
+      }
+      throw new ChatApiError(
+        response.status,
+        parsed.message || `候选回复生成失败（HTTP ${response.status}）`,
+        parsed.code,
+        parsed.requestId
+      )
+    }
+    const payload: { suggestions: string[] } = await response.json()
+    return payload.suggestions
+  },
+
   async endCombatTurn(params: {
     session_id: string
     actor_id: string

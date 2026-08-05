@@ -12,7 +12,13 @@ from fastapi import APIRouter
 from fastapi import status
 from fastapi.responses import StreamingResponse
 
-from app.api.schemas import ChatRequest, ChatResponse, EndCombatTurnRequest
+from app.api.schemas import (
+    ChatRequest,
+    ChatResponse,
+    EndCombatTurnRequest,
+    ReplySuggestionsRequest,
+    ReplySuggestionsResponse,
+)
 from app.services.chat_session_service import get_chat_session_service
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -137,6 +143,36 @@ async def chat_history(
     """从 checkpointer 恢复最近的对话历史。"""
     service = await _resolve_chat_session_service()
     return await service.get_history(session_id, limit)
+
+
+@router.post("/suggestions", response_model=ReplySuggestionsResponse)
+async def reply_suggestions(payload: ReplySuggestionsRequest) -> ReplySuggestionsResponse:
+    """为最新一轮可见叙事生成不改变游戏状态的玩家回复候选。"""
+    try:
+        service = await _resolve_chat_session_service()
+        suggestions = await service.get_reply_suggestions(payload.session_id)
+        return ReplySuggestionsResponse(suggestions=suggestions)
+    except ValueError as exc:
+        _raise_chat_http_error(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="suggestions_invalid",
+            message=str(exc),
+            exc=exc,
+        )
+    except RuntimeError as exc:
+        _raise_chat_http_error(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="suggestions_unavailable",
+            message=str(exc),
+            exc=exc,
+        )
+    except Exception as exc:
+        _raise_chat_http_error(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            code="suggestions_failed",
+            message=f"Reply suggestion generation failed: {type(exc).__name__}: {exc}",
+            exc=exc,
+        )
 
 
 @router.post("/combat/end-turn")

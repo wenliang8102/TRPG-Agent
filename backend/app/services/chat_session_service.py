@@ -32,6 +32,8 @@ from app.memory.context_assembler import (
     is_runtime_state_message,
 )
 from app.services.session_store import purge_chat_session_data, touch_chat_session
+from app.services.reply_suggestion_service import ReplySuggestionService
+from app.space.geometry import build_space_state, placement_distance
 from app.services.tools._helpers import compute_ac
 from app.utils.agent_trace import (
     trace_adventure_runtime_failed,
@@ -63,10 +65,12 @@ class ChatSessionService:
         self,
         graph: Any,
         adventure_director: AdventureDirector | None = None,
+        reply_suggestion_service: ReplySuggestionService | None = None,
     ) -> None:
         self._graph = graph
         self._adventure_director = adventure_director
         self._default_adventure_director: AdventureDirector | None = None
+        self._reply_suggestion_service = reply_suggestion_service
 
     def _graph_config(self, session_id: str) -> dict[str, Any]:
         """统一声明 LangGraph 运行参数；工具串行化后复杂场景需要更多图步数。"""
@@ -1111,6 +1115,150 @@ class ChatSessionService:
             "adventure": adventure_data,
         }
 
+    # 中文注释：候选回复只读取玩家已经看见的消息，不让冒险内部状态进入生成上下文。
+    async def get_reply_suggestions(self, session_id: str) -> list[str]:
+        state = await self._graph.aget_state(self._graph_config(session_id))
+        values = state.values if hasattr(state, "values") else {}
+        if self._get_pending_action(state):
+            return []
+
+        conversation = self._reply_suggestion_conversation(values.get("messages", []))
+        if not conversation or conversation[-1]["role"] != "assistant":
+            return []
+
+        player = self._state_value_to_dict(values.get("player")) or {}
+        combat_context = None
+        if values.get("phase") == "combat":
+            combat = self._state_value_to_dict(values.get("combat")) or {}
+            actor_id = str(combat.get("current_actor_id") or "")
+            if not actor_id or not self._is_player_controlled_actor(actor_id, combat, player):
+                return []
+            actor = self._current_combat_actor(combat, player)
+            if not actor or int(actor.get("hp", 0) or 0) <= 0:
+                return []
+            combat_context = self._reply_suggestion_combat_context(values, combat, actor)
+
+        player_identity = {
+            key: str(player[key])
+            for key in ("name", "role_class", "level")
+            if player.get(key) not in (None, "")
+        }
+        if self._reply_suggestion_service is None:
+            self._reply_suggestion_service = ReplySuggestionService()
+        return await self._reply_suggestion_service.generate(
+            conversation=conversation,
+            player_identity=player_identity,
+            combat_context=combat_context,
+        )
+
+    def _reply_suggestion_combat_context(self, values: dict[str, Any], combat: dict, actor: dict) -> dict[str, Any]:
+        """投影玩家可见的战斗事实，避免候选模型从完整单位模板中读取隐藏能力。"""
+        actor_id = str(actor.get("id") or combat.get("current_actor_id") or "")
+        units = [
+            self._reply_suggestion_unit(unit_id, unit)
+            for unit_id, unit in (combat.get("participants") or {}).items()
+            if unit_id != actor_id and (int(unit.get("hp", 0) or 0) > 0 or unit.get("side") == "ally")
+        ]
+        return {
+            "round": combat.get("round", 0),
+            "current_actor": self._reply_suggestion_actor(actor_id, actor),
+            "visible_units": units,
+            "distances_feet": self._reply_suggestion_distances(values.get("space"), actor_id, units),
+        }
+
+    def _reply_suggestion_actor(self, actor_id: str, actor: dict) -> dict[str, Any]:
+        """只暴露当前行动者拥有的公开能力和剩余资源。"""
+        attacks = actor.get("attacks") or actor.get("weapons") or []
+        return {
+            "id": actor_id,
+            "name": actor.get("name", actor_id),
+            "side": actor.get("side", "player"),
+            "hp": actor.get("hp", 0),
+            "max_hp": actor.get("max_hp", 0),
+            "conditions": self._reply_suggestion_condition_names(actor.get("conditions", [])),
+            "action_available": bool(actor.get("action_available", True) or actor.get("extra_action_available", False)),
+            "bonus_action_available": bool(actor.get("bonus_action_available", True)),
+            "reaction_available": bool(actor.get("reaction_available", True)),
+            "movement_left": int(actor.get("movement_left", actor.get("speed", 0)) or 0),
+            "attacks": [
+                {
+                    key: attack.get(key)
+                    for key in ("name", "weapon_type", "reach_feet", "normal_range_feet", "long_range_feet")
+                    if attack.get(key) is not None
+                }
+                for attack in attacks
+            ],
+            "known_spells": list(actor.get("known_spells", [])),
+            "known_cantrips": list(actor.get("known_cantrips", [])),
+            "resources": dict(actor.get("resources", {})),
+            "class_features": list(actor.get("class_features", [])),
+            "inventory": [
+                {"name": item.get("name", item.get("id", "")), "quantity": item.get("quantity", 1)}
+                for item in actor.get("inventory", [])
+                if int(item.get("quantity", 0) or 0) > 0
+            ],
+        }
+
+    def _reply_suggestion_unit(self, unit_id: str, unit: dict) -> dict[str, Any]:
+        """其他单位只提供界面已经展示的身份、阵营、生命与状态。"""
+        return {
+            "id": unit_id,
+            "name": unit.get("name", unit_id),
+            "side": unit.get("side", "neutral"),
+            "hp": unit.get("hp", 0),
+            "max_hp": unit.get("max_hp", 0),
+            "conditions": self._reply_suggestion_condition_names(unit.get("conditions", [])),
+        }
+
+    def _reply_suggestion_condition_names(self, conditions: list[Any]) -> list[str]:
+        return [
+            str(condition.get("name") or condition.get("id") or "")
+            if isinstance(condition, dict)
+            else str(condition)
+            for condition in conditions
+        ]
+
+    def _reply_suggestion_distances(
+        self,
+        raw_space: Any,
+        actor_id: str,
+        units: list[dict[str, Any]],
+    ) -> dict[str, float]:
+        """复用空间领域接口计算距离；未建图时不猜测站位。"""
+        if not raw_space:
+            return {}
+        space = build_space_state(raw_space)
+        if actor_id not in space.placements:
+            return {}
+        distances: dict[str, float] = {}
+        for unit in units:
+            unit_id = unit["id"]
+            if unit_id not in space.placements:
+                continue
+            distance, reason = placement_distance(space, actor_id, unit_id)
+            if reason is None:
+                distances[unit_id] = round(distance, 1)
+        return distances
+
+    def _reply_suggestion_conversation(self, messages: list[Any], limit: int = 8) -> list[dict[str, str]]:
+        """仅保留最近的玩家可见对话，避免系统帧与工具轨迹泄露给候选生成器。"""
+        conversation: list[dict[str, str]] = []
+        for message in reversed(messages):
+            if len(conversation) >= limit:
+                break
+            if isinstance(message, AIMessage) and message.content:
+                if self._is_internal_tool_prelude(message):
+                    continue
+                content = message.content if isinstance(message.content, str) else str(message.content)
+                if content.strip():
+                    conversation.append({"role": "assistant", "content": content.strip()})
+            elif isinstance(message, HumanMessage) and not is_internal_system_human_message(message):
+                content = str(message.content).strip()
+                if content:
+                    conversation.append({"role": "user", "content": content})
+        conversation.reverse()
+        return conversation
+
     async def delete_session(self, session_id: str) -> dict[str, int]:
         """删除会话持久化数据。"""
         return await purge_chat_session_data(session_id)
@@ -1145,6 +1293,7 @@ def reset_cached_adventure_director() -> None:
     """模型配置热切换后，丢弃持有旧 LLM 客户端的后台裁定器。"""
     if _CHAT_SESSION_SERVICE is not None:
         _CHAT_SESSION_SERVICE._default_adventure_director = None
+        _CHAT_SESSION_SERVICE._reply_suggestion_service = None
 
 
 async def close_chat_session_service() -> None:

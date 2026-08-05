@@ -47,6 +47,10 @@ class _FakeSessionService:
             "combat": {"round": 2},
         }
 
+    async def get_reply_suggestions(self, session_id: str) -> list[str]:
+        self.calls.append({"suggestions_session_id": session_id})
+        return ["我检查门锁。", "我询问守卫。", "我先退后观察。"]
+
     async def delete_session(self, session_id: str) -> dict:
         self.calls.append({"deleted_session_id": session_id})
         return {"deletedRows": 3, "deletedTraceFiles": 1}
@@ -149,6 +153,19 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual("哥布林被你逼退了半步。", data["messages"][1]["content"])
         self.assertEqual("demo-history", fake.calls[-1]["history_session_id"])
         self.assertEqual(5, fake.calls[-1]["history_limit"])
+
+    def test_reply_suggestions_endpoint_returns_latest_candidates(self):
+        fake = _FakeSessionService()
+        with patch("app.api.chat.CHAT_SESSION_SERVICE", fake):
+            client = TestClient(app)
+            resp = client.post("/api/chat/suggestions", json={"session_id": "demo-suggestions"})
+
+        self.assertEqual(200, resp.status_code)
+        self.assertEqual(
+            ["我检查门锁。", "我询问守卫。", "我先退后观察。"],
+            resp.json()["suggestions"],
+        )
+        self.assertEqual("demo-suggestions", fake.calls[-1]["suggestions_session_id"])
 
     def test_session_endpoints_create_list_and_delete_sessions(self):
         fake = _FakeSessionService()
